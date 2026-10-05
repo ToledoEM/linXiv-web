@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { api, idPath } from '../api'
 import type { Paper } from '../types'
 import { ErrorText } from '../components'
@@ -7,7 +7,8 @@ import { MathText } from '../tex'
 
 export default function Library() {
   const [q, setQ] = useState('')
-  const [tag, setTag] = useState('')
+  const [params] = useSearchParams()
+  const [tag, setTag] = useState(() => params.get('tag') ?? '')
   const [fulltext, setFulltext] = useState(false)
   const [sort, setSort] = useState('published')
   const [tags, setTags] = useState<string[]>([])

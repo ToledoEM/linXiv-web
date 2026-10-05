@@ -7,7 +7,7 @@ import Search from './pages/Search'
 import Library from './pages/Library'
 import PaperDetail from './pages/PaperDetail'
 import Upload from './pages/Upload'
-import StatsPage from './pages/Stats'
+import Home from './pages/Home'
 import Settings from './pages/Settings'
 import { setTexEnabled } from './tex'
 
@@ -57,7 +57,7 @@ export default function App() {
       <Sidebar items={NAV} onLogout={auth.enabled ? logout : undefined} />
       <main className="content">
         <Routes>
-          <Route path="/" element={<StatsPage />} />
+          <Route path="/" element={<Home />} />
           <Route path="/library" element={<Library />} />
           <Route path="/search" element={<Search />} />
           <Route path="/paper/*" element={<PaperDetail />} />
