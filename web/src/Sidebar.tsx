@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
+import ThemePicker from './ThemePicker'
 
 export type NavItem = { to: string; label: string; icon: string; end?: boolean }
 
@@ -57,6 +58,9 @@ export default function Sidebar({ items, onLogout }: { items: NavItem[]; onLogou
           </NavLink>
         ))}
       </nav>
+      <div className="sidebar-theme">
+        <ThemePicker compact={collapsed} />
+      </div>
       {onLogout && (
         <button className="link sidebar-foot" onClick={onLogout} title="Log out">
           <span className="nav-icon" aria-hidden="true">
