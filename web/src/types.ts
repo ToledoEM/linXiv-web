@@ -96,3 +96,12 @@ export interface TrashListing {
   papers: TrashedPaper[]
   projects: TrashedProject[]
 }
+
+export interface Author {
+  author_id: number
+  orcid: string | null
+  full_name: string | null
+  first_name: string | null
+  last_name: string | null
+  paper_count: number
+}

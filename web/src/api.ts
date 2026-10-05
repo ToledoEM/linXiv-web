@@ -1,4 +1,5 @@
 import type {
+  Author,
   Paper,
   PaperVersions,
   SavedPdf,
@@ -129,6 +130,8 @@ export const api = {
     form.append('file', file)
     return request<{ saved_count: number; source_ids: string[] }>('POST', `/api/import/${kind}`, form)
   },
+
+  authors: (hideSingle: boolean) => request<Author[]>('GET', `/api/authors${qs({ hide_single: hideSingle || undefined })}`),
 
   stats: () => request<Stats>('GET', '/api/stats'),
   storage: () => request<{ storage_mb: number; pdf_dir: string }>('GET', '/api/pdfs/storage'),

@@ -178,3 +178,7 @@ ul.plain { padding-left: 1.1rem; }
 button.danger.armed { background: var(--danger); color: var(--surface); }
 
 .warn { color: var(--danger); margin: 0.4rem 0; }
+
+.num { text-align: right; font-variant-numeric: tabular-nums; }
+.th-sort { font: inherit; text-transform: inherit; letter-spacing: inherit; color: inherit; }
+.th-sort:hover { color: var(--text); }

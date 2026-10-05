@@ -1,0 +1,42 @@
+[
+  {
+    "author_id": 1,
+    "orcid": "0000-0002-1825-0097",
+    "full_name": "Ashish Vaswani",
+    "first_name": null,
+    "last_name": null,
+    "paper_count": 3
+  },
+  {
+    "author_id": 2,
+    "orcid": null,
+    "full_name": "Noam Shazeer",
+    "first_name": null,
+    "last_name": null,
+    "paper_count": 1
+  },
+  {
+    "author_id": 3,
+    "orcid": null,
+    "full_name": "Niki Parmar",
+    "first_name": null,
+    "last_name": null,
+    "paper_count": 1
+  },
+  {
+    "author_id": 4,
+    "orcid": null,
+    "full_name": "Jakob Uszkoreit",
+    "first_name": null,
+    "last_name": null,
+    "paper_count": 1
+  },
+  {
+    "author_id": 5,
+    "orcid": null,
+    "full_name": "Llion Jones",
+    "first_name": null,
+    "last_name": null,
+    "paper_count": 1
+  }
+]

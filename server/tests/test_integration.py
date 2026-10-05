@@ -75,3 +75,16 @@ def test_real_cli_bibtex_and_zotero_import(settings):
     assert r.status_code == 200, r.text
     assert r.json()["saved_count"] == 1
     assert len(c.get("/api/papers").json()) == 2
+
+
+def test_real_cli_author_list(settings, tmp_path):
+    c = TestClient(create_app(replace(settings, linxiv_bin=BIN)))
+    bib = (
+        b"@misc{au1, title={One}, author={Doe, Jane and Roe, Rich}, year={2021}}\n"
+        b"@misc{au2, title={Two}, author={Doe, Jane}, year={2022}}\n"
+    )
+    assert c.post("/api/import/bibtex", files={"file": ("a.bib", bib)}).status_code == 200
+    authors = {a["full_name"]: a["paper_count"] for a in c.get("/api/authors").json()}
+    assert len(authors) == 2 and max(authors.values()) == 2
+    multi = c.get("/api/authors", params={"hide_single": "true"}).json()
+    assert [a["paper_count"] for a in multi] == [2]

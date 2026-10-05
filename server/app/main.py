@@ -10,7 +10,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from . import settings as settings_mod
 from .auth import Auth, require_auth
 from .cli import CLIError, LinxivCLI, Runner
-from .routes import add, imports, library, pdfs, trash, user_settings
+from .routes import add, authors, imports, library, pdfs, trash, user_settings
 from .routes import auth as auth_routes
 
 __version__ = "0.1.0"
@@ -60,6 +60,7 @@ def create_app(
     app.include_router(add.router, dependencies=guarded)
     app.include_router(trash.router, dependencies=guarded)
     app.include_router(imports.router, dependencies=guarded)
+    app.include_router(authors.router, dependencies=guarded)
     app.include_router(library.router, dependencies=guarded)
 
     if settings.static_dir and (settings.static_dir / "index.html").is_file():
