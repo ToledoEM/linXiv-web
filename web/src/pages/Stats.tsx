@@ -4,6 +4,7 @@ import { api, idPath } from '../api'
 import type { SavedPdf, Stats } from '../types'
 import { ErrorText } from '../components'
 import { formatBytes } from '../format'
+import { MathText } from '../tex'
 
 export default function StatsPage() {
   const [stats, setStats] = useState<Stats | null>(null)
@@ -48,7 +49,9 @@ export default function StatsPage() {
       <ul className="plain">
         {stats.recent_papers?.map((p) => (
           <li key={p.source_id}>
-            <Link to={`/paper/${idPath(p.source_id)}`}>{p.title}</Link>{' '}
+            <Link to={`/paper/${idPath(p.source_id)}`}>
+              <MathText forceInline>{p.title}</MathText>
+            </Link>{' '}
             <span className="muted small">{p.published}</span>
           </li>
         ))}
@@ -71,7 +74,9 @@ export default function StatsPage() {
               {pdfs.map((p) => (
                 <tr key={p.source_id}>
                   <td>
-                    <Link to={`/paper/${idPath(p.source_id)}`}>{p.title}</Link>
+                    <Link to={`/paper/${idPath(p.source_id)}`}>
+                      <MathText forceInline>{p.title}</MathText>
+                    </Link>
                   </td>
                   <td>v{p.version}</td>
                   <td className="nowrap">{formatBytes(p.size_bytes)}</td>

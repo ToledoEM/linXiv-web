@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { api, idPath } from '../api'
 import type { Paper, SearchResult, Source } from '../types'
 import { Authors, ErrorText } from '../components'
+import { MathText } from '../tex'
 
 type RowState = { busy?: boolean; paper?: Paper; error?: string }
 
@@ -76,7 +77,9 @@ export default function Search() {
           return (
             <li key={r.entry_id ?? r.source_id} className="card">
               <div className="result-head">
-                <strong>{r.title}</strong>
+                <strong>
+                  <MathText forceInline>{r.title}</MathText>
+                </strong>
                 <span className="muted mono">{r.source_id}</span>
               </div>
               <Authors authors={r.authors} />
@@ -86,7 +89,9 @@ export default function Search() {
               {r.summary && (
                 <details>
                   <summary>Abstract</summary>
-                  <p>{r.summary}</p>
+                  <p>
+                    <MathText>{r.summary}</MathText>
+                  </p>
                 </details>
               )}
               <div className="actions">

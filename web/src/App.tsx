@@ -9,6 +9,7 @@ import PaperDetail from './pages/PaperDetail'
 import Upload from './pages/Upload'
 import StatsPage from './pages/Stats'
 import Settings from './pages/Settings'
+import { setTexEnabled } from './tex'
 
 const NAV: NavItem[] = [
   { to: '/', label: 'Home', icon: '⌂', end: true },
@@ -31,6 +32,14 @@ export default function App() {
       .then((me) => setAuth({ checked: true, enabled: me.auth_enabled, authenticated: me.authenticated }))
       .catch(() => setAuth({ checked: true, enabled: true, authenticated: false }))
   }, [])
+
+  useEffect(() => {
+    if (!auth.authenticated) return
+    api
+      .settings()
+      .then((r) => setTexEnabled(r.settings.tex_rendering_enabled))
+      .catch(() => {})
+  }, [auth.authenticated])
 
   if (!auth.checked) return null
   if (!auth.authenticated) {

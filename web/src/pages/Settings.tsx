@@ -3,6 +3,7 @@ import { api } from '../api'
 import { ErrorText } from '../components'
 import ThemePicker from '../ThemePicker'
 import type { UserSettings } from '../types'
+import { setTexEnabled } from '../tex'
 
 const CONTACTS: { key: 'ARXIV_MAILTO' | 'CROSSREF_MAILTO' | 'OPENALEX_MAILTO'; label: string; hint: string }[] = [
   { key: 'ARXIV_MAILTO', label: 'arXiv', hint: 'Sent in the User-Agent of arXiv requests.' },
@@ -53,6 +54,7 @@ export default function Settings() {
       setSaved(r.settings)
       setDraft(r.settings)
       setEnvOverrides(r.env_overrides)
+      setTexEnabled(r.settings.tex_rendering_enabled)
       setStatus('Saved.')
     } catch (err) {
       setError((err as Error).message)

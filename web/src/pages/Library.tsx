@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { api, idPath } from '../api'
 import type { Paper } from '../types'
 import { ErrorText } from '../components'
+import { MathText } from '../tex'
 
 export default function Library() {
   const [q, setQ] = useState('')
@@ -83,7 +84,9 @@ export default function Library() {
               {papers.map((p) => (
                 <tr key={p.source_id}>
                   <td>
-                    <Link to={`/paper/${idPath(p.source_id)}`}>{p.title}</Link>
+                    <Link to={`/paper/${idPath(p.source_id)}`}>
+                      <MathText forceInline>{p.title}</MathText>
+                    </Link>
                   </td>
                   <td className="small">
                     {p.authors?.slice(0, 3).join(', ')}

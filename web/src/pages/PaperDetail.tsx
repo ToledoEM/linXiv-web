@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { api, pdfUrl } from '../api'
 import type { Paper, PaperVersions } from '../types'
 import { Authors, ErrorText } from '../components'
+import { MathText } from '../tex'
 
 export default function PaperDetail() {
   const id = useParams()['*'] ?? ''
@@ -65,7 +66,9 @@ export default function PaperDetail() {
 
   return (
     <section className="detail">
-      <h2>{paper.title}</h2>
+      <h2>
+        <MathText forceInline>{paper.title}</MathText>
+      </h2>
       <Authors authors={paper.authors} max={50} />
       <dl className="meta">
         <dt>ID</dt>
@@ -125,7 +128,9 @@ export default function PaperDetail() {
       </dl>
 
       {(paper.summary ?? versions?.versions[0]?.summary) && (
-        <p className="abstract">{paper.summary ?? versions?.versions[0]?.summary}</p>
+        <p className="abstract">
+          <MathText>{paper.summary ?? versions?.versions[0]?.summary}</MathText>
+        </p>
       )}
 
       <h3>Tags</h3>

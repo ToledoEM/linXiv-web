@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { api, idPath } from '../api'
 import { ErrorText } from '../components'
+import { MathText } from '../tex'
 
 type Result = { name: string; source_id?: string; title?: string; error?: string }
 
@@ -47,7 +48,9 @@ export default function Upload() {
             <strong>{r.name}</strong>
             {r.source_id && (
               <div>
-                <Link to={`/paper/${idPath(r.source_id)}`}>{r.title || r.source_id}</Link>
+                <Link to={`/paper/${idPath(r.source_id)}`}>
+                  <MathText forceInline>{r.title || r.source_id}</MathText>
+                </Link>
               </div>
             )}
             <ErrorText error={r.error} />
