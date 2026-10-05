@@ -80,7 +80,15 @@ export const api = {
   fetch: (id: string, source: Source) =>
     request<Paper>('POST', `/api/papers/${idPath(id)}/fetch${qs({ source })}`),
 
-  papers: (params: { q?: string; tag?: string; fulltext?: boolean; limit?: number; sort?: string }) =>
+  papers: (params: {
+    q?: string
+    tag?: string
+    fulltext?: boolean
+    limit?: number
+    sort?: string
+    dir?: 'asc' | 'desc'
+    pdf?: 'has' | 'none'
+  }) =>
     request<Paper[]>('GET', `/api/papers${qs(params)}`),
   paper: (id: string) => request<Paper>('GET', `/api/papers/${idPath(id)}`),
   versions: (id: string) => request<PaperVersions>('GET', `/api/papers/${idPath(id)}/versions`),

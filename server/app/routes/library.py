@@ -48,14 +48,16 @@ async def list_papers(
     category: str | None = None,
     sort: Literal["published", "added", "title"] = "published",
     dir: Literal["asc", "desc"] | None = None,
+    pdf: Literal["has", "none"] | None = None,
 ):
     """Library listing. `fulltext` uses linXiv's TeX-source index (`paper search`);
-    otherwise `q`/`tag` filter `linxiv list` by title, id, DOI, authors and tags."""
+    otherwise `q`/`tag`/`pdf` filter `linxiv list` by title, id, DOI, authors, tags
+    and whether a PDF is saved."""
     if q and fulltext:
         return await run(
             request, ["paper", "search", "--limit", str(limit), "--", ident(q, "query")]
         )
-    filtering = bool(q or tag)
+    filtering = bool(q or tag or pdf)
     args = ["list", "--sort", sort]
     # The CLI has no text filter, so filtered listings page in Python.
     if not filtering:
@@ -71,7 +73,9 @@ async def list_papers(
     hits = [
         p
         for p in papers
-        if (needle is None or _matches(p, needle)) and (tag is None or tag in (p.get("tags") or []))
+        if (needle is None or _matches(p, needle))
+        and (tag is None or tag in (p.get("tags") or []))
+        and (pdf is None or bool(p.get("has_pdf")) == (pdf == "has"))
     ]
     return hits[offset : offset + limit]
 

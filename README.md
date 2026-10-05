@@ -65,7 +65,7 @@ All routes except `/api/health`, `/api/login` and `/api/me` need a session when 
 |---|---|
 | `GET /api/search?q&source=arxiv\|openalex\|crossref&max` | `search` |
 | `POST /api/papers/{id}/fetch?source=` | `fetch`, then `paper get` |
-| `GET /api/papers?q&tag&fulltext&limit&offset&category&sort&dir` | `list` (`q`/`tag` filtered server-side), or `paper search` when `fulltext=true` |
+| `GET /api/papers?q&tag&pdf=has\|none&fulltext&limit&offset&category&sort&dir` | `list` (`q`/`tag`/`pdf` filtered server-side), or `paper search` when `fulltext=true` |
 | `GET /api/papers/{id}` | `paper get` |
 | `GET /api/papers/{id}/versions` | `paper versions` |
 | `DELETE /api/papers/{id}` | `paper delete` (soft delete, goes to trash) |

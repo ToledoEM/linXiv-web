@@ -53,6 +53,18 @@ def test_list_filters_by_text_and_tag(client, fake):
     assert "--limit" not in fake.calls[-1]
 
 
+def test_list_filters_by_pdf_and_pages_in_python(client, fake):
+    base = fixture("list.json")[0]
+    papers = [{**base, "source_id": f"arxiv:{i}", "has_pdf": i % 2 == 0} for i in range(6)]
+    fake.on("list", result=papers)
+    has = client.get("/api/papers", params={"pdf": "has"}).json()
+    assert [p["source_id"] for p in has] == ["arxiv:0", "arxiv:2", "arxiv:4"]
+    none = client.get("/api/papers", params={"pdf": "none", "limit": 1, "offset": 1}).json()
+    assert [p["source_id"] for p in none] == ["arxiv:3"]
+    assert "--limit" not in fake.calls[-1]
+    assert client.get("/api/papers", params={"pdf": "maybe"}).status_code == 422
+
+
 def test_fulltext_uses_paper_search(client, fake):
     fake.on("paper", "search", result=[])
     client.get("/api/papers", params={"q": "softmax", "fulltext": "true"})
