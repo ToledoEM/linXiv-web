@@ -1,7 +1,5 @@
-# Planning + local notes
-PLAN.md
+# Dev notes: PLAN.md, Status Bank files (CLAUDE-*.md), CLI discovery output
 discovery/
-CLAUDE*.md
 .claude/
 
 # Local dev data (bind mounts)

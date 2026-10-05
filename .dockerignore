@@ -6,7 +6,5 @@ discovery/
 **/__pycache__/
 **/.pytest_cache/
 web/dist/
-PLAN.md
-CLAUDE*.md
 .claude/
 .env
