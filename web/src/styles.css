@@ -176,3 +176,5 @@ ul.plain { padding-left: 1.1rem; }
 
 .row-actions { margin-top: 0; flex-wrap: nowrap; justify-content: flex-end; }
 button.danger.armed { background: var(--danger); color: var(--surface); }
+
+.warn { color: var(--danger); margin: 0.4rem 0; }

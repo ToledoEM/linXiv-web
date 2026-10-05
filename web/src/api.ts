@@ -124,6 +124,12 @@ export const api = {
   restoreProject: (id: number) => request('POST', `/api/trash/projects/${id}/restore`),
   purgeProject: (id: number) => request('DELETE', `/api/trash/projects/${id}`),
 
+  importFile: (kind: 'bibtex' | 'zotero', file: File) => {
+    const form = new FormData()
+    form.append('file', file)
+    return request<{ saved_count: number; source_ids: string[] }>('POST', `/api/import/${kind}`, form)
+  },
+
   stats: () => request<Stats>('GET', '/api/stats'),
   storage: () => request<{ storage_mb: number; pdf_dir: string }>('GET', '/api/pdfs/storage'),
 

@@ -4,6 +4,11 @@ import { api, idPath } from '../api'
 import { ErrorText } from '../components'
 import { MathText } from '../tex'
 
+type ImportKind = 'bibtex' | 'zotero'
+type Imported = { name: string; kind: ImportKind; saved?: number; ids?: string[]; error?: string }
+
+const kindFor = (name: string): ImportKind => (name.toLowerCase().endsWith('.json') ? 'zotero' : 'bibtex')
+
 type Added = { input: string; kind?: string; source_id?: string; title?: string; error?: string }
 
 const KIND_LABEL: Record<string, string> = { arxiv: 'arXiv', doi: 'DOI', pdf: 'PDF link' }
@@ -12,6 +17,28 @@ export default function AddPaper() {
   const [input, setInput] = useState('')
   const [busy, setBusy] = useState(false)
   const [added, setAdded] = useState<Added[]>([])
+  const [files, setFiles] = useState<File[]>([])
+  const [importing, setImporting] = useState(false)
+  const [imported, setImported] = useState<Imported[]>([])
+  const [fileKey, setFileKey] = useState(0)
+
+  const importFiles = async (e: FormEvent) => {
+    e.preventDefault()
+    setImporting(true)
+    // One at a time: the server serializes linxiv calls anyway.
+    for (const f of files) {
+      const kind = kindFor(f.name)
+      try {
+        const r = await api.importFile(kind, f)
+        setImported((prev) => [{ name: f.name, kind, saved: r.saved_count, ids: r.source_ids }, ...prev])
+      } catch (err) {
+        setImported((prev) => [{ name: f.name, kind, error: (err as Error).message }, ...prev])
+      }
+    }
+    setImporting(false)
+    setFiles([])
+    setFileKey((k) => k + 1)
+  }
 
   const submit = async (e: FormEvent) => {
     e.preventDefault()
@@ -58,6 +85,52 @@ export default function AddPaper() {
               </Link>
             )}
             <ErrorText error={a.error} />
+          </li>
+        ))}
+      </ul>
+
+      <h3>Import a file</h3>
+      <p className="muted">
+        A BibTeX <span className="mono">.bib</span> file or a Zotero CSL JSON export (
+        <span className="mono">.json</span>). Entries already in the library are updated, not duplicated; papers in the trash are restored.
+      </p>
+      <form className="toolbar" onSubmit={importFiles}>
+        <input
+          key={fileKey}
+          type="file"
+          accept=".bib,.bibtex,.json,application/json,application/x-bibtex,text/plain"
+          multiple
+          onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
+        />
+        <button disabled={importing || files.length === 0}>{importing ? 'Importing…' : 'Import'}</button>
+      </form>
+      <ul className="results">
+        {imported.map((r, i) => (
+          <li key={i} className="card">
+            <div className="result-head">
+              <span className="mono small">{r.name}</span>
+              <span className="pill">{r.kind === 'bibtex' ? 'BibTeX' : 'Zotero CSL JSON'}</span>
+            </div>
+            {r.saved !== undefined &&
+              (r.saved === 0 ? (
+                <p className="warn">
+                  No papers imported: linXiv found no entries it could read in this file.
+                </p>
+              ) : (
+                <>
+                  <p>
+                    Saved {r.saved} paper{r.saved === 1 ? '' : 's'} (new or updated).
+                  </p>
+                  <div className="tags">
+                    {r.ids?.map((id) => (
+                      <Link key={id} className="pill mono" to={`/paper/${idPath(id)}`}>
+                        {id}
+                      </Link>
+                    ))}
+                  </div>
+                </>
+              ))}
+            <ErrorText error={r.error} />
           </li>
         ))}
       </ul>

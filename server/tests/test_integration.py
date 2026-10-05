@@ -62,3 +62,16 @@ def test_real_cli_trash_roundtrip(settings, tmp_path):
     assert r.status_code == 200, r.text
     assert c.get("/api/trash").json()["papers"] == []
     assert c.get(f"/api/papers/{sid}").status_code == 404
+
+
+def test_real_cli_bibtex_and_zotero_import(settings):
+    c = TestClient(create_app(replace(settings, linxiv_bin=BIN)))
+    bib = b"@misc{imp1, title={Imported One}, author={Doe, Jane}, year={2021}}\n"
+    r = c.post("/api/import/bibtex", files={"file": ("a.bib", bib)})
+    assert r.status_code == 200, r.text
+    assert r.json() == {"saved_count": 1, "source_ids": ["local:imp1"]}
+    csl = b'[{"id": "z1", "type": "article-journal", "title": "Zotero One"}]'
+    r = c.post("/api/import/zotero", files={"file": ("z.json", csl)})
+    assert r.status_code == 200, r.text
+    assert r.json()["saved_count"] == 1
+    assert len(c.get("/api/papers").json()) == 2
