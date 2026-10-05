@@ -70,3 +70,29 @@ export interface SettingsResponse {
   /** Contact keys set as env vars on the server; those win over stored values. */
   env_overrides: string[]
 }
+
+export interface TrashedPaper {
+  source_fk: number
+  source_id: string
+  title: string
+  authors: string[]
+  published?: string
+  deleted_at: string
+  pdf_path?: string | null
+  had_pdf: boolean
+  project_fks: number[]
+}
+
+/** linXiv ProjectOut fields, flattened, plus deleted_at. */
+export interface TrashedProject {
+  id: number
+  name: string
+  description?: string
+  paper_count: number
+  deleted_at?: string | null
+}
+
+export interface TrashListing {
+  papers: TrashedPaper[]
+  projects: TrashedProject[]
+}

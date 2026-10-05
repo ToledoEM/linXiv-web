@@ -6,6 +6,7 @@ import type {
   SettingsResponse,
   Source,
   Stats,
+  TrashListing,
   UserSettings,
 } from './types'
 
@@ -116,6 +117,12 @@ export const api = {
       '/api/add',
       { input },
     ),
+
+  trash: () => request<TrashListing>('GET', '/api/trash'),
+  restorePaper: (id: string) => request('POST', `/api/trash/papers/${idPath(id)}/restore`),
+  purgePaper: (id: string) => request('DELETE', `/api/trash/papers/${idPath(id)}`),
+  restoreProject: (id: number) => request('POST', `/api/trash/projects/${id}/restore`),
+  purgeProject: (id: number) => request('DELETE', `/api/trash/projects/${id}`),
 
   stats: () => request<Stats>('GET', '/api/stats'),
   storage: () => request<{ storage_mb: number; pdf_dir: string }>('GET', '/api/pdfs/storage'),

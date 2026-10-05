@@ -1,0 +1,19 @@
+{
+  "papers": [
+    {
+      "source_fk": 2,
+      "source_id": "arxiv:2204.12985",
+      "title": "Quantum Linear Optics via String Diagrams",
+      "authors": [
+        "Giovanni de Felice",
+        "Bob Coecke"
+      ],
+      "published": "2022-04-27",
+      "deleted_at": "2026-10-05T15:00:32",
+      "pdf_path": null,
+      "had_pdf": false,
+      "project_fks": []
+    }
+  ],
+  "projects": []
+}

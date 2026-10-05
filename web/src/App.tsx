@@ -10,6 +10,7 @@ import Upload from './pages/Upload'
 import Home from './pages/Home'
 import Settings from './pages/Settings'
 import AddPaper from './pages/AddPaper'
+import Trash from './pages/Trash'
 import { setTexEnabled } from './tex'
 
 const NAV: NavItem[] = [
@@ -18,6 +19,7 @@ const NAV: NavItem[] = [
   { to: '/search', label: 'Search', icon: '⌕' },
   { to: '/add', label: 'Add Paper', icon: '＋' },
   { to: '/upload', label: 'Upload', icon: '⇪' },
+  { to: '/trash', label: 'Trash', icon: '⌫' },
   { to: '/settings', label: 'Settings', icon: '⚙' },
 ]
 
@@ -65,6 +67,7 @@ export default function App() {
           <Route path="/paper/*" element={<PaperDetail />} />
           <Route path="/add" element={<AddPaper />} />
           <Route path="/upload" element={<Upload />} />
+          <Route path="/trash" element={<Trash />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/stats" element={<Navigate to="/" replace />} />
           <Route path="*" element={<p className="muted">Page not found.</p>} />

@@ -77,6 +77,9 @@ All routes except `/api/health`, `/api/login` and `/api/me` need a session when 
 | `POST /api/pdfs/import` (multipart `file`) | `pdf import` |
 | `POST /api/add` `{input}` | arXiv id/link: `fetch`; DOI or doi.org link: `doi save`; other http(s) link: server downloads the PDF (public hosts only, size-capped), then `pdf import` |
 | `GET /api/stats`, `/api/categories`, `/api/tags` | `stats`, `categories`, `tag list-all` |
+| `GET /api/trash` | `trash list` |
+| `POST /api/trash/papers/{id}/restore`, `DELETE /api/trash/papers/{id}` | `trash restore`, `trash hard-delete` (paper must be in the trash) |
+| `POST /api/trash/projects/{id}/restore`, `DELETE /api/trash/projects/{id}` | `trash restore-project`, `trash hard-delete-project` |
 | `GET /api/settings`, `PATCH /api/settings` | `settings get`, `settings update` (allowlist: `pdf_save_limit_mb`, `tex_rendering_enabled`, `ARXIV_MAILTO`, `CROSSREF_MAILTO`, `OPENALEX_MAILTO`) |
 
 Paper ids are linXiv source ids such as `arxiv:1706.03762`. Old-style arXiv ids keep their slash: `/api/papers/arxiv:hep-th/9901001`.
