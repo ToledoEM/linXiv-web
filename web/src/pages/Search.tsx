@@ -6,24 +6,62 @@ import { Authors, ErrorText } from '../components'
 import { MathText } from '../tex'
 
 type RowState = { busy?: boolean; paper?: Paper; error?: string }
+type Tab = Source | 'local'
+type ViewSort = 'relevance' | 'newest' | 'oldest'
+
+const TABS: { value: Tab; label: string }[] = [
+  { value: 'arxiv', label: 'arXiv' },
+  { value: 'openalex', label: 'OpenAlex' },
+  { value: 'crossref', label: 'Crossref' },
+  { value: 'local', label: 'Local' },
+]
+const MAX_OPTIONS = [10, 25, 50, 100]
+
+// The CLI has no sort flag for search, so results are re-ordered here.
+// Undated entries go last under newest and first under oldest (as on desktop).
+function sortResults(results: SearchResult[], sort: ViewSort): SearchResult[] {
+  if (sort === 'relevance') return results
+  const key = (r: SearchResult) => r.published ?? '0000-00-00'
+  const sorted = [...results].sort((a, b) => key(a).localeCompare(key(b)))
+  return sort === 'newest' ? sorted.reverse() : sorted
+}
+
+function asResult(p: Paper): SearchResult {
+  return {
+    source_id: p.source_id,
+    version: p.version,
+    title: p.title,
+    summary: p.summary,
+    authors: p.authors,
+    published: p.published,
+    primary_category: p.category ?? undefined,
+  }
+}
 
 export default function Search() {
   const [q, setQ] = useState('')
-  const [source, setSource] = useState<Source>('arxiv')
-  const [max, setMax] = useState(10)
+  const [source, setSource] = useState<Tab>('arxiv')
+  const [max, setMax] = useState(25)
+  const [sort, setSort] = useState<ViewSort>('relevance')
   const [results, setResults] = useState<SearchResult[] | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [rows, setRows] = useState<Record<string, RowState>>({})
 
-  const submit = async (e: FormEvent) => {
-    e.preventDefault()
+  const run = async (tab: Tab) => {
     if (!q.trim()) return
     setBusy(true)
     setError('')
     setRows({})
     try {
-      setResults(await api.search(q.trim(), source, max))
+      if (tab === 'local') {
+        // Library papers: every row is already saved, so it links straight to it.
+        const papers = await api.papers({ q: q.trim(), limit: 500 })
+        setRows(Object.fromEntries(papers.map((p) => [p.source_id, { paper: p }])))
+        setResults(papers.map(asResult))
+      } else {
+        setResults(await api.search(q.trim(), tab, max))
+      }
     } catch (err) {
       setError(String((err as Error).message))
       setResults(null)
@@ -32,7 +70,19 @@ export default function Search() {
     }
   }
 
+  const submit = (e: FormEvent) => {
+    e.preventDefault()
+    run(source)
+  }
+
+  const switchTab = (tab: Tab) => {
+    setSource(tab)
+    setResults(null)
+    if (q.trim()) run(tab)
+  }
+
   const add = async (r: SearchResult, withPdf: boolean) => {
+    if (source === 'local') return
     const set = (s: RowState) => setRows((prev) => ({ ...prev, [r.source_id]: s }))
     set({ busy: true })
     try {
@@ -47,32 +97,52 @@ export default function Search() {
   return (
     <section>
       <h2>Search</h2>
+      <div className="tabs" role="tablist" aria-label="Source">
+        {TABS.map((t) => (
+          <button
+            key={t.value}
+            role="tab"
+            aria-selected={source === t.value}
+            className={source === t.value ? 'tab active' : 'tab'}
+            onClick={() => switchTab(t.value)}
+            disabled={busy}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
       <form className="toolbar" onSubmit={submit}>
         <input
           className="grow"
-          placeholder="Title, author, keywords…"
+          placeholder={source === 'local' ? 'Search your library: title, author, id, tag…' : 'Title, author, keywords…'}
           value={q}
           onChange={(e) => setQ(e.target.value)}
           autoFocus
         />
-        <select value={source} onChange={(e) => setSource(e.target.value as Source)}>
-          <option value="arxiv">arXiv</option>
-          <option value="openalex">OpenAlex</option>
-          <option value="crossref">Crossref</option>
-        </select>
-        <select value={max} onChange={(e) => setMax(Number(e.target.value))}>
-          {[10, 25, 50].map((n) => (
-            <option key={n} value={n}>
-              {n} results
-            </option>
-          ))}
+        {source !== 'local' && (
+          <select aria-label="Maximum results" value={max} onChange={(e) => setMax(Number(e.target.value))}>
+            {MAX_OPTIONS.map((n) => (
+              <option key={n} value={n}>
+                {n} results
+              </option>
+            ))}
+          </select>
+        )}
+        <select aria-label="Sort results" value={sort} onChange={(e) => setSort(e.target.value as ViewSort)}>
+          <option value="relevance">Relevance</option>
+          <option value="newest">Newest first</option>
+          <option value="oldest">Oldest first</option>
         </select>
         <button disabled={busy}>{busy ? 'Searching…' : 'Search'}</button>
       </form>
       <ErrorText error={error} />
-      {results && results.length === 0 && <p className="muted">No results.</p>}
+      {results && (
+        <p className="muted small">
+          {results.length} result{results.length === 1 ? '' : 's'}
+        </p>
+      )}
       <ul className="results">
-        {results?.map((r) => {
+        {results && sortResults(results, sort).map((r) => {
           const row = rows[r.source_id] ?? {}
           return (
             <li key={r.entry_id ?? r.source_id} className="card">
