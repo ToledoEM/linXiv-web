@@ -12,7 +12,7 @@ import Settings from './pages/Settings'
 import AddPaper from './pages/AddPaper'
 import Trash from './pages/Trash'
 import Authors from './pages/Authors'
-import { setTexEnabled } from './tex'
+import { setTexEnabled } from './texStore'
 
 const NAV: NavItem[] = [
   { to: '/', label: 'Home', icon: '⌂', end: true },

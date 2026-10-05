@@ -1,42 +1,5 @@
 import { useSyncExternalStore, type ReactNode } from 'react'
-
-type Katex = typeof import('katex').default
-
-// Store for the `tex_rendering_enabled` setting plus the lazily loaded KaTeX
-// module; components re-render when either changes.
-let enabled = true
-let katex: Katex | null = null
-let loading: Promise<void> | null = null
-let epoch = 0
-const listeners = new Set<() => void>()
-
-function notify() {
-  epoch++
-  for (const fn of listeners) fn()
-}
-
-const subscribe = (fn: () => void) => {
-  listeners.add(fn)
-  return () => listeners.delete(fn)
-}
-
-export function setTexEnabled(value: boolean) {
-  if (value !== enabled) {
-    enabled = value
-    notify()
-  }
-}
-
-function loadKatex() {
-  loading ??= Promise.all([import('katex'), import('katex/dist/katex.min.css')])
-    .then(([mod]) => {
-      katex = mod.default
-      notify()
-    })
-    .catch(() => {
-      loading = null // retry on the next render that needs it
-    })
-}
+import { getEpoch, loadKatex, loadedKatex, subscribe, texEnabled, type Katex } from './texStore'
 
 // Same delimiters as linXiv desktop (src/lib/tex.tsx): $$…$$ (display) or
 // $…$ (inline, one line, no space just inside either $). An unpaired opener
@@ -72,9 +35,10 @@ function toNodes(k: Katex, text: string, forceInline: boolean): ReactNode[] {
 /** Text with $…$ / $$…$$ rendered by KaTeX when TeX rendering is enabled.
  * `forceInline` keeps $$…$$ inline, for titles and other one-line spots. */
 export function MathText({ children, forceInline = false }: { children?: string | null; forceInline?: boolean }) {
-  useSyncExternalStore(subscribe, () => epoch)
+  useSyncExternalStore(subscribe, getEpoch)
   const text = children ?? ''
-  if (!enabled || !text.includes('$')) return <>{text}</>
+  if (!texEnabled() || !text.includes('$')) return <>{text}</>
+  const katex = loadedKatex()
   if (!katex) {
     loadKatex()
     return <>{text}</>

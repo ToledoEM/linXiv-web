@@ -3,7 +3,7 @@ import { api } from '../api'
 import { ErrorText } from '../components'
 import ThemePicker from '../ThemePicker'
 import type { UserSettings } from '../types'
-import { setTexEnabled } from '../tex'
+import { setTexEnabled } from '../texStore'
 
 const CONTACTS: { key: 'ARXIV_MAILTO' | 'CROSSREF_MAILTO' | 'OPENALEX_MAILTO'; label: string; hint: string }[] = [
   { key: 'ARXIV_MAILTO', label: 'arXiv', hint: 'Sent in the User-Agent of arXiv requests.' },
