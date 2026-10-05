@@ -1,0 +1,11 @@
+{
+  "pdfs": [
+    {
+      "source_id": "arxiv:1706.03762",
+      "source_fk": 1,
+      "title": "Attention Is All You Need",
+      "version": 7,
+      "size_bytes": 2215244
+    }
+  ]
+}

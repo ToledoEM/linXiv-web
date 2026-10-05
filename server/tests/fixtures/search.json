@@ -1,0 +1,28 @@
+[
+  {
+    "source_id": "2105.02723",
+    "version": 1,
+    "title": "Do You Even Need Attention? A Stack of Feed-Forward Layers Does Surprisingly Well on ImageNet",
+    "summary": "The strong performance of vision transformers on image classification and other vision tasks is often attributed to the design of their multi-head attention layers. However, the extent to which attention is responsible for this strong performance remains unclear. In this short report, we ask: is the attention layer even necessary? Specifically, we replace the attention layer in a vision transformer with a feed-forward layer applied over the patch dimension. The resulting architecture is simply a series of feed-forward layers applied over the patch and feature dimensions in an alternating fashion. In experiments on ImageNet, this architecture performs surprisingly well: a ViT/DeiT-base-sized model obtains 74.9\\% top-1 accuracy, compared to 77.9\\% and 79.9\\% for ViT and DeiT respectively. These results indicate that aspects of vision transformers other than attention, such as the patch embedding, may be more responsible for their strong performance than previously thought. We hope these results prompt the community to spend more time trying to understand why our current models are as effective as they are.",
+    "authors": [
+      "Luke Melas-Kyriazi"
+    ],
+    "published": "2021-05-06",
+    "paper_url": "https://arxiv.org/pdf/2105.02723v1",
+    "primary_category": "cs.CV",
+    "entry_id": "arxiv:2105.02723"
+  },
+  {
+    "source_id": "2512.19700",
+    "version": 1,
+    "title": "\"All You Need\" is Not All You Need for a Paper Title: On the Origins of a Scientific Meme",
+    "summary": "The 2017 paper ''Attention Is All You Need'' introduced the Transformer architecture-and inadvertently spawned one of machine learning's most persistent naming conventions. We analyze 717 arXiv preprints containing ''All You Need'' in their titles (2009-2025), finding exponential growth ($R^2$ > 0.994) following the original paper, with 200 titles in 2025 alone. Among papers following the canonical ''X [Is] All You Need'' structure, ''Attention'' remains the most frequently claimed necessity (28 occurrences). Situating this phenomenon within memetic theory, we argue the pattern's success reflects competitive pressures in scientific communication that increasingly favor memorability over precision. Whether this trend represents harmless academic whimsy or symptomatic sensationalism, we leave-with appropriate self-awareness-to the reader.",
+    "authors": [
+      "Anton Alyakin"
+    ],
+    "published": "2025-12-03",
+    "paper_url": "https://arxiv.org/pdf/2512.19700v1",
+    "primary_category": "cs.CY",
+    "entry_id": "arxiv:2512.19700"
+  }
+]

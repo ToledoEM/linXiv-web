@@ -1,0 +1,65 @@
+"""Environment-driven configuration. Read once at import; tests rebuild via `load()`."""
+
+from __future__ import annotations
+
+import ipaddress
+import os
+from dataclasses import dataclass
+from pathlib import Path
+
+
+def _bool(name: str, default: bool = False) -> bool:
+    raw = os.environ.get(name)
+    if raw is None or raw == "":
+        return default
+    return raw.strip().lower() in ("1", "true", "yes", "on")
+
+
+def is_loopback(host: str) -> bool:
+    if host == "localhost":
+        return True
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return False
+
+
+@dataclass(frozen=True)
+class Settings:
+    linxiv_bin: str
+    data_dir: Path
+    pdf_dir: Path
+    static_dir: Path | None
+    host: str
+    port: int
+    password_hash: str | None
+    password: str | None
+    secret_key: str | None
+    cookie_secure: bool
+    max_upload_mb: int
+    timeout_long: float
+    timeout_short: float
+
+    @property
+    def auth_enabled(self) -> bool:
+        return bool(self.password_hash or self.password)
+
+
+def load() -> Settings:
+    static = os.environ.get("LINXIV_WEB_STATIC_DIR")
+    data_dir = Path(os.environ.get("LINXIV_WEB_DATA_DIR", "/data"))
+    return Settings(
+        linxiv_bin=os.environ.get("LINXIV_BIN", "linxiv"),
+        data_dir=data_dir,
+        pdf_dir=Path(os.environ.get("LINXIV_WEB_PDF_DIR", str(data_dir / "pdfs"))),
+        static_dir=Path(static) if static else None,
+        host=os.environ.get("LINXIV_WEB_HOST", "127.0.0.1"),
+        port=int(os.environ.get("LINXIV_WEB_PORT", "8000")),
+        password_hash=os.environ.get("LINXIV_WEB_PASSWORD_HASH") or None,
+        password=os.environ.get("LINXIV_WEB_PASSWORD") or None,
+        secret_key=os.environ.get("LINXIV_WEB_SECRET_KEY") or None,
+        cookie_secure=_bool("LINXIV_WEB_COOKIE_SECURE"),
+        max_upload_mb=int(os.environ.get("LINXIV_WEB_MAX_UPLOAD_MB", "200")),
+        timeout_long=float(os.environ.get("LINXIV_WEB_TIMEOUT_LONG", "120")),
+        timeout_short=float(os.environ.get("LINXIV_WEB_TIMEOUT_SHORT", "30")),
+    )
