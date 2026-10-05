@@ -1,0 +1,110 @@
+# syntax=docker/dockerfile:1
+#
+# linXiv-web: FastAPI + React UI that drives the `linxiv` CLI as a subprocess.
+#
+# Stage 1 builds `linxiv` from upstream linxiv-dev/linXiv at LINXIV_REF. To
+# build against a local checkout instead (submodules initialised):
+#   docker build --build-arg LINXIV_SRC=local \
+#     --build-context linxiv-local=../linXiv .
+
+ARG LINXIV_REF=v0.6.0
+ARG LINXIV_SRC=git
+
+# --- linXiv source: pinned upstream tag (default) ---
+FROM rust:1-bookworm AS linxiv-src-git
+ARG LINXIV_REF
+RUN git clone --depth 1 --branch "${LINXIV_REF}" \
+      --recurse-submodules --shallow-submodules \
+      https://github.com/linxiv-dev/linXiv.git /src
+
+# --- linXiv source: local checkout via --build-context linxiv-local=<path> ---
+FROM scratch AS linxiv-src-local
+COPY --from=linxiv-local scripts/ /src/scripts/
+COPY --from=linxiv-local src-tauri/ /src/src-tauri/
+
+FROM linxiv-src-${LINXIV_SRC} AS linxiv-src
+
+# --- Stage 1: build the linxiv CLI (Tauri-free crate, no webkit/gtk) ---
+FROM rust:1-bookworm AS cli-build
+WORKDIR /src
+COPY --from=linxiv-src /src/scripts/ scripts/
+# Runtime dlopen'd PDF library (PDF import metadata extraction).
+RUN bash scripts/fetch_pdfium.sh
+COPY --from=linxiv-src /src/src-tauri/ src-tauri/
+RUN rm -rf src-tauri/target src-tauri/vendor/pdfium/*.tgz
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
+    --mount=type=cache,target=/usr/local/cargo/git \
+    --mount=type=cache,target=/src/src-tauri/target,sharing=locked \
+    cargo build --release --locked --manifest-path src-tauri/Cargo.toml \
+      -p linxiv-cli --bin linxiv-cli \
+    && install -D src-tauri/target/release/linxiv-cli /out/linxiv \
+    && install -D src-tauri/vendor/pdfium/lib/libpdfium.so /out/libpdfium.so
+
+# Standalone CLI image, used for discovery and the real-CLI integration test.
+FROM debian:bookworm-slim AS cli
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=cli-build /out/linxiv /usr/local/bin/linxiv
+COPY --from=cli-build /out/libpdfium.so /usr/local/lib/pdfium/libpdfium.so
+ENV LINXIV_PDFIUM_LIB=/usr/local/lib/pdfium/libpdfium.so \
+    LINXIV_DATA_DIR=/data
+ENTRYPOINT ["linxiv"]
+
+# --- Server tests + lint, with the real CLI for the integration test ---
+#   docker build --target server-test .
+FROM python:3.11-slim-bookworm AS server-test
+COPY --from=ghcr.io/astral-sh/uv:0.8 /uv /usr/local/bin/uv
+COPY --from=cli-build /out/linxiv /usr/local/bin/linxiv
+COPY --from=cli-build /out/libpdfium.so /usr/local/lib/pdfium/libpdfium.so
+ENV LINXIV_PDFIUM_LIB=/usr/local/lib/pdfium/libpdfium.so \
+    LINXIV_BIN=linxiv
+WORKDIR /app/server
+COPY server/pyproject.toml server/uv.lock ./
+RUN uv sync --frozen
+COPY server/ ./
+RUN uv run ruff check . && uv run ruff format --check . && uv run pytest -rs
+
+# --- Stage 2: build the React SPA ---
+FROM node:22-slim AS web-build
+WORKDIR /app/web
+COPY web/package.json web/package-lock.json ./
+RUN npm ci
+COPY web/ ./
+RUN npm run build
+
+# --- Stage 3: Python runtime ---
+FROM python:3.11-slim-bookworm AS runtime
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=ghcr.io/astral-sh/uv:0.8 /uv /usr/local/bin/uv
+
+COPY --from=cli-build /out/linxiv /usr/local/bin/linxiv
+COPY --from=cli-build /out/libpdfium.so /usr/local/lib/pdfium/libpdfium.so
+
+WORKDIR /app/server
+COPY server/pyproject.toml server/uv.lock ./
+RUN uv sync --frozen --no-dev --no-install-project
+COPY server/app ./app
+COPY --from=web-build /app/web/dist /app/web/dist
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+
+RUN useradd -u 1000 -m appuser \
+    && mkdir -p /data /pdfs \
+    && chown appuser:appuser /data /pdfs \
+    && chmod +x /usr/local/bin/entrypoint.sh
+
+ENV PATH="/app/server/.venv/bin:${PATH}" \
+    LINXIV_PDFIUM_LIB=/usr/local/lib/pdfium/libpdfium.so \
+    LINXIV_DATA_DIR=/data \
+    LINXIV_WEB_DATA_DIR=/data \
+    LINXIV_WEB_PDF_DIR=/pdfs \
+    LINXIV_WEB_STATIC_DIR=/app/web/dist \
+    LINXIV_WEB_HOST=0.0.0.0 \
+    LINXIV_WEB_PORT=8000
+
+USER appuser
+EXPOSE 8000
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+CMD ["python", "-m", "app"]

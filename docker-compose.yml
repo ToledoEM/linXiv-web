@@ -1,0 +1,35 @@
+# Local dev: http://127.0.0.1:8086
+#   cp .env.example .env   # set a password (see README)
+#   mkdir -p .dev/data .dev/pdfs
+#   docker compose up --build
+services:
+  linxiv-web:
+    build:
+      context: .
+      args:
+        LINXIV_REF: ${LINXIV_REF:-v0.6.0}
+    image: linxiv-web:dev
+    container_name: linxiv-web
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
+    ports:
+      - "127.0.0.1:8086:8000"
+    volumes:
+      # Long syntax: a missing host dir is an error, not a silently created empty one.
+      - type: bind
+        source: ${LINXIV_WEB_DATA_HOST:-./.dev/data}
+        target: /data
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${LINXIV_WEB_PDF_HOST:-./.dev/pdfs}
+        target: /pdfs
+        bind:
+          create_host_path: false
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
