@@ -140,3 +140,29 @@ export interface Note {
   created_at: string
   updated_at: string
 }
+
+/** Editable fields saved through `paper repair`. */
+export interface MetadataInput {
+  title: string
+  authors: string[]
+  published: string
+  summary: string
+  category: string | null
+  doi: string | null
+  url: string | null
+}
+
+export type LookupSource = 'crossref' | 'arxiv' | 'openalex' | 'pubmed'
+
+/** One metadata match from GET /api/papers/{id}/lookup. */
+export interface MetadataCandidate {
+  source: LookupSource
+  ref: string | null
+  title: string | null
+  authors: string[]
+  published: string | null
+  summary: string | null
+  category: string | null
+  doi: string | null
+  url: string | null
+}

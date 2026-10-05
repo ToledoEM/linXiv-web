@@ -3,6 +3,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { api, pdfUrl } from '../api'
 import type { Paper, PaperVersions } from '../types'
 import { Authors, ErrorText } from '../components'
+import MetadataEditor from '../MetadataEditor'
 import Notes from '../Notes'
 import { MathText } from '../tex'
 
@@ -19,6 +20,7 @@ export default function PaperDetail() {
   const [customUrl, setCustomUrl] = useState('')
   const [showPdf, setShowPdf] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [editingMeta, setEditingMeta] = useState(false)
 
   const load = useCallback(async () => {
     try {
@@ -69,71 +71,91 @@ export default function PaperDetail() {
 
   return (
     <section className="detail">
-      <h2>
-        <MathText forceInline>{paper.title}</MathText>
-      </h2>
+      <div className="page-head">
+        <h2>
+          <MathText forceInline>{paper.title}</MathText>
+        </h2>
+        {!editingMeta && (
+          <button className="page-head-action" onClick={() => setEditingMeta(true)}>
+            Edit metadata
+          </button>
+        )}
+      </div>
       <Authors authors={paper.authors} max={50} />
-      <dl className="meta">
-        <dt>ID</dt>
-        <dd className="mono">{sid}</dd>
-        <dt>Version</dt>
-        <dd>
-          v{paper.version}
-          {versions && versions.versions.length > 1 && (
-            <span className="muted"> ({versions.versions.map((v) => `v${v.version}`).join(', ')} stored)</span>
-          )}
-        </dd>
-        <dt>Published</dt>
-        <dd>
-          {paper.published}
-          {paper.updated && paper.updated !== paper.published && ` · updated ${paper.updated}`}
-        </dd>
-        {paper.categories?.length ? (
-          <>
-            <dt>Categories</dt>
+      {editingMeta ? (
+        <MetadataEditor
+          paper={paper}
+          onSaved={async () => {
+            setEditingMeta(false)
+            await load()
+          }}
+          onCancel={() => setEditingMeta(false)}
+        />
+      ) : (
+        <>
+          <dl className="meta">
+            <dt>ID</dt>
+            <dd className="mono">{sid}</dd>
+            <dt>Version</dt>
             <dd>
-              {paper.categories.map((c) => (
-                <span key={c} className="pill">
-                  {c}
-                </span>
-              ))}
+              v{paper.version}
+              {versions && versions.versions.length > 1 && (
+                <span className="muted"> ({versions.versions.map((v) => `v${v.version}`).join(', ')} stored)</span>
+              )}
             </dd>
-          </>
-        ) : null}
-        {paper.doi && (
-          <>
-            <dt>DOI</dt>
-            <dd className="mono">{paper.doi}</dd>
-          </>
-        )}
-        {paper.journal_ref && (
-          <>
-            <dt>Journal</dt>
-            <dd>{paper.journal_ref}</dd>
-          </>
-        )}
-        {paper.comment && (
-          <>
-            <dt>Comment</dt>
-            <dd>{paper.comment}</dd>
-          </>
-        )}
-        {paper.url && (
-          <>
-            <dt>Link</dt>
+            <dt>Published</dt>
             <dd>
-              <a href={paper.url} target="_blank" rel="noreferrer noopener">
-                {paper.url}
-              </a>
+              {paper.published}
+              {paper.updated && paper.updated !== paper.published && ` · updated ${paper.updated}`}
             </dd>
-          </>
-        )}
-      </dl>
+            {paper.categories?.length ? (
+              <>
+                <dt>Categories</dt>
+                <dd>
+                  {paper.categories.map((c) => (
+                    <span key={c} className="pill">
+                      {c}
+                    </span>
+                  ))}
+                </dd>
+              </>
+            ) : null}
+            {paper.doi && (
+              <>
+                <dt>DOI</dt>
+                <dd className="mono">{paper.doi}</dd>
+              </>
+            )}
+            {paper.journal_ref && (
+              <>
+                <dt>Journal</dt>
+                <dd>{paper.journal_ref}</dd>
+              </>
+            )}
+            {paper.comment && (
+              <>
+                <dt>Comment</dt>
+                <dd>{paper.comment}</dd>
+              </>
+            )}
+            {paper.url && (
+              <>
+                <dt>Link</dt>
+                <dd>
+                  <a href={paper.url} target="_blank" rel="noreferrer noopener">
+                    {paper.url}
+                  </a>
+                </dd>
+              </>
+            )}
+          </dl>
 
-      {(paper.summary ?? versions?.versions[0]?.summary) && (
-        <p className="abstract">
-          <MathText>{paper.summary ?? versions?.versions[0]?.summary}</MathText>
-        </p>
+          {(paper.summary ?? versions?.versions[0]?.summary) && (
+            <p className="abstract">
+              <MathText>{paper.summary ?? versions?.versions[0]?.summary}</MathText>
+            </p>
+          )}
+        </>
       )}
 
       <h3>Tags</h3>

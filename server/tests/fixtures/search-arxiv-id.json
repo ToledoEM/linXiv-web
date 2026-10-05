@@ -1,0 +1,16 @@
+[
+  {
+    "source_id": "2204.12985",
+    "version": 4,
+    "title": "Quantum Linear Optics via String Diagrams",
+    "summary": "We establish a formal bridge between qubit-based and photonic quantum computing. We do this by defining a functor from the ZX calculus to linear optical circuits. In the process we provide a compositional theory of quantum linear optics which allows to reason about events involving multiple photons such as those required to perform linear-optical and fusion-based quantum computing.",
+    "authors": [
+      "Giovanni de Felice",
+      "Bob Coecke"
+    ],
+    "published": "2022-04-27",
+    "paper_url": "https://arxiv.org/pdf/2204.12985v4",
+    "primary_category": "quant-ph",
+    "entry_id": "arxiv:2204.12985"
+  }
+]

@@ -241,3 +241,15 @@ a.button:hover { filter: brightness(0.95); text-decoration: none; }
 .note-tabs button { padding: 0.25rem 0.9rem; }
 .note-preview { cursor: default; min-height: 9rem; border: 1px solid var(--border); border-radius: var(--radius); padding: 0.5rem 0.7rem; background: var(--surface-2); }
 .note-foot { display: flex; justify-content: space-between; text-transform: uppercase; letter-spacing: 0.06em; font-size: 0.72rem; }
+.metadata-editor { display: grid; gap: 0.9rem; margin: 1rem 0; }
+.metadata-editor .project-form { margin: 0; }
+.lookup { display: grid; gap: 0.5rem; }
+.lookup .toolbar { margin: 0; }
+.lookup p { margin: 0; }
+.candidates { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.3rem; }
+.candidate { width: 100%; text-align: left; background: var(--surface-2); border: 1px solid var(--border); }
+.candidates li.active .candidate { border-color: var(--accent); background: var(--accent-soft); }
+.compare { display: grid; gap: 0.6rem; background: var(--surface-2); }
+.diff-cell { white-space: pre-wrap; overflow-wrap: anywhere; max-width: 28rem; font-size: 0.9rem; }
+.field-row { display: flex; flex-wrap: wrap; gap: 0.8rem; }
+.field-row .grow { min-width: 14rem; }

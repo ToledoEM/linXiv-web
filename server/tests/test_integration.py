@@ -171,3 +171,30 @@ def test_real_cli_notes(settings):
     assert c.delete(f"/api/notes/{nid}").status_code == 404
     bad = c.post("/api/notes", json={"source_id": "x:y", "content": "z"})
     assert bad.status_code == 404
+
+
+def test_real_cli_metadata_repair_keeps_tags(settings):
+    c = TestClient(create_app(replace(settings, linxiv_bin=BIN)))
+    bib = b"@misc{rp1, title={Old Title}, author={Doe, Jane}, year={2020}}\n"
+    assert c.post("/api/import/bibtex", files={"file": ("a.bib", bib)}).status_code == 200
+    assert c.post("/api/papers/local:rp1/tags", json={"tags": ["keep"]}).status_code == 200
+    body = {
+        "title": "New $x$ Title",
+        "authors": ["Jane Doe", "-Dash Person"],
+        "published": "2021-03-04",
+        "summary": "Abs\nline",
+        "category": "Journal",
+        "doi": "10.1234/rp1",
+        "url": "",
+    }
+    r = c.put("/api/papers/local:rp1/metadata", json=body)
+    assert r.status_code == 200, r.text
+    p = c.get("/api/papers/local:rp1").json()
+    assert p["title"] == "New $x$ Title"
+    assert p["authors"] == ["Jane Doe", "-Dash Person"]
+    assert p["published"] == "2021-03-04"
+    assert (p["summary"], p["category"]) == ("Abs\nline", "Journal")
+    assert (p["doi"], p["url"]) == ("10.1234/rp1", None)
+    assert p["tags"] == ["keep"]
+    bad = c.put("/api/papers/local:rp1/metadata", json={**body, "published": "2021-02-30"})
+    assert bad.status_code == 400, bad.text

@@ -1,0 +1,26 @@
+{
+  "source_id": "doi:10.1038/nature14539",
+  "version": 1,
+  "title": "Deep learning",
+  "authors": [
+    "Yann LeCun",
+    "Yoshua Bengio",
+    "Geoffrey Hinton"
+  ],
+  "published": "2015-05-27",
+  "updated": null,
+  "summary": "",
+  "category": "Nature",
+  "categories": null,
+  "doi": "10.1038/nature14539",
+  "journal_ref": null,
+  "comment": null,
+  "url": "https://doi.org/10.1038/nature14539",
+  "tags": null,
+  "source": "crossref",
+  "author_orcids": [
+    null,
+    null,
+    null
+  ]
+}

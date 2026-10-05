@@ -12,6 +12,8 @@ linXiv-web reaches linXiv only through the `linxiv` CLI, which prints JSON for e
 browser ──HTTP──▶ FastAPI (/api/*, static SPA) ──subprocess──▶ linxiv CLI ──▶ papers.db + pdfs/
 ```
 
+Library reads and writes always go through the CLI. The server contacts outside services itself in two cases the CLI doesn't cover: it downloads a PDF link pasted into Add Paper before importing it, and it queries PubMed through NCBI E-utilities (`eutils.ncbi.nlm.nih.gov`) when you check a paper's metadata.
+
 A linXiv library allows one writing process per data dir, so the server runs CLI calls one at a time behind a lock. Don't point linXiv-web at a data dir that the desktop app or `linxiv-headless` also uses.
 
 `linxiv` always writes PDFs to `<data dir>/pdfs`. The container turns that path into a symlink to `/pdfs`, which lets the database stay on local disk while the PDFs sit on other storage.
@@ -72,6 +74,8 @@ All routes except `/api/health`, `/api/login` and `/api/me` need a session when 
 | `GET /api/papers/{id}/pdf` | `pdf path`, then serves the file (only from inside the data or PDF dir) |
 | `POST /api/papers/{id}/pdf` `{url?, version?}` | `pdf download` (for arXiv papers the URL is derived) |
 | `DELETE /api/papers/{id}/pdf` | `pdf delete` |
+| `PUT /api/papers/{id}/metadata` `{title, authors[], published, summary, category?, doi?, url?}` | `paper get`, then `paper repair` with the full record and the paper's current tags (repair clears any field it isn't given) |
+| `GET /api/papers/{id}/lookup?source=crossref\|arxiv\|openalex\|pubmed` | Candidate metadata: `doi resolve` (by DOI), `search` (by arXiv id or title), or NCBI E-utilities for PubMed (by DOI, then title) |
 | `GET/POST/DELETE /api/papers/{id}/tags` | `tag list` / `tag add` / `tag remove` |
 | `GET /api/pdfs`, `GET /api/pdfs/storage` | `pdf list`, `pdf storage` |
 | `POST /api/pdfs/import` (multipart `file`) | `pdf import` |

@@ -1,5 +1,8 @@
 import type {
   Author,
+  LookupSource,
+  MetadataCandidate,
+  MetadataInput,
   Note,
   Paper,
   PaperVersions,
@@ -105,6 +108,13 @@ export const api = {
   paper: (id: string) => request<Paper>('GET', `/api/papers/${idPath(id)}`),
   versions: (id: string) => request<PaperVersions>('GET', `/api/papers/${idPath(id)}/versions`),
   deletePaper: (id: string) => request('DELETE', `/api/papers/${idPath(id)}`),
+  saveMetadata: (id: string, body: MetadataInput) =>
+    request<Paper>('PUT', `/api/papers/${idPath(id)}/metadata`, body),
+  lookupMetadata: (id: string, source: LookupSource) =>
+    request<{ match: 'doi' | 'arxiv' | 'title'; candidates: MetadataCandidate[] }>(
+      'GET',
+      `/api/papers/${idPath(id)}/lookup${qs({ source })}`,
+    ),
 
   addTags: (id: string, tags: string[]) =>
     request<{ tags: string[] }>('POST', `/api/papers/${idPath(id)}/tags`, { tags }),
