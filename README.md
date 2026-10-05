@@ -80,6 +80,8 @@ All routes except `/api/health`, `/api/login` and `/api/me` need a session when 
 | `GET /api/stats`, `/api/categories`, `/api/tags` | `stats`, `categories`, `tag list-all` |
 | `GET /api/authors?hide_single` | `author list` (`hide_single` drops one-paper authors server-side) |
 | `GET /api/projects?status=active\|archived`, `POST /api/projects`, `PATCH /api/projects/{id}` | `project list`, `project create`, `project update` |
+| `GET /api/projects/{id}`, `GET /api/projects/{id}/papers` | `project get`; papers = `project get` + `list`, filtered to members in project order |
+| `POST /api/projects/{id}/papers` (`{"source_ids": [...]}`), `DELETE /api/projects/{id}/papers/{source_id}` | `project add-papers` (200 with `added`/`failed`), `project remove-paper` |
 | `POST /api/projects/{id}/archive`, `POST /api/projects/{id}/restore`, `DELETE /api/projects/{id}` | `project archive`, `project restore`, `project delete` (soft delete, goes to trash) |
 | `GET /api/trash` | `trash list` |
 | `POST /api/trash/papers/{id}/restore`, `DELETE /api/trash/papers/{id}` | `trash restore`, `trash hard-delete` (paper must be in the trash) |

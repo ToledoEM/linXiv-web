@@ -1,0 +1,10 @@
+{
+  "project_id": 1,
+  "ok": false,
+  "added": [
+    "local:webimport2026"
+  ],
+  "failed": [
+    "nope:x"
+  ]
+}

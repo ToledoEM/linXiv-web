@@ -110,3 +110,23 @@ def test_real_cli_projects(settings):
     assert c.delete(f"/api/projects/{pid}").status_code == 200
     assert [p["id"] for p in c.get("/api/trash").json()["projects"]] == [pid]
     assert c.post("/api/projects/9999/archive").status_code == 404
+
+
+def test_real_cli_project_papers(settings):
+    c = TestClient(create_app(replace(settings, linxiv_bin=BIN)))
+    bib = (
+        b"@misc{pp1, title={One}, author={Doe, Jane}, year={2021}}\n"
+        b"@misc{pp2, title={Two}, author={Doe, Jane}, year={2022}}\n"
+    )
+    assert c.post("/api/import/bibtex", files={"file": ("a.bib", bib)}).status_code == 200
+    pid = c.post("/api/projects", json={"name": "P"}).json()["id"]
+    r = c.post(
+        f"/api/projects/{pid}/papers", json={"source_ids": ["local:pp2", "local:pp1", "x:y"]}
+    )
+    assert r.status_code == 200, r.text
+    assert (r.json()["added"], r.json()["failed"]) == (["local:pp2", "local:pp1"], ["x:y"])
+    papers = c.get(f"/api/projects/{pid}/papers").json()
+    assert [p["source_id"] for p in papers] == ["local:pp2", "local:pp1"]
+    assert c.delete(f"/api/projects/{pid}/papers/local:pp2").status_code == 200
+    assert c.get(f"/api/projects/{pid}").json()["source_ids"] == ["local:pp1"]
+    assert c.get("/api/projects/9999/papers").status_code == 404

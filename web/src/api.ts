@@ -142,6 +142,14 @@ export const api = {
   archiveProject: (id: number) => request('POST', `/api/projects/${id}/archive`),
   unarchiveProject: (id: number) => request('POST', `/api/projects/${id}/restore`),
   deleteProject: (id: number) => request('DELETE', `/api/projects/${id}`),
+  project: (id: number) => request<Project>('GET', `/api/projects/${id}`),
+  projectPapers: (id: number) => request<Paper[]>('GET', `/api/projects/${id}/papers`),
+  addProjectPapers: (id: number, sourceIds: string[]) =>
+    request<{ ok: boolean; added: string[]; failed: string[] }>('POST', `/api/projects/${id}/papers`, {
+      source_ids: sourceIds,
+    }),
+  removeProjectPaper: (id: number, sourceId: string) =>
+    request('DELETE', `/api/projects/${id}/papers/${idPath(sourceId)}`),
 
   stats: () => request<Stats>('GET', '/api/stats'),
   storage: () => request<{ storage_mb: number; pdf_dir: string }>('GET', '/api/pdfs/storage'),

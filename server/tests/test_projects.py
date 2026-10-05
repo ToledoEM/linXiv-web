@@ -112,3 +112,46 @@ def test_not_found(client, fake):
     r = client.post("/api/projects/99/archive")
     assert r.status_code == 404
     assert r.json()["detail"] == "Project 99 not found"
+
+
+def test_get(client, fake):
+    fake.on("project", "get", result=fixture("project-get.json"))
+    assert client.get("/api/projects/1").json()["source_ids"][0] == "arxiv:2204.12985"
+    assert fake.calls[-1] == ["project", "get", "--", "1"]
+
+
+def test_project_papers_in_project_order(client, fake):
+    """Members missing from `list` (trashed) are dropped."""
+    project = {**fixture("project-get.json"), "source_ids": ["b", "gone", "a"]}
+    fake.on("project", "get", result=project)
+    fake.on("list", result=[{"source_id": s, "title": s} for s in ("a", "b", "c")])
+    r = client.get("/api/projects/1/papers")
+    assert [p["source_id"] for p in r.json()] == ["b", "a"]
+    assert fake.calls[-1] == ["list"]
+
+
+def test_project_papers_not_found(client, fake):
+    fake.on("project", "get", result=CLIError(404, "Project 9 not found"))
+    assert client.get("/api/projects/9/papers").status_code == 404
+    assert fake.calls == [["project", "get", "--", "9"]]
+
+
+def test_add_papers(client, fake):
+    fake.on("project", "add-papers", result=fixture("project-add-papers-partial.json"))
+    r = client.post("/api/projects/1/papers", json={"source_ids": ["nope:x", " -y "]})
+    assert r.status_code == 200
+    assert r.json()["failed"] == ["nope:x"]
+    assert fake.calls[-1] == ["project", "add-papers", "--", "1", "nope:x", "-y"]
+
+
+def test_add_papers_validation(client, fake):
+    for body in ({"source_ids": []}, {"source_ids": "a"}, {"ids": ["a"]}, {"source_ids": [""]}):
+        assert client.post("/api/projects/1/papers", json=body).status_code in (400, 422), body
+    assert fake.calls == []
+
+
+def test_remove_paper_keeps_slashes(client, fake):
+    fake.on("project", "remove-paper", result={"ok": True, "paper_count": 0})
+    r = client.delete("/api/projects/1/papers/arxiv:hep-th/9901001")
+    assert r.status_code == 200
+    assert fake.calls[-1] == ["project", "remove-paper", "--", "1", "arxiv:hep-th/9901001"]

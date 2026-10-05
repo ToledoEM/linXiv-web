@@ -53,6 +53,12 @@ class ProjectUpdate(BaseModel):
     _tags = field_validator("project_tags")(_clean_tags)
 
 
+class PaperIds(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    source_ids: list[str] = Field(min_length=1, max_length=1000)
+
+
 def _desc(value: str) -> str:
     # Descriptions are free text; only NUL can't travel in an argv.
     return value.replace("\x00", "")
@@ -85,6 +91,37 @@ async def update_project(request: Request, project_id: int, body: ProjectUpdate)
         # Bare --tags clears; repeated --tags=x replaces the set.
         args += [f"--tags={t}" for t in body.project_tags] or ["--tags"]
     return await run(request, [*args, "--", str(project_id)])
+
+
+@router.get("/projects/{project_id}")
+async def get_project(request: Request, project_id: int):
+    return await run(request, ["project", "get", "--", str(project_id)])
+
+
+@router.get("/projects/{project_id}/papers")
+async def project_papers(request: Request, project_id: int):
+    """Library rows for the project's papers, in project order. The CLI has no
+    membership filter on `list`, so the full listing is filtered here; trashed
+    papers drop out because `list` omits them."""
+    project = await run(request, ["project", "get", "--", str(project_id)])
+    papers = await run(request, ["list"])
+    by_id = {p.get("source_id"): p for p in papers} if isinstance(papers, list) else {}
+    return [by_id[s] for s in project.get("source_ids", []) if s in by_id]
+
+
+@router.post("/projects/{project_id}/papers")
+async def add_papers(request: Request, project_id: int, body: PaperIds):
+    """`project add-papers`: answers 200 with `added` and `failed` lists, even
+    when some (or all) ids are unknown."""
+    ids = [ident(s, "paper id") for s in body.source_ids]
+    return await run(request, ["project", "add-papers", "--", str(project_id), *ids])
+
+
+@router.delete("/projects/{project_id}/papers/{source_id:path}")
+async def remove_paper(request: Request, project_id: int, source_id: str):
+    return await run(
+        request, ["project", "remove-paper", "--", str(project_id), ident(source_id, "paper id")]
+    )
 
 
 @router.post("/projects/{project_id}/archive")

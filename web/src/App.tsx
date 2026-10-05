@@ -13,6 +13,7 @@ import AddPaper from './pages/AddPaper'
 import Trash from './pages/Trash'
 import Authors from './pages/Authors'
 import Projects from './pages/Projects'
+import ProjectDetail from './pages/ProjectDetail'
 import { setTexEnabled } from './texStore'
 
 const NAV: NavItem[] = [
@@ -68,6 +69,7 @@ export default function App() {
           <Route path="/" element={<Home />} />
           <Route path="/library" element={<Library />} />
           <Route path="/projects" element={<Projects />} />
+          <Route path="/projects/:id" element={<ProjectDetail />} />
           <Route path="/search" element={<Search />} />
           <Route path="/paper/*" element={<PaperDetail />} />
           <Route path="/add" element={<AddPaper />} />
