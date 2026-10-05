@@ -12,11 +12,13 @@ import Settings from './pages/Settings'
 import AddPaper from './pages/AddPaper'
 import Trash from './pages/Trash'
 import Authors from './pages/Authors'
+import Projects from './pages/Projects'
 import { setTexEnabled } from './texStore'
 
 const NAV: NavItem[] = [
   { to: '/', label: 'Home', icon: '⌂', end: true },
   { to: '/library', label: 'Library', icon: '▤' },
+  { to: '/projects', label: 'Projects', icon: '◫' },
   { to: '/search', label: 'Search', icon: '⌕' },
   { to: '/add', label: 'Add Paper', icon: '＋' },
   { to: '/upload', label: 'Upload', icon: '⇪' },
@@ -65,6 +67,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/library" element={<Library />} />
+          <Route path="/projects" element={<Projects />} />
           <Route path="/search" element={<Search />} />
           <Route path="/paper/*" element={<PaperDetail />} />
           <Route path="/add" element={<AddPaper />} />

@@ -88,3 +88,25 @@ def test_real_cli_author_list(settings, tmp_path):
     assert len(authors) == 2 and max(authors.values()) == 2
     multi = c.get("/api/authors", params={"hide_single": "true"}).json()
     assert [a["paper_count"] for a in multi] == [2]
+
+
+def test_real_cli_projects(settings):
+    c = TestClient(create_app(replace(settings, linxiv_bin=BIN)))
+    r = c.post(
+        "/api/projects",
+        json={"name": "-P", "description": "-d", "color_hex": "#4f86f7", "project_tags": ["A"]},
+    )
+    assert r.status_code == 200, r.text
+    pid = r.json()["id"]
+    [p] = c.get("/api/projects").json()
+    assert (p["name"], p["description"], p["project_tags"]) == ("-P", "-d", ["A"])
+    r = c.patch(f"/api/projects/{pid}", json={"name": "Q", "project_tags": []})
+    assert r.status_code == 200, r.text
+    assert (r.json()["name"], r.json()["project_tags"]) == ("Q", [])
+    assert c.post(f"/api/projects/{pid}/archive").status_code == 200
+    assert c.get("/api/projects").json() == []
+    assert [p["id"] for p in c.get("/api/projects?status=archived").json()] == [pid]
+    assert c.post(f"/api/projects/{pid}/restore").status_code == 200
+    assert c.delete(f"/api/projects/{pid}").status_code == 200
+    assert [p["id"] for p in c.get("/api/trash").json()["projects"]] == [pid]
+    assert c.post("/api/projects/9999/archive").status_code == 404

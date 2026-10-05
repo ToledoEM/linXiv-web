@@ -79,6 +79,8 @@ All routes except `/api/health`, `/api/login` and `/api/me` need a session when 
 | `POST /api/add` `{input}` | arXiv id/link: `fetch`; DOI or doi.org link: `doi save`; other http(s) link: server downloads the PDF (public hosts only, size-capped), then `pdf import` |
 | `GET /api/stats`, `/api/categories`, `/api/tags` | `stats`, `categories`, `tag list-all` |
 | `GET /api/authors?hide_single` | `author list` (`hide_single` drops one-paper authors server-side) |
+| `GET /api/projects?status=active\|archived`, `POST /api/projects`, `PATCH /api/projects/{id}` | `project list`, `project create`, `project update` |
+| `POST /api/projects/{id}/archive`, `POST /api/projects/{id}/restore`, `DELETE /api/projects/{id}` | `project archive`, `project restore`, `project delete` (soft delete, goes to trash) |
 | `GET /api/trash` | `trash list` |
 | `POST /api/trash/papers/{id}/restore`, `DELETE /api/trash/papers/{id}` | `trash restore`, `trash hard-delete` (paper must be in the trash) |
 | `POST /api/trash/projects/{id}/restore`, `DELETE /api/trash/projects/{id}` | `trash restore-project`, `trash hard-delete-project` |

@@ -2,6 +2,8 @@ import type {
   Author,
   Paper,
   PaperVersions,
+  Project,
+  ProjectInput,
   SavedPdf,
   SearchResult,
   SettingsResponse,
@@ -132,6 +134,14 @@ export const api = {
   },
 
   authors: (hideSingle: boolean) => request<Author[]>('GET', `/api/authors${qs({ hide_single: hideSingle || undefined })}`),
+
+  projects: (status: 'active' | 'archived') => request<Project[]>('GET', `/api/projects${qs({ status })}`),
+  createProject: (body: ProjectInput) =>
+    request<{ id: number; name: string; status: string }>('POST', '/api/projects', body),
+  updateProject: (id: number, body: Partial<ProjectInput>) => request<Project>('PATCH', `/api/projects/${id}`, body),
+  archiveProject: (id: number) => request('POST', `/api/projects/${id}/archive`),
+  unarchiveProject: (id: number) => request('POST', `/api/projects/${id}/restore`),
+  deleteProject: (id: number) => request('DELETE', `/api/projects/${id}`),
 
   stats: () => request<Stats>('GET', '/api/stats'),
   storage: () => request<{ storage_mb: number; pdf_dir: string }>('GET', '/api/pdfs/storage'),

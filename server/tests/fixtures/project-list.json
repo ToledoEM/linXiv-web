@@ -1,0 +1,19 @@
+[
+  {
+    "id": 1,
+    "name": "Disc Proj",
+    "description": "Test $x$",
+    "color_hex": "#4f86f7",
+    "project_tags": [
+      "alpha",
+      "beta"
+    ],
+    "source_ids": [],
+    "paper_count": 0,
+    "status": "active",
+    "created_at": "2026-10-05T19:50:32.556674218",
+    "updated_at": "2026-10-05T19:50:32.556674218",
+    "archived_at": null,
+    "share_id": null
+  }
+]

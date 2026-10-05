@@ -105,3 +105,26 @@ export interface Author {
   last_name: string | null
   paper_count: number
 }
+
+/** linXiv ProjectOut (`project list` / `project get`). */
+export interface Project {
+  id: number
+  name: string
+  description: string
+  color_hex: string | null
+  project_tags: string[]
+  source_ids: string[]
+  paper_count: number
+  status: 'active' | 'archived' | 'deleted'
+  created_at: string
+  updated_at: string
+  archived_at: string | null
+  share_id: string | null
+}
+
+export interface ProjectInput {
+  name: string
+  description: string
+  color_hex: string | null
+  project_tags: string[]
+}
