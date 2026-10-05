@@ -1,0 +1,106 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  conventions:
+    name: Branch name + commit messages
+    if: github.event_name == 'pull_request' && github.actor != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Branch name is <type>/<slug>
+        env:
+          BRANCH: ${{ github.head_ref }}
+        run: |
+          case "$BRANCH" in
+            feat/?*|fix/?*|refactor/?*|perf/?*|docs/?*|test/?*|chore/?*|build/?*|ci/?*|style/?*|revert/?*) ;;
+            *) echo "::error::branch '$BRANCH' should be <type>/<slug> (see CONTRIBUTING.md)"; exit 1 ;;
+          esac
+      - name: Commit messages pass .githooks/commit-lint.sh
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          failed=0
+          for sha in $(git rev-list --no-merges "$BASE..$HEAD"); do
+            git log -1 --format=%B "$sha" > msg
+            if ! out=$(sh .githooks/commit-lint.sh msg); then
+              echo "::error::$(git log -1 --format='%h %s' "$sha")"
+              printf '%s\n' "$out"
+              failed=1
+            fi
+          done
+          exit $failed
+
+  web:
+    name: Frontend (lint + typecheck + build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
+
+  image:
+    name: Server tests + image (linXiv ${{ matrix.linxiv_ref }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        linxiv_ref: [v0.6.0]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      # server-test runs ruff + pytest, including the real-CLI integration test.
+      - name: Server tests
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: server-test
+          build-args: LINXIV_REF=${{ matrix.linxiv_ref }}
+          cache-from: type=gha,scope=${{ matrix.linxiv_ref }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.linxiv_ref }}
+      - name: Runtime image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          build-args: LINXIV_REF=${{ matrix.linxiv_ref }}
+          tags: linxiv-web:ci
+          load: true
+          cache-from: type=gha,scope=${{ matrix.linxiv_ref }}
+      - name: Smoke test
+        run: |
+          mkdir -p data pdfs && chmod 777 data pdfs
+          docker run -d --name lxw -p 127.0.0.1:8000:8000 -e LINXIV_WEB_PASSWORD=ci \
+            -v "$PWD/data:/data" -v "$PWD/pdfs:/pdfs" linxiv-web:ci
+          for i in $(seq 1 20); do curl -sf http://127.0.0.1:8000/api/health && break; sleep 1; done
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8000/api/stats)" = 401
+          curl -sf -c jar -H 'content-type: application/json' -d '{"password":"ci"}' http://127.0.0.1:8000/api/login
+          curl -sf -b jar http://127.0.0.1:8000/api/stats
+          curl -sf http://127.0.0.1:8000/ | grep -q 'id="root"'
+          test -L data/pdfs
+      - name: Container logs
+        if: failure()
+        run: docker logs lxw || true
