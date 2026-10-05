@@ -6,11 +6,18 @@ can't be read as a flag; the project name/id still follow `--`.
 
 from __future__ import annotations
 
+import re
+import shutil
+import tempfile
+from pathlib import Path
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Request
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+from starlette.background import BackgroundTask
 
+from ..cli import CLIError
 from .common import ident, run
 
 router = APIRouter(prefix="/api", tags=["projects"])
@@ -121,6 +128,55 @@ async def add_papers(request: Request, project_id: int, body: PaperIds):
 async def remove_paper(request: Request, project_id: int, source_id: str):
     return await run(
         request, ["project", "remove-paper", "--", str(project_id), ident(source_id, "paper id")]
+    )
+
+
+# format -> (CLI subcommand, file extension, media type)
+EXPORTS = {
+    "lxproj": ("export", ".lxproj", "application/zip"),
+    "bibtex": ("export-bibtex", ".bib", "application/x-bibtex"),
+    "obsidian": ("export-obsidian", ".md", "text/markdown"),
+    "zotero": ("export-zotero", ".json", "application/json"),
+}
+
+
+def _slug(name: str, project_id: int) -> str:
+    """Download file name, as linXiv desktop's slugify (src/api/exportImport.ts)."""
+    stripped = re.sub(r"\s+", "_", re.sub(r'[:/\\*?"<>|]', "", name)).lower()
+    return stripped or f"project-{project_id}"
+
+
+@router.get("/projects/{project_id}/export")
+async def export_project(
+    request: Request,
+    project_id: int,
+    format: Literal["lxproj", "bibtex", "obsidian", "zotero"] = "lxproj",
+    pdfs: bool = False,
+):
+    """The CLI writes the export into a private temp dir; the file is sent as a
+    download and the dir removed once the response is done. `pdfs` bundles
+    saved PDFs into the .lxproj archive."""
+    sub, ext, media = EXPORTS[format]
+    project = await run(request, ["project", "get", "--", str(project_id)])
+    tmp = Path(tempfile.mkdtemp(prefix="lxw-export-"))
+    try:
+        args = ["project", sub]
+        if format == "lxproj" and pdfs:
+            args.append("--pdfs")
+        out = await run(
+            request, [*args, "--", str(project_id), str(tmp / f"export{ext}")], long=True
+        )
+        path = Path(str(out.get("path", ""))).resolve() if isinstance(out, dict) else None
+        if not path or not path.is_file() or not path.is_relative_to(tmp.resolve()):
+            raise CLIError(502, "linxiv export wrote no file")
+    except BaseException:
+        shutil.rmtree(tmp, ignore_errors=True)
+        raise
+    return FileResponse(
+        path,
+        media_type=media,
+        filename=_slug(str(project.get("name", "")), project_id) + ext,
+        background=BackgroundTask(shutil.rmtree, tmp, ignore_errors=True),
     )
 
 

@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import shutil
 import subprocess
+import zipfile
 from dataclasses import replace
 
 import pytest
@@ -130,3 +131,22 @@ def test_real_cli_project_papers(settings):
     assert c.delete(f"/api/projects/{pid}/papers/local:pp2").status_code == 200
     assert c.get(f"/api/projects/{pid}").json()["source_ids"] == ["local:pp1"]
     assert c.get("/api/projects/9999/papers").status_code == 404
+
+
+def test_real_cli_project_export(settings, tmp_path):
+    c = TestClient(create_app(replace(settings, linxiv_bin=BIN)))
+    bib = b"@misc{ex1, title={Export Me}, author={Doe, Jane}, year={2021}}\n"
+    assert c.post("/api/import/bibtex", files={"file": ("a.bib", bib)}).status_code == 200
+    pid = c.post("/api/projects", json={"name": "Ex Port"}).json()["id"]
+    c.post(f"/api/projects/{pid}/papers", json={"source_ids": ["local:ex1"]})
+    r = c.get(f"/api/projects/{pid}/export", params={"format": "bibtex"})
+    assert r.status_code == 200, r.text
+    assert "Export Me" in r.text
+    assert 'filename="ex_port.bib"' in r.headers["content-disposition"]
+    r = c.get(f"/api/projects/{pid}/export", params={"pdfs": "true"})
+    assert r.status_code == 200, r.text
+    (tmp_path / "p.lxproj").write_bytes(r.content)
+    with zipfile.ZipFile(tmp_path / "p.lxproj") as z:
+        assert "manifest.json" in z.namelist()
+    for fmt in ("obsidian", "zotero"):
+        assert c.get(f"/api/projects/{pid}/export", params={"format": fmt}).status_code == 200

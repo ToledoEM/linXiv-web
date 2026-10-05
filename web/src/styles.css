@@ -224,3 +224,7 @@ textarea { resize: vertical; width: 100%; }
 .block { display: block; }
 .pick-row > span { min-width: 0; }
 .pick-row .block { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+a.button { display: inline-block; background: var(--accent-soft); color: var(--text); border-radius: var(--radius); padding: 0.45rem 0.7rem; text-decoration: none; }
+a.button:hover { filter: brightness(0.95); text-decoration: none; }
+.export-panel { display: grid; gap: 0.4rem; margin: 0.75rem 0; }
+.export-panel p { margin: 0; }

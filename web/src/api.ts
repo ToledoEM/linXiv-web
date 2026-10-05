@@ -37,6 +37,13 @@ export function pdfUrl(sourceId: string): string {
   return `/api/papers/${idPath(sourceId)}/pdf`
 }
 
+export type ExportFormat = 'lxproj' | 'bibtex' | 'obsidian' | 'zotero'
+
+/** Plain GET download link: the browser streams the file with the session cookie. */
+export function projectExportUrl(id: number, format: ExportFormat, pdfs = false): string {
+  return `/api/projects/${id}/export?format=${format}${pdfs && format === 'lxproj' ? '&pdfs=true' : ''}`
+}
+
 let onUnauthorized: () => void = () => {}
 export function setUnauthorizedHandler(fn: () => void) {
   onUnauthorized = fn

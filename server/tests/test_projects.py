@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from app.cli import CLIError
 
 from .conftest import fixture
@@ -155,3 +157,65 @@ def test_remove_paper_keeps_slashes(client, fake):
     r = client.delete("/api/projects/1/papers/arxiv:hep-th/9901001")
     assert r.status_code == 200
     assert fake.calls[-1] == ["project", "remove-paper", "--", "1", "arxiv:hep-th/9901001"]
+
+
+def _writes(content: bytes, seen: list):
+    """Fake `project export*`: write `content` to the dest argv, like the CLI."""
+
+    def run(argv):
+        dest = Path(argv[-1])
+        dest.write_bytes(content)
+        seen.append(dest)
+        return {"path": str(dest), "project_id": int(argv[-2])}
+
+    return run
+
+
+def test_export_bibtex_download(client, fake):
+    seen: list[Path] = []
+    fake.on("project", "get", result={**fixture("project-get.json"), "name": 'My: "Proj" x'})
+    fake.on("project", "export-bibtex", result=_writes(b"@article{a}\n", seen))
+    r = client.get("/api/projects/1/export", params={"format": "bibtex"})
+    assert r.status_code == 200, r.text
+    assert r.content == b"@article{a}\n"
+    assert r.headers["content-type"].startswith("application/x-bibtex")
+    assert 'filename="my_proj_x.bib"' in r.headers["content-disposition"]
+    assert fake.calls[-1][:4] == ["project", "export-bibtex", "--", "1"]
+    assert not seen[0].parent.exists()  # temp dir removed after sending
+
+
+def test_export_lxproj_with_pdfs(client, fake):
+    seen: list[Path] = []
+    fake.on("project", "get", result={**fixture("project-get.json"), "name": "***"})
+    fake.on("project", "export", result=_writes(b"PK\x03\x04", seen))
+    r = client.get("/api/projects/7/export", params={"pdfs": "true"})
+    assert r.status_code == 200
+    assert r.headers["content-type"] == "application/zip"
+    assert 'filename="project-7.lxproj"' in r.headers["content-disposition"]
+    assert fake.calls[-1][:5] == ["project", "export", "--pdfs", "--", "7"]
+    assert seen[0].name == "export.lxproj"
+
+
+def test_export_pdfs_flag_only_for_lxproj(client, fake):
+    fake.on("project", "get", result=fixture("project-get.json"))
+    fake.on("project", "export-zotero", result=_writes(b"[]", []))
+    client.get("/api/projects/1/export", params={"format": "zotero", "pdfs": "true"})
+    assert "--pdfs" not in fake.calls[-1]
+
+
+def test_export_errors_clean_up(client, fake):
+    seen: list[Path] = []
+
+    def outside(argv):
+        seen.append(Path(argv[-1]))
+        return {"path": "/etc/passwd", "project_id": 1}
+
+    fake.on("project", "get", result=fixture("project-get.json"))
+    fake.on("project", "export-obsidian", result=outside)
+    r = client.get("/api/projects/1/export", params={"format": "obsidian"})
+    assert r.status_code == 502
+    assert not seen[0].parent.exists()
+
+    fake.on("project", "get", result=CLIError(404, "Project 9 not found"))
+    assert client.get("/api/projects/9/export").status_code == 404
+    assert client.get("/api/projects/1/export", params={"format": "pdf"}).status_code == 422

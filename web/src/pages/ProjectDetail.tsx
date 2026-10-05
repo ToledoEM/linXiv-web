@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { api, idPath } from '../api'
+import { api, idPath, projectExportUrl, type ExportFormat } from '../api'
 import { ErrorText } from '../components'
 import { DeleteButton, ProjectForm, Swatch } from '../projectParts'
 import { failedMessage, READING_LIST_TAG, toggled } from '../projects'
@@ -103,6 +103,37 @@ function AddPapers({
   )
 }
 
+const EXPORTS: { format: ExportFormat; label: string }[] = [
+  { format: 'bibtex', label: 'BibTeX' },
+  { format: 'obsidian', label: 'Obsidian' },
+  { format: 'zotero', label: 'Zotero' },
+  { format: 'lxproj', label: '.lxproj' },
+]
+
+/** Export downloads (desktop ExportDialog). */
+function ExportPanel({ projectId, onClose }: { projectId: number; onClose: () => void }) {
+  const [pdfs, setPdfs] = useState(false)
+  return (
+    <div className="card export-panel">
+      <label className="check">
+        <input type="checkbox" checked={pdfs} onChange={(e) => setPdfs(e.target.checked)} />
+        Include PDFs in .lxproj archive
+      </label>
+      <p className="muted small">BibTeX, Obsidian and Zotero exports include paper metadata only.</p>
+      <div className="actions">
+        {EXPORTS.map((e) => (
+          <a key={e.format} className="button" href={projectExportUrl(projectId, e.format, pdfs)} download>
+            ⇩ {e.label}
+          </a>
+        ))}
+        <button className="link" onClick={onClose}>
+          Close
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export default function ProjectDetail() {
   const { id } = useParams()
   const projectId = id && /^\d+$/.test(id) ? Number(id) : NaN
@@ -113,6 +144,7 @@ export default function ProjectDetail() {
   const [error, setError] = useState('')
   const [editing, setEditing] = useState(false)
   const [adding, setAdding] = useState(false)
+  const [exporting, setExporting] = useState(false)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [busy, setBusy] = useState(false)
 
@@ -208,6 +240,9 @@ export default function ProjectDetail() {
             </h2>
             {project.status === 'archived' && <span className="pill">Archived</span>}
             <div className="actions page-head-action">
+              <button onClick={() => setExporting((v) => !v)} aria-expanded={exporting}>
+                Export
+              </button>
               {project.status === 'archived' ? (
                 <button disabled={busy} onClick={() => run(() => api.unarchiveProject(projectId))}>
                   Restore
@@ -247,6 +282,7 @@ export default function ProjectDetail() {
           )}
         </>
       )}
+      {exporting && !editing && <ExportPanel projectId={projectId} onClose={() => setExporting(false)} />}
       <ErrorText error={error} />
 
       <div className="section-head">
