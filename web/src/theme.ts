@@ -101,6 +101,16 @@ export function saveTheme(pref: ThemePref): void {
     // storage unavailable: theme lasts for this page load only
   }
   applyTheme(pref)
+  window.dispatchEvent(new CustomEvent<ThemePref>(CHANGE_EVENT, { detail: pref }))
+}
+
+const CHANGE_EVENT = 'lxw-theme-change'
+
+// Keeps every mounted picker (sidebar, Settings page) in step.
+export function onThemeChange(fn: (pref: ThemePref) => void): () => void {
+  const handler = (e: Event) => fn((e as CustomEvent<ThemePref>).detail)
+  window.addEventListener(CHANGE_EVENT, handler)
+  return () => window.removeEventListener(CHANGE_EVENT, handler)
 }
 
 // Re-apply when the OS scheme flips and the user follows the system.

@@ -76,6 +76,7 @@ All routes except `/api/health`, `/api/login` and `/api/me` need a session when 
 | `GET /api/pdfs`, `GET /api/pdfs/storage` | `pdf list`, `pdf storage` |
 | `POST /api/pdfs/import` (multipart `file`) | `pdf import` |
 | `GET /api/stats`, `/api/categories`, `/api/tags` | `stats`, `categories`, `tag list-all` |
+| `GET /api/settings`, `PATCH /api/settings` | `settings get`, `settings update` (allowlist: `pdf_save_limit_mb`, `tex_rendering_enabled`, `ARXIV_MAILTO`, `CROSSREF_MAILTO`, `OPENALEX_MAILTO`) |
 
 Paper ids are linXiv source ids such as `arxiv:1706.03762`. Old-style arXiv ids keep their slash: `/api/papers/arxiv:hep-th/9901001`.
 

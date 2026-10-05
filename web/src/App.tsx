@@ -8,12 +8,14 @@ import Library from './pages/Library'
 import PaperDetail from './pages/PaperDetail'
 import Upload from './pages/Upload'
 import StatsPage from './pages/Stats'
+import Settings from './pages/Settings'
 
 const NAV: NavItem[] = [
   { to: '/', label: 'Home', icon: '⌂', end: true },
   { to: '/library', label: 'Library', icon: '▤' },
   { to: '/search', label: 'Search', icon: '⌕' },
   { to: '/upload', label: 'Upload', icon: '⇪' },
+  { to: '/settings', label: 'Settings', icon: '⚙' },
 ]
 
 type AuthState = { checked: boolean; enabled: boolean; authenticated: boolean }
@@ -51,6 +53,7 @@ export default function App() {
           <Route path="/search" element={<Search />} />
           <Route path="/paper/*" element={<PaperDetail />} />
           <Route path="/upload" element={<Upload />} />
+          <Route path="/settings" element={<Settings />} />
           <Route path="/stats" element={<Navigate to="/" replace />} />
           <Route path="*" element={<p className="muted">Page not found.</p>} />
         </Routes>

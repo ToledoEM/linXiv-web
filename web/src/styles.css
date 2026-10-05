@@ -70,7 +70,7 @@ button.link { background: none; border: none; color: var(--muted); padding: 0; }
 .sidebar.collapsed nav a, .sidebar.collapsed .sidebar-foot { justify-content: center; }
 .nav-icon { width: 1.2rem; text-align: center; flex-shrink: 0; }
 .sidebar-toggle { font-size: 1.1rem; }
-.sidebar-theme { padding: 0 0.3rem; }
+.sidebar-theme { padding: 0 0.6rem; }
 .sidebar.collapsed .sidebar-theme { display: flex; justify-content: center; }
 .theme-picker { display: grid; gap: 0.4rem; }
 .theme-picker select { width: 100%; }
@@ -86,8 +86,6 @@ button.link { background: none; border: none; color: var(--muted); padding: 0; }
   .sidebar-head { padding: 0 0.4rem; }
   .sidebar-toggle { display: none; }
   .sidebar-theme { flex-shrink: 0; }
-  .theme-picker { display: flex; }
-  .theme-picker select { width: auto; }
   .sidebar nav { flex-direction: row; }
   .sidebar .nav-label { display: inline; }
   .sidebar.collapsed .nav-label { display: inline; }
@@ -140,3 +138,12 @@ ul.plain { padding-left: 1.1rem; }
 .login form { display: grid; gap: 0.8rem; width: min(22rem, 100%); }
 .login h1 { margin: 0; font-size: 1.4rem; }
 .login label { display: grid; gap: 0.3rem; color: var(--muted); }
+
+.settings { display: grid; gap: 1rem; max-width: 44rem; }
+.settings form { display: grid; gap: 1rem; }
+.settings-section h3 { margin-top: 0; }
+.settings-section { display: grid; gap: 0.75rem; }
+.settings-section p { margin: 0; }
+.settings-theme { max-width: 16rem; }
+.field { display: grid; gap: 0.3rem; }
+.field > span:first-child { font-weight: 600; }

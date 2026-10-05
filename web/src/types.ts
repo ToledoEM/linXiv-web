@@ -56,3 +56,17 @@ export interface Stats {
   recent_papers: Paper[]
   [key: string]: unknown
 }
+
+export interface UserSettings {
+  pdf_save_limit_mb: number
+  tex_rendering_enabled: boolean
+  ARXIV_MAILTO: string
+  CROSSREF_MAILTO: string
+  OPENALEX_MAILTO: string
+}
+
+export interface SettingsResponse {
+  settings: UserSettings
+  /** Contact keys set as env vars on the server; those win over stored values. */
+  env_overrides: string[]
+}

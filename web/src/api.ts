@@ -3,8 +3,10 @@ import type {
   PaperVersions,
   SavedPdf,
   SearchResult,
+  SettingsResponse,
   Source,
   Stats,
+  UserSettings,
 } from './types'
 
 export class ApiError extends Error {
@@ -102,4 +104,8 @@ export const api = {
 
   stats: () => request<Stats>('GET', '/api/stats'),
   storage: () => request<{ storage_mb: number; pdf_dir: string }>('GET', '/api/pdfs/storage'),
+
+  settings: () => request<SettingsResponse>('GET', '/api/settings'),
+  updateSettings: (patch: Partial<UserSettings>) =>
+    request<SettingsResponse>('PATCH', '/api/settings', patch),
 }

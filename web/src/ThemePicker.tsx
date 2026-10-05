@@ -1,5 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
-import { loadTheme, saveTheme, watchSystemMode, PRESET_NAMES, type ModePref, type PresetName } from './theme'
+import {
+  loadTheme,
+  onThemeChange,
+  saveTheme,
+  watchSystemMode,
+  PRESET_NAMES,
+  type ModePref,
+  type PresetName,
+  type ThemePref,
+} from './theme'
 
 const MODES: { value: ModePref; label: string; icon: string }[] = [
   { value: 'system', label: 'System', icon: '◐' },
@@ -8,15 +17,17 @@ const MODES: { value: ModePref; label: string; icon: string }[] = [
 ]
 
 export default function ThemePicker({ compact = false }: { compact?: boolean }) {
-  const [pref, setPref] = useState(loadTheme)
+  const [pref, setLocal] = useState(loadTheme)
   const prefRef = useRef(pref)
 
   useEffect(() => {
     prefRef.current = pref
-    saveTheme(pref)
   }, [pref])
 
   useEffect(() => watchSystemMode(() => prefRef.current), [])
+  useEffect(() => onThemeChange(setLocal), [])
+
+  const setPref = (next: ThemePref) => saveTheme(next)
 
   const cycleMode = () => {
     const i = MODES.findIndex((m) => m.value === pref.mode)

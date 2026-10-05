@@ -29,3 +29,16 @@ def test_real_cli_roundtrip(settings):
     assert missing.status_code == 404
     assert "not found" in missing.json()["detail"]
     assert (settings.data_dir / "papers.db").is_file()
+
+
+def test_real_cli_settings_roundtrip(settings):
+    c = TestClient(create_app(replace(settings, linxiv_bin=BIN)))
+    r = c.patch(
+        "/api/settings",
+        json={"pdf_save_limit_mb": 2048, "OPENALEX_MAILTO": "me@example.org"},
+    )
+    assert r.status_code == 200, r.text
+    got = c.get("/api/settings").json()["settings"]
+    assert got["pdf_save_limit_mb"] == 2048
+    assert got["OPENALEX_MAILTO"] == "me@example.org"
+    assert (settings.data_dir / "user_settings.json").is_file()

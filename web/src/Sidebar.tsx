@@ -59,7 +59,7 @@ export default function Sidebar({ items, onLogout }: { items: NavItem[]; onLogou
         ))}
       </nav>
       <div className="sidebar-theme">
-        <ThemePicker compact={collapsed} />
+        <ThemePicker compact />
       </div>
       {onLogout && (
         <button className="link sidebar-foot" onClick={onLogout} title="Log out">
