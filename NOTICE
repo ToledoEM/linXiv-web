@@ -1,0 +1,9 @@
+linXiv-web
+Copyright 2026 linXiv-web contributors
+
+This product is a web interface for linXiv (https://github.com/linxiv-dev/linXiv),
+licensed under the Apache License, Version 2.0. The container image builds and
+bundles the linXiv `linxiv` CLI from upstream source.
+
+The container image also bundles the pdfium library from
+https://github.com/bblanchon/pdfium-binaries (BSD-3-Clause / Apache-2.0).

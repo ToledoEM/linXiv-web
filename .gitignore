@@ -1,0 +1,25 @@
+# Planning + local notes
+PLAN.md
+discovery/
+CLAUDE*.md
+.claude/
+
+# Local dev data (bind mounts)
+.dev/
+.env
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.coverage
+coverage.xml
+
+# Node
+node_modules/
+web/dist/
+*.tsbuildinfo
+
+# OS
+.DS_Store
