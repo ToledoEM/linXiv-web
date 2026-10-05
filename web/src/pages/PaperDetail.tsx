@@ -1,13 +1,16 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { api, pdfUrl } from '../api'
 import type { Paper, PaperVersions } from '../types'
 import { Authors, ErrorText } from '../components'
+import Notes from '../Notes'
 import { MathText } from '../tex'
 
 export default function PaperDetail() {
   const id = useParams()['*'] ?? ''
   const navigate = useNavigate()
+  // Opened from a project page: new notes default to that project's scope.
+  const fromProjectId = (useLocation().state as { fromProjectId?: number } | null)?.fromProjectId ?? null
   const [paper, setPaper] = useState<Paper | null>(null)
   const [versions, setVersions] = useState<PaperVersions | null>(null)
   const [error, setError] = useState('')
@@ -153,6 +156,8 @@ export default function PaperDetail() {
           <button disabled={!!busy || !newTag.trim()}>Add</button>
         </form>
       </div>
+
+      <Notes key={sid} sourceId={sid} defaultProjectId={fromProjectId} />
 
       <h3>PDF</h3>
       <div className="actions">

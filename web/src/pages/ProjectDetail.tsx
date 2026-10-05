@@ -345,7 +345,7 @@ export default function ProjectDetail() {
                     />
                   </td>
                   <td>
-                    <Link to={`/paper/${idPath(p.source_id)}`}>
+                    <Link to={`/paper/${idPath(p.source_id)}`} state={{ fromProjectId: projectId }}>
                       <MathText forceInline>{p.title}</MathText>
                     </Link>
                     <div className="muted small mono">{p.source_id}</div>

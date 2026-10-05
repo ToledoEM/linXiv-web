@@ -128,3 +128,15 @@ export interface ProjectInput {
   color_hex: string | null
   project_tags: string[]
 }
+
+/** linXiv note (`note list` / `note get`). */
+export interface Note {
+  id: number
+  uuid: string
+  source_fk: number
+  project_id: number | null
+  title: string
+  content: string
+  created_at: string
+  updated_at: string
+}

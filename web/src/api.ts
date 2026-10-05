@@ -1,5 +1,6 @@
 import type {
   Author,
+  Note,
   Paper,
   PaperVersions,
   Project,
@@ -157,6 +158,13 @@ export const api = {
     }),
   removeProjectPaper: (id: number, sourceId: string) =>
     request('DELETE', `/api/projects/${id}/papers/${idPath(sourceId)}`),
+
+  notes: (params: { paper?: string; project?: number }) => request<Note[]>('GET', `/api/notes${qs(params)}`),
+  createNote: (body: { source_id: string; title: string; content: string; project_id: number | null }) =>
+    request<Note>('POST', '/api/notes', body),
+  updateNote: (id: number, body: { title?: string; content?: string }) =>
+    request<Note>('PATCH', `/api/notes/${id}`, body),
+  deleteNote: (id: number) => request('DELETE', `/api/notes/${id}`),
 
   stats: () => request<Stats>('GET', '/api/stats'),
   storage: () => request<{ storage_mb: number; pdf_dir: string }>('GET', '/api/pdfs/storage'),

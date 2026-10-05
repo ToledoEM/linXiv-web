@@ -150,3 +150,24 @@ def test_real_cli_project_export(settings, tmp_path):
         assert "manifest.json" in z.namelist()
     for fmt in ("obsidian", "zotero"):
         assert c.get(f"/api/projects/{pid}/export", params={"format": fmt}).status_code == 200
+
+
+def test_real_cli_notes(settings):
+    c = TestClient(create_app(replace(settings, linxiv_bin=BIN)))
+    bib = b"@misc{nt1, title={Noted}, author={Doe, Jane}, year={2021}}\n"
+    assert c.post("/api/import/bibtex", files={"file": ("a.bib", bib)}).status_code == 200
+    pid = c.post("/api/projects", json={"name": "N"}).json()["id"]
+    r = c.post("/api/notes", json={"source_id": "local:nt1", "title": "-T", "content": "-a\nb"})
+    assert r.status_code == 200, r.text
+    nid = r.json()["id"]
+    r = c.post("/api/notes", json={"source_id": "local:nt1", "content": "p", "project_id": pid})
+    assert r.json()["project_id"] == pid
+    notes = c.get("/api/notes", params={"paper": "local:nt1"}).json()
+    assert [(n["title"], n["content"]) for n in notes] == [("-T", "-a\nb"), ("", "p")]
+    assert [n["content"] for n in c.get("/api/notes", params={"project": pid}).json()] == ["p"]
+    r = c.patch(f"/api/notes/{nid}", json={"content": "new"})
+    assert (r.json()["title"], r.json()["content"]) == ("-T", "new")
+    assert c.delete(f"/api/notes/{nid}").status_code == 200
+    assert c.delete(f"/api/notes/{nid}").status_code == 404
+    bad = c.post("/api/notes", json={"source_id": "x:y", "content": "z"})
+    assert bad.status_code == 404
