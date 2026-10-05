@@ -1,12 +1,20 @@
 import { useEffect, useState } from 'react'
-import { NavLink, Route, Routes, useNavigate } from 'react-router-dom'
+import { Navigate, Route, Routes, useNavigate } from 'react-router-dom'
 import { api, setUnauthorizedHandler } from './api'
+import Sidebar, { type NavItem } from './Sidebar'
 import Login from './pages/Login'
 import Search from './pages/Search'
 import Library from './pages/Library'
 import PaperDetail from './pages/PaperDetail'
 import Upload from './pages/Upload'
 import StatsPage from './pages/Stats'
+
+const NAV: NavItem[] = [
+  { to: '/', label: 'Home', icon: '⌂', end: true },
+  { to: '/library', label: 'Library', icon: '▤' },
+  { to: '/search', label: 'Search', icon: '⌕' },
+  { to: '/upload', label: 'Upload', icon: '⇪' },
+]
 
 type AuthState = { checked: boolean; enabled: boolean; authenticated: boolean }
 
@@ -34,30 +42,16 @@ export default function App() {
   }
 
   return (
-    <div className="shell">
-      <header className="topbar">
-        <span className="brand">
-          linXiv<span className="brand-web">-web</span>
-        </span>
-        <nav>
-          <NavLink to="/" end>Search</NavLink>
-          <NavLink to="/library">Library</NavLink>
-          <NavLink to="/upload">Upload</NavLink>
-          <NavLink to="/stats">Stats</NavLink>
-        </nav>
-        {auth.enabled && (
-          <button className="link" onClick={logout}>
-            Log out
-          </button>
-        )}
-      </header>
-      <main>
+    <div className="layout">
+      <Sidebar items={NAV} onLogout={auth.enabled ? logout : undefined} />
+      <main className="content">
         <Routes>
-          <Route path="/" element={<Search />} />
+          <Route path="/" element={<StatsPage />} />
           <Route path="/library" element={<Library />} />
+          <Route path="/search" element={<Search />} />
           <Route path="/paper/*" element={<PaperDetail />} />
           <Route path="/upload" element={<Upload />} />
-          <Route path="/stats" element={<StatsPage />} />
+          <Route path="/stats" element={<Navigate to="/" replace />} />
           <Route path="*" element={<p className="muted">Page not found.</p>} />
         </Routes>
       </main>
