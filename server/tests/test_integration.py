@@ -209,3 +209,13 @@ def test_real_cli_versions_offline(settings):
     r = c.post("/api/versions/local:vv1/ack")
     assert r.json() == {"ok": True, "already_acknowledged": True}
     assert c.post("/api/versions/nope:1/ack").status_code == 404
+
+
+def test_real_cli_sources_offline(settings):
+    c = TestClient(create_app(replace(settings, linxiv_bin=BIN)))
+    bib = b"@misc{src1, title={S}, author={Doe, Jane}, year={2021}}\n"
+    assert c.post("/api/import/bibtex", files={"file": ("a.bib", bib)}).status_code == 200
+    assert c.get("/api/sources/pending").json() == {"pending": 0, "arxiv_papers": 0}
+    r = c.post("/api/papers/local:src1/source")
+    assert r.status_code == 400, r.text
+    assert "arXiv" in r.json()["detail"]

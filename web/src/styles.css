@@ -257,3 +257,7 @@ a.button:hover { filter: brightness(0.95); text-decoration: none; }
 .version-list { list-style: none; padding: 0; margin: 0; }
 .version-list li { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: 0.6rem 0; border-bottom: 1px solid var(--border); }
 .version-list li:last-child { border-bottom: none; }
+.job { display: grid; gap: 0.4rem; }
+.job p { margin: 0; }
+.progress { height: 0.45rem; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--border); overflow: hidden; }
+.progress span { display: block; height: 100%; background: var(--accent); transition: width 0.3s ease; }

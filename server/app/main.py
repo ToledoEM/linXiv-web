@@ -10,6 +10,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from . import settings as settings_mod
 from .auth import Auth, require_auth
 from .cli import CLIError, LinxivCLI, Runner
+from .jobs import Jobs
 from .routes import (
     add,
     authors,
@@ -19,6 +20,7 @@ from .routes import (
     notes,
     pdfs,
     projects,
+    sources,
     trash,
     user_settings,
     versions,
@@ -50,6 +52,7 @@ def create_app(
     app = FastAPI(title="linXiv-web", version=__version__, docs_url=None, redoc_url=None)
     app.state.settings = settings
     app.state.auth = Auth(settings)
+    app.state.jobs = Jobs()
     app.state.cli = runner or LinxivCLI(
         settings.linxiv_bin, env={"LINXIV_DATA_DIR": str(settings.data_dir)}
     )
@@ -76,6 +79,7 @@ def create_app(
     app.include_router(projects.router, dependencies=guarded)
     app.include_router(notes.router, dependencies=guarded)
     app.include_router(versions.router, dependencies=guarded)
+    app.include_router(sources.router, dependencies=guarded)
     # Before library: its GET /papers/{id:path} would swallow .../lookup.
     app.include_router(metadata.router, dependencies=guarded)
     app.include_router(library.router, dependencies=guarded)

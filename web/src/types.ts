@@ -33,6 +33,8 @@ export interface Paper {
   has_pdf: boolean
   pdf_path?: string | null
   source?: string
+  /** arXiv TeX source fetched and indexed for full-text search. */
+  downloaded_source?: boolean
 }
 
 export interface PaperVersions {
@@ -173,4 +175,20 @@ export interface NewVersion {
   source_id: string
   title: string
   version: number
+}
+
+/** Background job (GET /api/jobs/{id}). */
+export interface Job {
+  id: number
+  kind: string
+  state: 'running' | 'done' | 'failed' | 'cancelled'
+  total: number
+  done: number
+  current: string | null
+  result: Record<string, number>
+  errors: { source_id: string; error: string }[]
+  error: string | null
+  started_at: number
+  finished_at: number | null
+  cancel_requested: boolean
 }

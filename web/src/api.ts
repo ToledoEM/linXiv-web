@@ -1,5 +1,6 @@
 import type {
   Author,
+  Job,
   LookupSource,
   MetadataCandidate,
   MetadataInput,
@@ -180,6 +181,18 @@ export const api = {
   newVersions: () => request<{ new_versions: NewVersion[] }>('GET', '/api/versions/new'),
   checkVersions: () => request<{ checked: number; new_versions: NewVersion[] }>('POST', '/api/versions/check'),
   ackVersion: (id: string) => request('POST', `/api/versions/${idPath(id)}/ack`),
+
+  fetchSource: (id: string, force = false) =>
+    request<{ source_id: string; indexed: boolean; chars?: number; reason?: string }>(
+      'POST',
+      `/api/papers/${idPath(id)}/source`,
+      { force },
+    ),
+  sourcesPending: () => request<{ pending: number; arxiv_papers: number }>('GET', '/api/sources/pending'),
+  startIndexSources: (limit: number) => request<Job>('POST', '/api/jobs/index-sources', { limit }),
+  jobs: (kind: string) => request<Job[]>('GET', `/api/jobs${qs({ kind })}`),
+  job: (id: number) => request<Job>('GET', `/api/jobs/${id}`),
+  cancelJob: (id: number) => request<Job>('POST', `/api/jobs/${id}/cancel`),
 
   stats: () => request<Stats>('GET', '/api/stats'),
   storage: () => request<{ storage_mb: number; pdf_dir: string }>('GET', '/api/pdfs/storage'),

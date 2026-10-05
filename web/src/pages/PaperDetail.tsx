@@ -21,6 +21,7 @@ export default function PaperDetail() {
   const [showPdf, setShowPdf] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [editingMeta, setEditingMeta] = useState(false)
+  const [sourceNote, setSourceNote] = useState('')
 
   const load = useCallback(async () => {
     try {
@@ -208,6 +209,31 @@ export default function PaperDetail() {
         )}
       </div>
       {showPdf && paper.has_pdf && <iframe className="pdf" src={pdfUrl(sid)} title={paper.title} />}
+
+      {sid.startsWith('arxiv:') && (
+        <>
+          <h3>Full text</h3>
+          <div className="actions">
+            <span className="muted small">
+              {paper.downloaded_source
+                ? 'TeX source indexed: Full text search in the Library covers this paper.'
+                : 'TeX source not fetched: Full text search can’t find words inside this paper yet.'}
+            </span>
+            <button
+              disabled={!!busy}
+              onClick={() =>
+                act('source', async () => {
+                  const r = await api.fetchSource(id, !!paper.downloaded_source)
+                  setSourceNote(r.indexed ? `Indexed ${r.chars ?? 0} characters.` : (r.reason ?? 'Nothing to index.'))
+                })
+              }
+            >
+              {busy === 'source' ? 'Fetching…' : paper.downloaded_source ? 'Re-fetch TeX source' : 'Fetch TeX source'}
+            </button>
+            {sourceNote && <span className="small">{sourceNote}</span>}
+          </div>
+        </>
+      )}
 
       <ErrorText error={error} />
 
