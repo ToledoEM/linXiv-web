@@ -253,3 +253,7 @@ a.button:hover { filter: brightness(0.95); text-decoration: none; }
 .diff-cell { white-space: pre-wrap; overflow-wrap: anywhere; max-width: 28rem; font-size: 0.9rem; }
 .field-row { display: flex; flex-wrap: wrap; gap: 0.8rem; }
 .field-row .grow { min-width: 14rem; }
+.count-pill { margin-left: 0.5rem; text-transform: none; letter-spacing: 0; color: var(--accent); }
+.version-list { list-style: none; padding: 0; margin: 0; }
+.version-list li { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: 0.6rem 0; border-bottom: 1px solid var(--border); }
+.version-list li:last-child { border-bottom: none; }

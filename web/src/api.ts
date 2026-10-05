@@ -3,6 +3,7 @@ import type {
   LookupSource,
   MetadataCandidate,
   MetadataInput,
+  NewVersion,
   Note,
   Paper,
   PaperVersions,
@@ -175,6 +176,10 @@ export const api = {
   updateNote: (id: number, body: { title?: string; content?: string }) =>
     request<Note>('PATCH', `/api/notes/${id}`, body),
   deleteNote: (id: number) => request('DELETE', `/api/notes/${id}`),
+
+  newVersions: () => request<{ new_versions: NewVersion[] }>('GET', '/api/versions/new'),
+  checkVersions: () => request<{ checked: number; new_versions: NewVersion[] }>('POST', '/api/versions/check'),
+  ackVersion: (id: string) => request('POST', `/api/versions/${idPath(id)}/ack`),
 
   stats: () => request<Stats>('GET', '/api/stats'),
   storage: () => request<{ storage_mb: number; pdf_dir: string }>('GET', '/api/pdfs/storage'),

@@ -166,3 +166,11 @@ export interface MetadataCandidate {
   doi: string | null
   url: string | null
 }
+
+/** `versions new` / `versions check` entry: a saved arXiv paper with a newer version stored. */
+export interface NewVersion {
+  source_fk: number
+  source_id: string
+  title: string
+  version: number
+}

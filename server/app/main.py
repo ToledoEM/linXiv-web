@@ -21,6 +21,7 @@ from .routes import (
     projects,
     trash,
     user_settings,
+    versions,
 )
 from .routes import auth as auth_routes
 
@@ -74,6 +75,7 @@ def create_app(
     app.include_router(authors.router, dependencies=guarded)
     app.include_router(projects.router, dependencies=guarded)
     app.include_router(notes.router, dependencies=guarded)
+    app.include_router(versions.router, dependencies=guarded)
     # Before library: its GET /papers/{id:path} would swallow .../lookup.
     app.include_router(metadata.router, dependencies=guarded)
     app.include_router(library.router, dependencies=guarded)

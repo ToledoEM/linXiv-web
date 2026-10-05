@@ -1,0 +1,10 @@
+{
+  "new_versions": [
+    {
+      "source_fk": 1,
+      "source_id": "arxiv:1706.03762",
+      "title": "Attention Is All You Need",
+      "version": 7
+    }
+  ]
+}

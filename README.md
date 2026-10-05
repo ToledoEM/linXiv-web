@@ -89,6 +89,7 @@ All routes except `/api/health`, `/api/login` and `/api/me` need a session when 
 | `GET /api/projects/{id}/export?format=lxproj\|bibtex\|obsidian\|zotero&pdfs` | `project export [--pdfs]`, `export-bibtex`, `export-obsidian`, `export-zotero`; written to a temp dir, sent as a download, then deleted |
 | `POST /api/projects/{id}/archive`, `POST /api/projects/{id}/restore`, `DELETE /api/projects/{id}` | `project archive`, `project restore`, `project delete` (soft delete, goes to trash) |
 | `GET /api/notes?paper=&project=`, `POST /api/notes`, `PATCH /api/notes/{id}`, `DELETE /api/notes/{id}` | `note list`, `note create [--project-id]`, `note update`, `note delete` (permanent); title/content capped at 100 kB |
+| `GET /api/versions/new`, `POST /api/versions/check` `{limit?}`, `POST /api/versions/{id}/ack` | `versions new`, `versions check --limit` (1 to 100, default 20; stores new versions it finds), `versions ack` (a second ack still returns ok) |
 | `GET /api/trash` | `trash list` |
 | `POST /api/trash/papers/{id}/restore`, `DELETE /api/trash/papers/{id}` | `trash restore`, `trash hard-delete` (paper must be in the trash) |
 | `POST /api/trash/projects/{id}/restore`, `DELETE /api/trash/projects/{id}` | `trash restore-project`, `trash hard-delete-project` |

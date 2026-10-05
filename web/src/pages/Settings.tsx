@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { api } from '../api'
 import { ErrorText } from '../components'
 import ThemePicker from '../ThemePicker'
+import VersionMonitor from '../VersionMonitor'
 import type { UserSettings } from '../types'
 import { setTexEnabled } from '../texStore'
 
@@ -142,6 +143,7 @@ export default function Settings() {
         </div>
         <ErrorText error={error} />
       </form>
+      <VersionMonitor />
     </section>
   )
 }

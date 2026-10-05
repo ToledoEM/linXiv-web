@@ -198,3 +198,14 @@ def test_real_cli_metadata_repair_keeps_tags(settings):
     assert p["tags"] == ["keep"]
     bad = c.put("/api/papers/local:rp1/metadata", json={**body, "published": "2021-02-30"})
     assert bad.status_code == 400, bad.text
+
+
+def test_real_cli_versions_offline(settings):
+    """No arXiv papers saved, so nothing is polled or flagged."""
+    c = TestClient(create_app(replace(settings, linxiv_bin=BIN)))
+    assert c.get("/api/versions/new").json() == {"new_versions": []}
+    bib = b"@misc{vv1, title={V}, author={Doe, Jane}, year={2021}}\n"
+    assert c.post("/api/import/bibtex", files={"file": ("a.bib", bib)}).status_code == 200
+    r = c.post("/api/versions/local:vv1/ack")
+    assert r.json() == {"ok": True, "already_acknowledged": True}
+    assert c.post("/api/versions/nope:1/ack").status_code == 404
