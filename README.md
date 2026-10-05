@@ -75,6 +75,7 @@ All routes except `/api/health`, `/api/login` and `/api/me` need a session when 
 | `GET/POST/DELETE /api/papers/{id}/tags` | `tag list` / `tag add` / `tag remove` |
 | `GET /api/pdfs`, `GET /api/pdfs/storage` | `pdf list`, `pdf storage` |
 | `POST /api/pdfs/import` (multipart `file`) | `pdf import` |
+| `POST /api/add` `{input}` | arXiv id/link: `fetch`; DOI or doi.org link: `doi save`; other http(s) link: server downloads the PDF (public hosts only, size-capped), then `pdf import` |
 | `GET /api/stats`, `/api/categories`, `/api/tags` | `stats`, `categories`, `tag list-all` |
 | `GET /api/settings`, `PATCH /api/settings` | `settings get`, `settings update` (allowlist: `pdf_save_limit_mb`, `tex_rendering_enabled`, `ARXIV_MAILTO`, `CROSSREF_MAILTO`, `OPENALEX_MAILTO`) |
 

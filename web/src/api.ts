@@ -110,6 +110,13 @@ export const api = {
     return request<{ source_id: string; title: string }>('POST', '/api/pdfs/import', form)
   },
 
+  add: (input: string) =>
+    request<{ kind: 'arxiv' | 'doi' | 'pdf'; paper: Partial<Paper> & { source_id: string } }>(
+      'POST',
+      '/api/add',
+      { input },
+    ),
+
   stats: () => request<Stats>('GET', '/api/stats'),
   storage: () => request<{ storage_mb: number; pdf_dir: string }>('GET', '/api/pdfs/storage'),
 
