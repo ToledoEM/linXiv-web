@@ -12,7 +12,7 @@ import VersionMonitor from '../VersionMonitor'
 import { clearHistory, historySize } from '../searchHistory'
 import { SHORTCUTS } from '../shortcuts'
 import { PAGE_OPTIONS, setSidebarPage, useSidebarPages } from '../sidebarPages'
-import type { UserSettings } from '../types'
+import type { NcbiKeyStatus, UserSettings } from '../types'
 import { setTexEnabled } from '../texStore'
 import { formSubmitOnCtrlEnter } from '../submitShortcut'
 
@@ -26,6 +26,7 @@ export default function Settings() {
   const [saved, setSaved] = useState<UserSettings | null>(null)
   const [draft, setDraft] = useState<UserSettings | null>(null)
   const [envOverrides, setEnvOverrides] = useState<string[]>([])
+  const [ncbi, setNcbi] = useState<NcbiKeyStatus | null>(null)
   const [storageMb, setStorageMb] = useState<number | null>(null)
   const [error, setError] = useState('')
   const [status, setStatus] = useState('')
@@ -40,6 +41,7 @@ export default function Settings() {
         setSaved(r.settings)
         setDraft(r.settings)
         setEnvOverrides(r.env_overrides)
+        setNcbi(r.ncbi_api_key)
       })
       .catch((err) => setError((err as Error).message))
     api
@@ -67,6 +69,7 @@ export default function Settings() {
       setSaved(r.settings)
       setDraft(r.settings)
       setEnvOverrides(r.env_overrides)
+      setNcbi(r.ncbi_api_key)
       setTexEnabled(r.settings.tex_rendering_enabled)
       setStatus('Saved.')
     } catch (err) {
@@ -91,7 +94,7 @@ export default function Settings() {
 
       <form onSubmit={submit} onKeyDown={formSubmitOnCtrlEnter}>
         <div className="card settings-section">
-          <h3>Contacts</h3>
+          <h3>Contacts &amp; API keys</h3>
           <p className="muted small">
             Email addresses linXiv sends to metadata services. Leave empty to send none.
           </p>
@@ -112,6 +115,49 @@ export default function Settings() {
               </span>
             </label>
           ))}
+          <label className="field">
+            <span>NCBI API key (PubMed)</span>
+            <input
+              type="password"
+              autoComplete="off"
+              spellCheck={false}
+              value={draft.NCBI_API_KEY}
+              placeholder={ncbi?.set ? 'Enter a new key to replace it' : 'Paste your NCBI API key'}
+              onChange={(e) => set('NCBI_API_KEY', e.target.value.trim())}
+            />
+            <span className="muted small">
+              {ncbi?.source === 'env'
+                ? `Set by the server environment (…${ncbi.last4}); it takes precedence.`
+                : ncbi?.set
+                  ? `Key saved (…${ncbi.last4}).`
+                  : 'Not set.'}{' '}
+              Raises PubMed lookups from 3 to 10 per second.{' '}
+              <a href="https://support.nlm.nih.gov/kbArticle/?pn=KA-05317" target="_blank" rel="noreferrer">
+                How to get one
+              </a>
+            </span>
+          </label>
+          {ncbi?.source === 'settings' && (
+            <div className="actions">
+              <button
+                type="button"
+                className="link danger-link"
+                disabled={busy}
+                onClick={async () => {
+                  setError('')
+                  try {
+                    const r = await api.updateSettings({ NCBI_API_KEY: '' })
+                    setNcbi(r.ncbi_api_key)
+                    setStatus('NCBI API key removed.')
+                  } catch (err) {
+                    setError((err as Error).message)
+                  }
+                }}
+              >
+                Remove NCBI API key
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="card settings-section">

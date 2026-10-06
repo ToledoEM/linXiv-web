@@ -243,3 +243,39 @@ def test_lookup_biorxiv_errors(client, fake, monkeypatch):
     fake.on("paper", "get", result={"source_id": SID, "doi": "10.1101/x", "title": "T"})
     r = client.get(f"/api/papers/{SID}/lookup", params={"source": "biorxiv"})
     assert r.status_code == 502 and "bioRxiv" in r.json()["detail"]
+
+
+def test_pubmed_sends_api_key_when_set(client, fake, monkeypatch):
+    monkeypatch.delenv("NCBI_API_KEY", raising=False)
+    seen: list = []
+    _ncbi(monkeypatch, {"10.1038/nature14539[doi]": ["26017442"]}, seen)
+    fake.on("paper", "get", result={"source_id": SID, "doi": "10.1038/nature14539", "title": "D"})
+    fake.on("settings", "get", result={"NCBI_API_KEY": "abcdef0123456789abcdef0123456789abcd"})
+    assert client.get(f"/api/papers/{SID}/lookup", params={"source": "pubmed"}).status_code == 200
+    assert all(u.params["api_key"] == "abcdef0123456789abcdef0123456789abcd" for u in seen)
+    assert len(seen) == 2  # esearch + efetch
+
+    seen.clear()
+    monkeypatch.setenv("NCBI_API_KEY", "ENVKEY0123456789ENVKEY")
+    client.get(f"/api/papers/{SID}/lookup", params={"source": "pubmed"})
+    assert seen[0].params["api_key"] == "ENVKEY0123456789ENVKEY"  # env wins
+
+    seen.clear()
+    monkeypatch.delenv("NCBI_API_KEY")
+    fake.on("settings", "get", result={})
+    client.get(f"/api/papers/{SID}/lookup", params={"source": "pubmed"})
+    assert "api_key" not in seen[0].params
+
+
+def test_pubmed_error_does_not_leak_key(client, fake, monkeypatch):
+    def down(req):
+        raise httpx.ConnectError(f"cannot reach {req.url}")
+
+    monkeypatch.setattr(
+        metadata, "_http", lambda: httpx.AsyncClient(transport=httpx.MockTransport(down))
+    )
+    fake.on("paper", "get", result={"source_id": SID, "doi": None, "title": "T"})
+    fake.on("settings", "get", result={"NCBI_API_KEY": "SECRETKEY0123456789SECRET"})
+    r = client.get(f"/api/papers/{SID}/lookup", params={"source": "pubmed"})
+    assert r.status_code == 502
+    assert "SECRET" not in r.text

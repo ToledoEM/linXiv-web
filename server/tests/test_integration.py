@@ -460,3 +460,16 @@ def test_real_cli_pdf_folder_layout(settings):
         assert run_layout("year")["result"]["moved"] == 1
         assert c.delete(f"/api/papers/{sid}/pdf").status_code == 200
         assert not any(settings.pdf_dir.rglob("*.pdf"))
+
+
+def test_real_cli_ncbi_api_key_setting(settings, monkeypatch):
+    monkeypatch.delenv("NCBI_API_KEY", raising=False)
+    c = TestClient(create_app(replace(settings, linxiv_bin=BIN)))
+    assert c.get("/api/settings").json()["ncbi_api_key"]["set"] is False
+    digits = "12345678901234567890123456"  # all digits: must stay a string
+    body = c.patch("/api/settings", json={"NCBI_API_KEY": digits}).json()
+    assert body["ncbi_api_key"] == {"set": True, "last4": "3456", "source": "settings"}
+    assert digits not in str(body)
+    assert (
+        c.patch("/api/settings", json={"NCBI_API_KEY": ""}).json()["ncbi_api_key"]["set"] is False
+    )

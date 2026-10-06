@@ -33,6 +33,10 @@ DEFAULTS: dict[str, object] = {
     "web_pdf_folder_layout": "none",
 }
 FEED_KEYS = ("home_feed_url", "rss_cache_retention_days")
+# NCBI E-utilities key for PubMed lookups (10 instead of 3 requests/s). A secret:
+# stored like any setting but never sent back; the env var of the same name wins.
+NCBI_KEY = "NCBI_API_KEY"
+NCBI_KEY_RE = r"^$|^[A-Za-z0-9]{20,64}$"
 EMAIL = r"^$|^[^@\s]+@[^@\s]+\.[^@\s]+$"
 FEED_URL = r"^$|^[Hh][Tt][Tt][Pp][Ss]?://[^\s/?#]+[^\s]*$"
 
@@ -50,6 +54,7 @@ class SettingsPatch(BaseModel):
     search_history_enabled: bool | None = None
     search_history_max: int | None = Field(None, ge=1, le=10_000)
     full_text_worker_enabled: bool | None = None
+    NCBI_API_KEY: str | None = Field(None, max_length=64, pattern=NCBI_KEY_RE)
 
 
 async def _current(request: Request) -> dict:
@@ -58,8 +63,23 @@ async def _current(request: Request) -> dict:
     values = {k: raw.get(k, d) for k, d in DEFAULTS.items()}
     for k in (*MAILTO_KEYS, "home_feed_url"):
         values[k] = values[k] or ""
-    env_overrides = [k for k in MAILTO_KEYS if os.environ.get(k)]
-    return {"settings": values, "env_overrides": env_overrides}
+    env_overrides = [k for k in (*MAILTO_KEYS, NCBI_KEY) if os.environ.get(k)]
+    key, source = ncbi_api_key(raw)
+    return {
+        "settings": {**values, NCBI_KEY: ""},  # write-only: the stored key never leaves the server
+        "env_overrides": env_overrides,
+        "ncbi_api_key": {"set": bool(key), "last4": key[-4:] if key else None, "source": source},
+    }
+
+
+def ncbi_api_key(stored: dict) -> tuple[str, str | None]:
+    """(key, "env" | "settings" | None) — the env var wins over the stored setting."""
+    if env := os.environ.get(NCBI_KEY, "").strip():
+        return env, "env"
+    saved = stored.get(NCBI_KEY) if isinstance(stored, dict) else None
+    if isinstance(saved, str) and saved.strip():
+        return saved.strip(), "settings"
+    return "", None
 
 
 @router.get("/settings")
@@ -74,6 +94,8 @@ async def update_settings(request: Request, body: SettingsPatch):
         # The CLI JSON-parses the value, so bools/ints go as JSON; an email is
         # never valid JSON and stays a string.
         arg = json.dumps(value) if isinstance(value, bool | int) else value
+        if key == NCBI_KEY:
+            arg = json.dumps(value)  # quoted, so an all-digit key stays a string
         await run(request, ["settings", "update", "--", key, arg])
     if any(k in patch for k in FEED_KEYS):
         clear_feed_cache(request)

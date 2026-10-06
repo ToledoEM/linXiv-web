@@ -77,6 +77,8 @@ export interface UserSettings {
   full_text_worker_enabled: boolean
   /** Last layout applied in Settings → PDF folders (read-only here; set by the layout job). */
   web_pdf_folder_layout: PdfLayout
+  /** Write-only: always "" from the server; send a new key to set it, "" to remove. */
+  NCBI_API_KEY: string
 }
 
 export type PdfLayout = 'none' | 'year' | 'journal' | 'year/journal' | 'journal/year'
@@ -117,6 +119,14 @@ export interface SettingsResponse {
   settings: UserSettings
   /** Contact keys set as env vars on the server; those win over stored values. */
   env_overrides: string[]
+  /** NCBI (PubMed) API key status; the key itself is never returned. */
+  ncbi_api_key: NcbiKeyStatus
+}
+
+export interface NcbiKeyStatus {
+  set: boolean
+  last4: string | null
+  source: 'settings' | 'env' | null
 }
 
 export interface TrashedPaper {

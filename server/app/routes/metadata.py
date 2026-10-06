@@ -23,6 +23,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from ..cli import CLIError
 from .common import ident, run
+from .user_settings import ncbi_api_key
 
 router = APIRouter(prefix="/api", tags=["metadata"])
 
@@ -170,12 +171,18 @@ def _http() -> httpx.AsyncClient:
     return httpx.AsyncClient(timeout=20, headers={"User-Agent": "linxiv-web"})
 
 
-async def _ncbi(path: str, params: dict) -> bytes:
+async def _ncbi(path: str, params: dict, api_key: str = "") -> bytes:
+    query = {**params, "tool": "linxiv-web"}
+    if api_key:
+        query["api_key"] = api_key
     try:
         async with _http() as client:
-            r = await client.get(f"{NCBI}/{path}", params={**params, "tool": "linxiv-web"})
+            r = await client.get(f"{NCBI}/{path}", params=query)
     except httpx.HTTPError as e:
-        raise HTTPException(status_code=502, detail=f"PubMed lookup failed: {e}") from e
+        # Exception type only: the request URL (with the api_key) must not leak.
+        raise HTTPException(
+            status_code=502, detail=f"PubMed lookup failed ({type(e).__name__})"
+        ) from e
     if r.status_code != 200 or len(r.content) > NCBI_MAX_BYTES:
         raise HTTPException(status_code=502, detail=f"PubMed lookup failed ({r.status_code})")
     return r.content
@@ -257,9 +264,11 @@ def _pubmed_parse(xml: bytes) -> list[dict]:
     return out
 
 
-async def _pubmed(term: str) -> list[dict]:
+async def _pubmed(term: str, api_key: str = "") -> list[dict]:
     found = await _ncbi(
-        "esearch.fcgi", {"db": "pubmed", "retmode": "json", "retmax": MAX_RESULTS, "term": term}
+        "esearch.fcgi",
+        {"db": "pubmed", "retmode": "json", "retmax": MAX_RESULTS, "term": term},
+        api_key,
     )
     try:
         ids = json.loads(found)["esearchresult"]["idlist"]
@@ -267,7 +276,9 @@ async def _pubmed(term: str) -> list[dict]:
         raise HTTPException(status_code=502, detail="PubMed lookup failed (bad reply)") from e
     if not ids:
         return []
-    xml = await _ncbi("efetch.fcgi", {"db": "pubmed", "retmode": "xml", "id": ",".join(ids)})
+    xml = await _ncbi(
+        "efetch.fcgi", {"db": "pubmed", "retmode": "xml", "id": ",".join(ids)}, api_key
+    )
     try:
         return _pubmed_parse(xml)
     except ET.ParseError as e:
@@ -355,10 +366,15 @@ async def lookup(
             )
         return {"match": "doi", "candidates": await _biorxiv(doi)}
     if source == "pubmed":
+        try:
+            stored = await run(request, ["settings", "get"])
+        except CLIError:
+            stored = {}  # no key is not a reason to fail the lookup
+        key, _ = ncbi_api_key(stored)
         # Not every DOI is indexed in PubMed; fall back to the title.
-        if doi and (found := await _pubmed(f"{doi}[doi]")):
+        if doi and (found := await _pubmed(f"{doi}[doi]", key)):
             return {"match": "doi", "candidates": found}
-        return {"match": "title", "candidates": await _pubmed(f"{title}[title]")}
+        return {"match": "title", "candidates": await _pubmed(f"{title}[title]", key)}
     if not title:
         raise HTTPException(status_code=400, detail="paper has no title to search by")
     return {"match": "title", "candidates": await _search(request, source, title)}

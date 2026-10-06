@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 from .conftest import fixture
 
 
@@ -22,6 +24,7 @@ def test_get_settings_hides_unlisted_keys(client, fake, monkeypatch):
         "search_history_max": 200,
         "full_text_worker_enabled": False,
         "web_pdf_folder_layout": "none",
+        "NCBI_API_KEY": "",
     }
     assert "p2p_relay_auth_token" not in r.text
     assert body["env_overrides"] == ["CROSSREF_MAILTO"]
@@ -108,3 +111,32 @@ def test_patch_search_history_settings(client, fake):
     assert client.patch("/api/settings", json=body).status_code == 200
     updates = [c[-2:] for c in fake.calls if c[:2] == ["settings", "update"]]
     assert updates == [["search_history_enabled", "false"], ["search_history_max", "50"]]
+
+
+def test_ncbi_api_key_is_write_only(client, fake, monkeypatch):
+    monkeypatch.delenv("NCBI_API_KEY", raising=False)
+    stored: dict = {}
+    fake.on("settings", "get", result=lambda _: stored)
+    fake.on(
+        "settings", "update", result=lambda argv: stored.update({argv[-2]: json.loads(argv[-1])})
+    )
+    key = "abcdef0123456789abcdef0123456789ab12"
+    r = client.patch("/api/settings", json={"NCBI_API_KEY": key})
+    assert r.status_code == 200, r.text
+    assert ["settings", "update", "--", "NCBI_API_KEY", f'"{key}"'] in fake.calls
+    body = client.get("/api/settings").json()
+    assert key not in str(body)
+    assert body["settings"]["NCBI_API_KEY"] == ""
+    assert body["ncbi_api_key"] == {"set": True, "last4": "ab12", "source": "settings"}
+
+    monkeypatch.setenv("NCBI_API_KEY", "ENVKEY0123456789ENVzz99")
+    body = client.get("/api/settings").json()
+    assert body["ncbi_api_key"]["source"] == "env" and "NCBI_API_KEY" in body["env_overrides"]
+    monkeypatch.delenv("NCBI_API_KEY")
+
+    assert (
+        client.patch("/api/settings", json={"NCBI_API_KEY": ""}).json()["ncbi_api_key"]["set"]
+        is False
+    )
+    for bad in ("short", "has space in it 12345678", "x" * 65, "abc$def0123456789abcdef"):
+        assert client.patch("/api/settings", json={"NCBI_API_KEY": bad}).status_code == 422, bad
