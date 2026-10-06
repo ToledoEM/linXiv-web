@@ -6,6 +6,7 @@ import { ErrorText } from '../components'
 import FeedRules from '../FeedRules'
 import FullTextIndex from '../FullTextIndex'
 import OrcidBackfill from '../OrcidBackfill'
+import PdfLayout from '../PdfLayout'
 import ThemePicker from '../ThemePicker'
 import VersionMonitor from '../VersionMonitor'
 import { clearHistory, historySize } from '../searchHistory'
@@ -266,6 +267,7 @@ export default function Settings() {
       </div>
       <FeedRules />
       <Backup />
+      <PdfLayout />
       <VersionMonitor />
       <FullTextIndex />
       <OrcidBackfill />

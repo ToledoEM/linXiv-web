@@ -75,6 +75,19 @@ export interface UserSettings {
   search_history_max: number
   /** Background full-text indexer (shared linXiv setting, off by default). */
   full_text_worker_enabled: boolean
+  /** Last layout applied in Settings → PDF folders (read-only here; set by the layout job). */
+  web_pdf_folder_layout: PdfLayout
+}
+
+export type PdfLayout = 'none' | 'year' | 'journal' | 'year/journal' | 'journal/year'
+
+export interface PdfLayoutPreview {
+  layout: PdfLayout
+  to_move: number
+  in_place: number
+  missing: number
+  conflicts: string[]
+  sample: { source_id: string; version: number; from: string; to: string }[]
 }
 
 /** One cached feed entry (`feed get`). arxiv_id/version are null for non-arXiv items. */

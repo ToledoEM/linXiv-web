@@ -29,6 +29,8 @@ DEFAULTS: dict[str, object] = {
     "search_history_enabled": True,
     "search_history_max": 200,
     "full_text_worker_enabled": False,
+    # Last layout applied in Settings → PDF folders (web-only key; linXiv ignores it).
+    "web_pdf_folder_layout": "none",
 }
 FEED_KEYS = ("home_feed_url", "rss_cache_retention_days")
 EMAIL = r"^$|^[^@\s]+@[^@\s]+\.[^@\s]+$"

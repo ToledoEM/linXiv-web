@@ -13,6 +13,8 @@ import type {
   NewVersion,
   Note,
   Paper,
+  PdfLayout,
+  PdfLayoutPreview,
   PaperVersions,
   Project,
   ProjectInput,
@@ -291,6 +293,9 @@ export const api = {
       parked: number
       last_error: string | null
     }>('GET', '/api/sources/worker'),
+  pdfLayoutPreview: (layout: PdfLayout) =>
+    request<PdfLayoutPreview>('GET', `/api/pdfs/layout/preview${qs({ layout })}`),
+  startPdfLayout: (layout: PdfLayout) => request<Job>('POST', '/api/jobs/pdf-layout', { layout }),
   sourcesPending: () => request<{ pending: number; arxiv_papers: number }>('GET', '/api/sources/pending'),
   startIndexSources: (limit: number) => request<Job>('POST', '/api/jobs/index-sources', { limit }),
   jobs: (kind: string) => request<Job[]>('GET', `/api/jobs${qs({ kind })}`),

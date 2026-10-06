@@ -403,3 +403,6 @@ button.danger-link { color: var(--danger); }
 .shortcut-table td { border-bottom: none; padding: 0.3rem 0.5rem 0.3rem 0; }
 kbd { display: inline-block; margin-right: 0.25rem; padding: 0.05rem 0.4rem; font: 0.78rem ui-monospace, SFMono-Regular, Menlo, monospace; border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 4px; background: var(--surface-2); }
 .sidebar-toggles { display: grid; gap: 0.35rem; }
+.layout-preview { display: grid; gap: 0.4rem; padding: 0.6rem 0.75rem; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-2); }
+.layout-preview p { margin: 0; }
+.layout-sample { margin: 0; max-height: 14rem; overflow: auto; word-break: break-all; }

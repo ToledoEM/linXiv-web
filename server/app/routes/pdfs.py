@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import os
 import re
 import tempfile
@@ -9,8 +10,10 @@ from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
+from ..jobs import JobBusy
+from ..pdf_layout import Layout, PdfLayout, apply, storage_bytes
 from .common import ident, run, settings
 
 router = APIRouter(prefix="/api", tags=["pdfs"])
@@ -101,7 +104,62 @@ async def list_pdfs(request: Request):
 
 @router.get("/pdfs/storage")
 async def storage(request: Request):
-    return await run(request, ["pdf", "storage"])
+    """linXiv's report, with the total recounted to include PDFs filed into
+    subfolders (linXiv itself only counts the top level)."""
+    out = await run(request, ["pdf", "storage"])
+    total = await asyncio.to_thread(storage_bytes, settings(request).pdf_dir)
+    if isinstance(out, dict):
+        out = {**out, "storage_mb": total / (1024 * 1024)}
+    return out
+
+
+# --- Folder layout (pdf_layout.py) ------------------------------------------
+LAYOUT_KIND = "pdf-layout"
+LAYOUT_SETTING = "web_pdf_folder_layout"
+
+
+def _layout_tool(request: Request) -> PdfLayout:
+    s = settings(request)
+    # PDF_PATH values are written the way linXiv sees the folder: <data dir>/pdfs/...
+    return PdfLayout(s.data_dir / "papers.db", s.data_dir / "pdfs")
+
+
+class LayoutBody(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    layout: Layout
+
+
+@router.get("/pdfs/layout/preview")
+async def layout_preview(request: Request, layout: Layout):
+    tool = _layout_tool(request)
+    plan = await asyncio.to_thread(tool.plan, layout)
+    return tool.summary(plan)
+
+
+@router.post("/jobs/pdf-layout")
+async def start_layout(request: Request, body: LayoutBody):
+    """Move saved PDFs into the chosen subfolder layout (`none` = flat). Refused while
+    another background job runs; each move holds the CLI lock."""
+    jobs = request.app.state.jobs
+    if busy := next((j for j in jobs.list() if j.state == "running"), None):
+        raise HTTPException(
+            status_code=409, detail=f"a {busy.kind} job is running; wait for it first"
+        )
+    tool = _layout_tool(request)
+    cli = request.app.state.cli
+    timeout = settings(request).timeout_short
+
+    async def work(job):
+        await apply(tool, body.layout, job, getattr(cli, "_lock", None))
+        if not job.result.get("failed") and not job.cancel_requested:
+            await cli(["settings", "update", "--", LAYOUT_SETTING, body.layout], timeout)
+
+    try:
+        job = jobs.start(LAYOUT_KIND, work)
+    except JobBusy as e:
+        raise HTTPException(status_code=409, detail=str(e)) from e
+    return job.public()
 
 
 @router.post("/pdfs/import")

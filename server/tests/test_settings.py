@@ -21,6 +21,7 @@ def test_get_settings_hides_unlisted_keys(client, fake, monkeypatch):
         "search_history_enabled": True,
         "search_history_max": 200,
         "full_text_worker_enabled": False,
+        "web_pdf_folder_layout": "none",
     }
     assert "p2p_relay_auth_token" not in r.text
     assert body["env_overrides"] == ["CROSSREF_MAILTO"]

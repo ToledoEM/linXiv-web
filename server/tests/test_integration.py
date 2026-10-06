@@ -6,6 +6,7 @@ import json
 import os
 import shutil
 import subprocess
+import time
 import zipfile
 from dataclasses import replace
 
@@ -405,3 +406,57 @@ def test_real_cli_project_import_roundtrip(settings):
     assert [p["source_id"] for p in c.get(f"/api/projects/{new_id}/papers").json()] == ["local:im1"]
     bad = c.post("/api/projects/import/preview", files={"file": ("x.lxproj", b"PK\x03\x04junk")})
     assert bad.status_code == 400
+
+
+def _tiny_pdf(title: str) -> bytes:
+    objs = [
+        b"<< /Type /Catalog /Pages 2 0 R >>",
+        b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+        b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 200] >>",
+        b"<< /Title (" + title.encode() + b") >>",
+    ]
+    out, offs = b"%PDF-1.4\n", []
+    for i, o in enumerate(objs, 1):
+        offs.append(len(out))
+        out += b"%d 0 obj\n" % i + o + b"\nendobj\n"
+    xref = len(out)
+    out += b"xref\n0 %d\n0000000000 65535 f \n" % (len(objs) + 1)
+    out += b"".join(b"%010d 00000 n \n" % o for o in offs)
+    out += b"trailer\n<< /Size %d /Root 1 0 R /Info 4 0 R >>\n" % (len(objs) + 1)
+    return out + b"startxref\n%d\n%%%%EOF\n" % xref
+
+
+def test_real_cli_pdf_folder_layout(settings):
+    with TestClient(create_app(replace(settings, linxiv_bin=BIN))) as c:
+        pdf = _tiny_pdf("Layout Paper")
+        sid = c.post("/api/pdfs/import", files={"file": ("a.pdf", pdf)}).json()["source_id"]
+
+        def run_layout(layout: str) -> dict:
+            job = c.post("/api/jobs/pdf-layout", json={"layout": layout}).json()
+            for _ in range(200):
+                job = c.get(f"/api/jobs/{job['id']}").json()
+                if job["state"] != "running":
+                    return job
+                time.sleep(0.05)
+            raise AssertionError("layout job did not finish")
+
+        preview = c.get("/api/pdfs/layout/preview", params={"layout": "journal/year"}).json()
+        assert preview["to_move"] == 1
+        target = settings.pdf_dir / preview["sample"][0]["to"]
+        assert len(target.relative_to(settings.pdf_dir).parts) == 3  # journal/year/file
+        assert run_layout("journal/year")["result"]["moved"] == 1
+        assert target.is_file()
+        # linXiv now resolves the moved file: the reader serves it, storage counts it
+        r = c.get(f"/api/papers/{sid}/pdf")
+        assert r.status_code == 200 and r.content == pdf
+        assert c.get("/api/pdfs/storage").json()["storage_mb"] > 0
+        assert c.get("/api/settings").json()["settings"]["web_pdf_folder_layout"] == "journal/year"
+
+        assert run_layout("none")["result"]["moved"] == 1
+        assert (settings.pdf_dir / f"{sid.replace(':', '_')}v1.pdf").is_file()
+        assert not target.parent.exists()  # emptied folders pruned
+        assert c.get(f"/api/papers/{sid}/pdf").content == pdf
+
+        assert run_layout("year")["result"]["moved"] == 1
+        assert c.delete(f"/api/papers/{sid}/pdf").status_code == 200
+        assert not any(settings.pdf_dir.rglob("*.pdf"))
