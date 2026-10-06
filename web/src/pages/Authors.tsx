@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { api } from '../api'
 import { nameSortKey, type NameSortBy } from '../authorName'
 import { ErrorText } from '../components'
@@ -123,7 +124,9 @@ export default function Authors() {
             <tbody>
               {shown.map((a) => (
                 <tr key={a.author_id}>
-                  <td>{a.full_name ?? '(unnamed)'}</td>
+                  <td>
+                    <Link to={`/authors/${a.author_id}`}>{a.full_name ?? '(unnamed)'}</Link>
+                  </td>
                   <td className="mono">
                     {a.orcid && (
                       <a href={`https://orcid.org/${encodeURIComponent(a.orcid)}`} target="_blank" rel="noreferrer">

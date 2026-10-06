@@ -11,6 +11,7 @@ import Home from './pages/Home'
 import Settings from './pages/Settings'
 import AddPaper from './pages/AddPaper'
 import Trash from './pages/Trash'
+import AuthorDetail from './pages/AuthorDetail'
 import Authors from './pages/Authors'
 import Projects from './pages/Projects'
 import ProjectDetail from './pages/ProjectDetail'
@@ -79,6 +80,7 @@ export default function App() {
           <Route path="/upload" element={<Upload />} />
           <Route path="/trash" element={<Trash />} />
           <Route path="/authors" element={<Authors />} />
+          <Route path="/authors/:id" element={<AuthorDetail />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/stats" element={<Navigate to="/" replace />} />
           <Route path="*" element={<p className="muted">Page not found.</p>} />

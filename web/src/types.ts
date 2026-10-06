@@ -108,6 +108,29 @@ export interface Author {
   paper_count: number
 }
 
+/** `author get`: one row per linked paper version. */
+export interface AuthorPaper {
+  paper_id: number
+  source_id: string
+  source_fk: number
+  version: number
+  title: string | null
+}
+
+export interface AuthorDetail extends Author {
+  papers: AuthorPaper[]
+}
+
+export type AuthorRef = Omit<Author, 'paper_count'>
+
+/** `candidates` share this author's ORCID; `name_candidates` only the exact full name. */
+export interface MergeCandidates {
+  candidates: AuthorRef[]
+  name_candidates: AuthorRef[]
+}
+
+export type AuthorUpdate = Partial<Record<'full_name' | 'first_name' | 'last_name' | 'orcid', string>>
+
 /** linXiv ProjectOut (`project list` / `project get`). */
 export interface Project {
   id: number

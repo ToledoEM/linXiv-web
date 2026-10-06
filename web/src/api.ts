@@ -1,7 +1,10 @@
 import type {
   Author,
+  AuthorDetail,
+  AuthorUpdate,
   Job,
   LookupSource,
+  MergeCandidates,
   MetadataCandidate,
   MetadataInput,
   NewVersion,
@@ -74,7 +77,12 @@ async function request<T>(method: string, url: string, body?: unknown): Promise<
   const data = text ? JSON.parse(text) : null
   if (!res.ok) {
     const detail = data?.detail
-    const msg = typeof detail === 'string' ? detail : JSON.stringify(detail ?? res.statusText)
+    const msg =
+      typeof detail === 'string'
+        ? detail
+        : Array.isArray(detail) // pydantic 422: [{msg: 'Value error, …'}, …]
+          ? detail.map((d) => String(d?.msg ?? d).replace(/^Value error, /, '')).join('; ')
+          : JSON.stringify(detail ?? res.statusText)
     throw new ApiError(res.status, msg)
   }
   return data as T
@@ -154,6 +162,15 @@ export const api = {
   },
 
   authors: (hideSingle: boolean) => request<Author[]>('GET', `/api/authors${qs({ hide_single: hideSingle || undefined })}`),
+  author: (id: number) => request<AuthorDetail>('GET', `/api/authors/${id}`),
+  updateAuthor: (id: number, body: AuthorUpdate) =>
+    request<{ updated_author_id: number }>('PATCH', `/api/authors/${id}`, body),
+  deleteAuthor: (id: number) => request('DELETE', `/api/authors/${id}`),
+  mergeCandidates: (id: number) => request<MergeCandidates>('GET', `/api/authors/${id}/merge-candidates`),
+  mergeAuthors: (id: number, duplicateIds: number[]) =>
+    request<{ canonical_id: number; merged_ids: number[] }>('POST', `/api/authors/${id}/merge`, {
+      duplicate_ids: duplicateIds,
+    }),
 
   projects: (status: 'active' | 'archived') => request<Project[]>('GET', `/api/projects${qs({ status })}`),
   createProject: (body: ProjectInput) =>

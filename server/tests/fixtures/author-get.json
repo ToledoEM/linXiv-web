@@ -1,0 +1,24 @@
+{
+  "author_id": 1,
+  "orcid": null,
+  "full_name": "Ashish Vaswani",
+  "first_name": null,
+  "last_name": null,
+  "paper_count": 2,
+  "papers": [
+    {
+      "paper_id": 1,
+      "source_id": "arxiv:1706.03762",
+      "source_fk": 1,
+      "version": 7,
+      "title": "Attention Is All You Need"
+    },
+    {
+      "paper_id": 6,
+      "source_id": "local:vaswani2017",
+      "source_fk": 6,
+      "version": 1,
+      "title": "Attention Is All You Need"
+    }
+  ]
+}

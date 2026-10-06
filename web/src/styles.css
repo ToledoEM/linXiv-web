@@ -261,3 +261,16 @@ a.button:hover { filter: brightness(0.95); text-decoration: none; }
 .job p { margin: 0; }
 .progress { height: 0.45rem; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--border); overflow: hidden; }
 .progress span { display: block; height: 100%; background: var(--accent); transition: width 0.3s ease; }
+
+.author-detail { max-width: 52rem; }
+.author-detail h3 { margin: 1.6rem 0 0.4rem; }
+.author-form { display: grid; gap: 0.8rem; max-width: 32rem; }
+.kv { display: grid; grid-template-columns: max-content 1fr; gap: 0.35rem 1rem; margin: 0; }
+.kv dt { color: var(--muted); }
+.kv dd { margin: 0; }
+.author-paper { display: flex; justify-content: space-between; align-items: baseline; gap: 0.8rem; flex-wrap: wrap; }
+.merge-hint { margin: 0.6rem 0; }
+.merge-hint p { margin: 0; }
+.merge-picker { display: grid; gap: 0.5rem; max-width: 32rem; }
+.merge-picker select { width: 100%; }
+.danger-head { color: var(--danger); }

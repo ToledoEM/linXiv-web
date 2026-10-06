@@ -91,6 +91,33 @@ def test_real_cli_author_list(settings, tmp_path):
     assert [a["paper_count"] for a in multi] == [2]
 
 
+def test_real_cli_author_edit_merge(settings):
+    c = TestClient(create_app(replace(settings, linxiv_bin=BIN)))
+    bib = (
+        b"@misc{am1, title={One}, author={Doe, Jane and Roe, Rich}, year={2021}}\n"
+        b"@misc{am2, title={Two}, author={Doe, Jane}, year={2022}}\n"
+    )
+    assert c.post("/api/import/bibtex", files={"file": ("a.bib", bib)}).status_code == 200
+    ids = {a["full_name"]: a["author_id"] for a in c.get("/api/authors").json()}
+    jane, rich = ids["Jane Doe"], ids["Rich Roe"]
+    assert len(c.get(f"/api/authors/{jane}").json()["papers"]) == 2
+
+    orcid = {"orcid": "0000-0002-1825-0097"}
+    assert c.patch(f"/api/authors/{jane}", json={**orcid, "first_name": "Jane"}).status_code == 200
+    assert c.patch(f"/api/authors/{rich}", json=orcid).status_code == 200
+    got = c.get(f"/api/authors/{jane}").json()
+    assert (got["orcid"], got["first_name"]) == ("0000-0002-1825-0097", "Jane")
+    found = c.get(f"/api/authors/{jane}/merge-candidates").json()
+    assert [a["author_id"] for a in found["candidates"]] == [rich]
+    assert found["name_candidates"] == []
+
+    assert c.delete(f"/api/authors/{jane}").status_code == 409
+    merged = c.post(f"/api/authors/{jane}/merge", json={"duplicate_ids": [rich, 99999]}).json()
+    assert merged["merged_ids"] == [rich]
+    assert c.get(f"/api/authors/{rich}").status_code == 404
+    assert c.get("/api/authors/99999/merge-candidates").status_code == 404
+
+
 def test_real_cli_projects(settings):
     c = TestClient(create_app(replace(settings, linxiv_bin=BIN)))
     r = c.post(
