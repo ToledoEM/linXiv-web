@@ -256,3 +256,23 @@ def test_real_cli_orcid_backfill_offline(settings):
     assert r.status_code == 200, r.text
     assert r.json() == {"checked": 0, "updated": [], "errored": 0}
     assert c.post("/api/orcid/backfill", json={"limit": 0}).status_code == 422
+
+
+def test_real_cli_feed_offline(settings):
+    c = TestClient(create_app(replace(settings, linxiv_bin=BIN)))
+    assert c.get("/api/feed").json() == {"configured": False}
+    patch = {"home_feed_url": "http://127.0.0.1:9/feed", "rss_cache_retention_days": 7}
+    got = c.patch("/api/settings", json=patch).json()["settings"]
+    assert (got["home_feed_url"], got["rss_cache_retention_days"]) == ("http://127.0.0.1:9/feed", 7)
+    r = c.get("/api/feed")
+    assert r.status_code == 502 and "private address" in r.json()["detail"]
+
+    rule = c.post("/api/feed/rules", json={"field": "TITLE", "keywords": "quantum, graph"}).json()
+    rules = c.get("/api/feed/rules").json()["rules"]
+    assert [(x["rule_id"], x["keywords"], x["action"]) for x in rules] == [
+        (rule["rule_id"], "quantum,graph", "DENY")
+    ]
+    assert c.delete(f"/api/feed/rules/{rule['rule_id']}").json() == {"ok": True}
+    assert c.delete(f"/api/feed/rules/{rule['rule_id']}").status_code == 404
+    body = {"arxiv_id": "2610.03647", "version": 1, "permanent": True}
+    assert c.post("/api/feed/dismiss", json=body).json() == {"ok": True}

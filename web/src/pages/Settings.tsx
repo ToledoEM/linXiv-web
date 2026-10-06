@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { api } from '../api'
 import { ErrorText } from '../components'
+import FeedRules from '../FeedRules'
 import FullTextIndex from '../FullTextIndex'
 import OrcidBackfill from '../OrcidBackfill'
 import ThemePicker from '../ThemePicker'
@@ -123,6 +124,39 @@ export default function Settings() {
         </div>
 
         <div className="card settings-section">
+          <h3>Home feed</h3>
+          <label className="field">
+            <span>Feed URL</span>
+            <input
+              type="url"
+              pattern="https?://.+"
+              maxLength={512}
+              value={draft.home_feed_url}
+              placeholder="https://rss.arxiv.org/rss/cs.LG"
+              onChange={(e) => set('home_feed_url', e.target.value.trim())}
+            />
+            <span className="muted small">
+              RSS or Atom feed shown on Home, e.g. https://rss.arxiv.org/rss/cs.LG. Leave empty for no feed.
+            </span>
+          </label>
+          <label className="field">
+            <span>Cache retention (days)</span>
+            <input
+              type="number"
+              min={1}
+              max={3650}
+              step={1}
+              required
+              value={draft.rss_cache_retention_days}
+              onChange={(e) => set('rss_cache_retention_days', Math.trunc(Number(e.target.value)))}
+            />
+            <span className="muted small">
+              Days of feed entries kept locally before pruning; permanently dismissed papers are always kept.
+            </span>
+          </label>
+        </div>
+
+        <div className="card settings-section">
           <h3>Display</h3>
           <label className="check">
             <input
@@ -145,6 +179,7 @@ export default function Settings() {
         </div>
         <ErrorText error={error} />
       </form>
+      <FeedRules />
       <VersionMonitor />
       <FullTextIndex />
       <OrcidBackfill />

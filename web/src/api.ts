@@ -2,6 +2,8 @@ import type {
   Author,
   AuthorDetail,
   AuthorUpdate,
+  FeedResponse,
+  FeedRule,
   Job,
   LookupSource,
   MergeCandidates,
@@ -166,6 +168,13 @@ export const api = {
   updateAuthor: (id: number, body: AuthorUpdate) =>
     request<{ updated_author_id: number }>('PATCH', `/api/authors/${id}`, body),
   deleteAuthor: (id: number) => request('DELETE', `/api/authors/${id}`),
+  feed: (refresh = false) => request<FeedResponse>('GET', `/api/feed${qs({ refresh: refresh || undefined })}`),
+  dismissFeedEntry: (arxivId: string, version: number, permanent = false) =>
+    request('POST', '/api/feed/dismiss', { arxiv_id: arxivId, version, permanent }),
+  feedRules: () => request<{ rules: FeedRule[] }>('GET', '/api/feed/rules'),
+  addFeedRule: (rule: Pick<FeedRule, 'field' | 'keywords' | 'action'>) =>
+    request<{ rule_id: number }>('POST', '/api/feed/rules', rule),
+  deleteFeedRule: (id: number) => request('DELETE', `/api/feed/rules/${id}`),
   orcidBackfill: () =>
     request<{ checked: number; updated: { author_id: number; full_name: string; doi: string }[]; errored: number }>(
       'POST',

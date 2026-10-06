@@ -65,6 +65,32 @@ export interface UserSettings {
   ARXIV_MAILTO: string
   CROSSREF_MAILTO: string
   OPENALEX_MAILTO: string
+  /** RSS/Atom URL shown on Home; empty = no feed. */
+  home_feed_url: string
+  rss_cache_retention_days: number
+}
+
+/** One cached feed entry (`feed get`). arxiv_id/version are null for non-arXiv items. */
+export interface FeedEntry {
+  title: string
+  link: string
+  authors: string[]
+  summary: string
+  published: string
+  arxiv_id: string | null
+  version: number | null
+}
+
+export type FeedResponse =
+  | { configured: false }
+  | { configured: true; url: string; title: string; entries: FeedEntry[]; saved_arxiv_ids: string[] }
+
+export interface FeedRule {
+  rule_id: number
+  field: 'TITLE' | 'SUMMARY' | 'AUTHOR'
+  keywords: string
+  action: 'DENY' | 'ALLOW'
+  enabled: boolean
 }
 
 export interface SettingsResponse {

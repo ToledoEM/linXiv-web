@@ -274,3 +274,16 @@ a.button:hover { filter: brightness(0.95); text-decoration: none; }
 .merge-picker { display: grid; gap: 0.5rem; max-width: 32rem; }
 .merge-picker select { width: 100%; }
 .danger-head { color: var(--danger); }
+
+.home-feed { margin-top: 1.75rem; }
+.home-feed .page-head { margin-bottom: 0.6rem; }
+.home-feed h3 { margin: 0; }
+.feed-list { list-style: none; margin: 0; padding: 0 1rem; }
+.feed-row { display: flex; gap: 1rem; justify-content: space-between; align-items: flex-start; padding: 0.75rem 0; border-bottom: 1px solid var(--border); }
+.feed-row:last-child { border-bottom: none; }
+.feed-main { min-width: 0; display: grid; gap: 0.2rem; }
+.feed-summary { margin: 0; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.feed-actions { display: flex; gap: 0.6rem; align-items: center; flex-shrink: 0; }
+@media (max-width: 700px) { .feed-row { flex-direction: column; gap: 0.5rem; } .feed-actions { flex-wrap: wrap; } }
+.rule-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.35rem; }
+.rule-list li { display: flex; justify-content: space-between; gap: 1rem; align-items: baseline; }

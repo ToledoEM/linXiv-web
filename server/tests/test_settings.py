@@ -16,6 +16,8 @@ def test_get_settings_hides_unlisted_keys(client, fake, monkeypatch):
         "ARXIV_MAILTO": "",
         "CROSSREF_MAILTO": "",
         "OPENALEX_MAILTO": "",
+        "home_feed_url": "",
+        "rss_cache_retention_days": 30,
     }
     assert "p2p_relay_auth_token" not in r.text
     assert body["env_overrides"] == ["CROSSREF_MAILTO"]
@@ -64,6 +66,28 @@ def test_patch_rejects_unlisted_and_invalid(client, fake):
         {"OPENALEX_MAILTO": "not-an-email"},
         {"pdf_save_limit_mb": 0},
         {"tex_rendering_enabled": "yes"},
+        {"home_feed_url": "file:///etc/passwd"},
+        {"home_feed_url": "https://"},
+        {"home_feed_url": "https://a b"},
+        {"rss_cache_retention_days": 0},
+        {"rss_cache_retention_days": "7"},
     ):
         assert client.patch("/api/settings", json=body).status_code == 422, body
     assert not [c for c in fake.calls if c[:2] == ["settings", "update"]]
+
+
+def test_patch_feed_settings(client, fake):
+    stored: dict = {}
+    fake.on("settings", "get", result=lambda _: stored)
+    fake.on("settings", "update", result=lambda argv: stored.update({argv[-2]: argv[-1]}))
+    r = client.patch(
+        "/api/settings",
+        json={"home_feed_url": "https://rss.arxiv.org/rss/cs.LG", "rss_cache_retention_days": 7},
+    )
+    assert r.status_code == 200, r.text
+    updates = [c[-2:] for c in fake.calls if c[:2] == ["settings", "update"]]
+    assert updates == [
+        ["home_feed_url", "https://rss.arxiv.org/rss/cs.LG"],
+        ["rss_cache_retention_days", "7"],
+    ]
+    assert client.patch("/api/settings", json={"home_feed_url": ""}).status_code == 200

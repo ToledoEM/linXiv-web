@@ -13,6 +13,7 @@ from fastapi import APIRouter, Request
 from pydantic import BaseModel, ConfigDict, Field
 
 from .common import run
+from .feed import clear_feed_cache
 
 router = APIRouter(prefix="/api", tags=["settings"])
 
@@ -23,8 +24,12 @@ DEFAULTS: dict[str, object] = {
     "pdf_save_limit_mb": 1024,
     "tex_rendering_enabled": True,
     **{k: "" for k in MAILTO_KEYS},
+    "home_feed_url": "",
+    "rss_cache_retention_days": 30,
 }
+FEED_KEYS = ("home_feed_url", "rss_cache_retention_days")
 EMAIL = r"^$|^[^@\s]+@[^@\s]+\.[^@\s]+$"
+FEED_URL = r"^$|^[Hh][Tt][Tt][Pp][Ss]?://[^\s/?#]+[^\s]*$"
 
 
 class SettingsPatch(BaseModel):
@@ -35,13 +40,15 @@ class SettingsPatch(BaseModel):
     ARXIV_MAILTO: str | None = Field(None, max_length=254, pattern=EMAIL)
     CROSSREF_MAILTO: str | None = Field(None, max_length=254, pattern=EMAIL)
     OPENALEX_MAILTO: str | None = Field(None, max_length=254, pattern=EMAIL)
+    home_feed_url: str | None = Field(None, max_length=512, pattern=FEED_URL)
+    rss_cache_retention_days: int | None = Field(None, ge=1, le=3650)
 
 
 async def _current(request: Request) -> dict:
     raw = await run(request, ["settings", "get"])
     raw = raw if isinstance(raw, dict) else {}
     values = {k: raw.get(k, d) for k, d in DEFAULTS.items()}
-    for k in MAILTO_KEYS:
+    for k in (*MAILTO_KEYS, "home_feed_url"):
         values[k] = values[k] or ""
     env_overrides = [k for k in MAILTO_KEYS if os.environ.get(k)]
     return {"settings": values, "env_overrides": env_overrides}
@@ -54,9 +61,12 @@ async def get_settings(request: Request):
 
 @router.patch("/settings")
 async def update_settings(request: Request, body: SettingsPatch):
-    for key, value in body.model_dump(exclude_none=True).items():
+    patch = body.model_dump(exclude_none=True)
+    for key, value in patch.items():
         # The CLI JSON-parses the value, so bools/ints go as JSON; an email is
         # never valid JSON and stays a string.
         arg = json.dumps(value) if isinstance(value, bool | int) else value
         await run(request, ["settings", "update", "--", key, arg])
+    if any(k in patch for k in FEED_KEYS):
+        clear_feed_cache(request)
     return await _current(request)

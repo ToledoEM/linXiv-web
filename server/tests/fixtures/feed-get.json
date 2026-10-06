@@ -1,0 +1,50 @@
+{
+  "title": "cs.LG updates on arXiv.org",
+  "entries": [
+    {
+      "title": "Amortized Structured Stochastic Variational Inference for Gaussian Process Latent Variable Models",
+      "link": "https://arxiv.org/abs/2610.03647",
+      "authors": [
+        "Maksym Tretiakov",
+        "Sarah Filippi",
+        "Vincent Fortuin",
+        "Ruth Misener",
+        "Ruby Sedgwick",
+        "James Odgers"
+      ],
+      "summary": "Many machine learning methods aim to approximate the lower-dimensional manifold on which the data lives. A desirable feature of such methods is that they should capture the epistemic uncertainty of this learned manifold. One model that achieves this is the Gaussian Process Latent Variable Model, in which a Gaussian Process (GP) mapping from the latent space provides an estimate of the uncertainty of the manifold. However, the effectiveness of this uncertainty estimation is limited by the mean-field variational approximation between the GP inducing points and the latent variables. In this work, we apply Amortized Structured Stochastic Variational Inference to allow the variational posterior for the latent space to be conditionally dependent on the value of the inducing points. We demonstrate that this more flexible variational posterior improves several metrics relating to the reconstruction of points on the data manifold.",
+      "published": "Tue, 06 Oct 2026 00:00:00 -0400",
+      "arxiv_id": "2610.03647",
+      "version": 1
+    },
+    {
+      "title": "Clinical Concept Centers in LLMs",
+      "link": "https://arxiv.org/abs/2610.02829",
+      "authors": [
+        "Aishik Nagar",
+        "Abhishek Vaidyanathan",
+        "Arun-Kumar Kaliya-Perumal",
+        "Elijah Tzen Hsuen Boey",
+        "Stefan Winkler"
+      ],
+      "summary": "Large language models are increasingly used in clinical settings. However, research into the reliability and performance of these models has focused almost entirely on the language substrate, scoring what the model says. Mechanistic interpretability has found that the latent space carries a higher fidelity of representation than the text: internal representations not only encode substantially more than the output verbalizes, but the stated reasoning also systematically omits features that causally drive the answer. An evaluation of model behavior in terms of mechanistic interpretability has not been explored in clinical decision support. In this work, we extend behavioral evaluation into the latent space and ask whether clinical concepts exist as locatable, causally used representations inside open-weight LLMs. We find dedicated clinical concept centers in the latent space of all eleven open models we test. These concept centers are interpretable, firing only on their aligned clinical narratives, and meaningfully and causally drive model behavior in both constrained and open-ended settings. They are not just analytical representations, but circuits that can be utilized in clinical practice, and we explore their use from the perspective of both evaluation and performance. From the evaluation standpoint, models stay internally coherent and keep using the relevant concept centers even under adversarial role-based priming, while aligned priming improves downstream clinical performance. From a performance perspective, we simulate realistic deployment settings and find that steering models along these centers leads to meaningful downstream improvements. Finally, we conduct a blinded clinician validation and find the activation and usage of these concept centers predicts clinicians preferences.",
+      "published": "Tue, 06 Oct 2026 00:00:00 -0400",
+      "arxiv_id": "2610.02829",
+      "version": 1
+    },
+    {
+      "title": "Generalization Bounds for Flow-matching Generative Models for Intrinsically Low-dimensional Data",
+      "link": "https://arxiv.org/abs/2610.02663",
+      "authors": [
+        "Saptarshi Chakraborty",
+        "Quentin Berthet",
+        "Peter L. Bartlett"
+      ],
+      "summary": "Despite the remarkable empirical success of flow-matching models, their statistical generalization guarantees remain underdeveloped. Existing analyses often impose restrictive assumptions on the estimated velocity field and yield convergence rates that fail to reflect the intrinsic low-dimensional structure common in real data, such as natural images and molecular geometries. In this work, we study the statistical generalization of flow-matching models for learning an unknown distribution $P_{\\mathrm{data}}$ from finitely many samples. We derive finite-sample error bounds on the learned generative distribution, measured in the Wasserstein-$p$ distance, for all $p\\geq 1$. Specifically, given $n$ i.i.d. samples from $P_{\\mathrm{data}}$, we show that, for every $d>d_p^\\ast(P_{\\mathrm{data}})$ and appropriately chosen network architectures and hyperparameters, the learned distribution $\\widehat{P}^{\\mathrm{FM}}$ satisfies $ \\mathbb{W}_p(\\widehat{P}^{\\mathrm{FM}},P_{\\mathrm{data}}) \\lesssim n^{-1/d}+n^{-1/(2p)}\\bigl(\\log(1/\\xi)\\bigr)^{1/(2p)}$ with probability at least $1-\\xi$, where $d_p^\\ast(P_{\\mathrm{data}})$ denotes the Wasserstein-$p$ dimension of the target measure. Our results demonstrate that flow matching naturally adapts to the intrinsic geometry of data and mitigates the curse of dimensionality, as the convergence exponent depends on the intrinsic rather than ambient dimension. These guarantees remain meaningful in high-dimensional regimes and provide a theoretical explanation for the empirical success of flow matching on structured data distributions under substantially more relaxed assumptions than those in existing analyses.",
+      "published": "Tue, 06 Oct 2026 00:00:00 -0400",
+      "arxiv_id": "2610.02663",
+      "version": 1
+    }
+  ],
+  "saved_arxiv_ids": []
+}

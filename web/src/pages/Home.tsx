@@ -4,6 +4,7 @@ import { api, idPath } from '../api'
 import type { Paper, SavedPdf, Stats } from '../types'
 import { Authors, ErrorText } from '../components'
 import { formatBytes } from '../format'
+import HomeFeed from '../HomeFeed'
 import { MathText } from '../tex'
 
 // Top tags across the recent papers, as on linXiv desktop's Home.
@@ -69,6 +70,8 @@ export default function Home() {
           )
         })}
       </div>
+
+      <HomeFeed />
 
       <div className="home-panels">
         <div>
