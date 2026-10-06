@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import shutil
 import subprocess
@@ -307,3 +308,32 @@ def test_real_cli_backup_restore_import(settings):
 
     bad = b"SQLite format 3\x00" + b"\x00" * 200
     assert c.post("/api/backup/restore", files={"file": ("b.db", bad)}).status_code == 400
+
+
+def test_real_cli_annotations(settings):
+    c = TestClient(create_app(replace(settings, linxiv_bin=BIN)))
+    bib = b"@misc{an1, title={Annotated}, author={Doe, Jane}, year={2021}}\n"
+    assert c.post("/api/import/bibtex", files={"file": ("a.bib", bib)}).status_code == 200
+    sid = "local:an1"
+    anchor = {
+        "v": 1,
+        "version": 1,
+        "page": 1,
+        "color": "#ffd400",
+        "quote": "Some text",
+        "rects": [{"x": 0.1, "y": 0.2, "w": 0.3, "h": 0.02}],
+    }
+    r = c.post("/api/annotations", json={"source_id": sid, "anchor": anchor, "comment": "hi"})
+    assert r.status_code == 200, r.text
+    ann_id = r.json()["id"]
+    assert c.patch(f"/api/annotations/{ann_id}", json={"comment": "edited"}).status_code == 200
+    r = c.patch(f"/api/annotations/{ann_id}", json={"color": "#54b9f5", "source_id": sid})
+    assert r.status_code == 200, r.text
+    new_id = r.json()["id"]
+    listed = c.get("/api/annotations", params={"paper": sid}).json()
+    assert [a["id"] for a in listed] == [new_id]
+    stored = json.loads(listed[0]["anchor"])
+    got = (stored["color"], stored["quote"], listed[0]["comment"])
+    assert got == ("#54b9f5", "Some text", "edited")
+    assert c.delete(f"/api/annotations/{new_id}").status_code == 200
+    assert c.get("/api/annotations", params={"paper": sid}).json() == []

@@ -1,8 +1,20 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type UIEvent } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type MouseEvent,
+  type UIEvent,
+} from 'react'
 import { Document, Page, pdfjs, type DocumentProps } from 'react-pdf'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
 import 'react-pdf/dist/Page/TextLayer.css'
+import { api } from './api'
+import ColorSwatches from './ColorSwatches'
 import { loadZoom } from './display'
+import { HIGHLIGHT_COLORS, parseAnchor, selectionToAnchor, type Anchor } from './pdfAnchor'
 import {
   buildPageIndex,
   escapeHtml,
@@ -16,6 +28,7 @@ import {
   type HighlightRange,
   type PageIndex,
 } from './pdfFind'
+import type { Annotation } from './types'
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString()
 
@@ -29,9 +42,33 @@ const MAX_CANVAS_DPR = 3
 
 type LoadedPdf = Parameters<NonNullable<DocumentProps['onLoadSuccess']>>[0]
 
-/** In-page PDF reader (desktop PdfReader without highlights): fit-width pages,
- * a page indicator, and a find bar (Ctrl/Cmd+F inside the reader). */
-export default function PdfReader({ file, errorUrl }: { file: string; errorUrl?: string }) {
+type PageHighlight = { id: number; anchor: Anchor }
+type SelBar = { top: number; left: number; anchor: Anchor }
+type Popup = { id: number; top: number; left: number; anchor: Anchor; comment: string }
+
+interface Props {
+  file: string
+  errorUrl?: string
+  sourceId: string
+  /** Paper version the rendered PDF belongs to; anchors are scoped to it. */
+  version: number
+  /** New highlights are scoped to this project (null = library-wide). */
+  projectId?: number | null
+  annotations: Annotation[]
+  onAnnotationsChanged: () => Promise<unknown> | void
+}
+
+/** In-page PDF reader (desktop PdfReader): fit-width pages, a page indicator, a
+ * find bar (Ctrl/Cmd+F inside the reader) and text highlights with comments. */
+export default function PdfReader({
+  file,
+  errorUrl,
+  sourceId,
+  version,
+  projectId = null,
+  annotations,
+  onAnnotationsChanged,
+}: Props) {
   const [numPages, setNumPages] = useState(0)
   const [page, setPage] = useState(1)
   const [pageInput, setPageInput] = useState('1')
@@ -48,7 +85,25 @@ export default function PdfReader({ file, errorUrl }: { file: string; errorUrl?:
   const findInputRef = useRef<HTMLInputElement | null>(null)
   // Armed on a find jump; the target page's text-layer render completes it.
   const findScrollPendingRef = useRef(false)
-  const dpr = useMemo(() => Math.min(MAX_CANVAS_DPR, (window.devicePixelRatio || 1) * loadZoom()), [])
+  const zoom = useMemo(() => loadZoom(), [])
+  const dpr = Math.min(MAX_CANVAS_DPR, (window.devicePixelRatio || 1) * zoom)
+  const [selBar, setSelBar] = useState<SelBar | null>(null)
+  const [popup, setPopup] = useState<Popup | null>(null)
+  const [draft, setDraft] = useState('')
+  const [draftColor, setDraftColor] = useState<string>(HIGHLIGHT_COLORS[0])
+  const [hlBusy, setHlBusy] = useState(false)
+  const [hlError, setHlError] = useState('')
+
+  // This version's highlights per page: layout (and so coords) differ per version.
+  const byPage = useMemo(() => {
+    const m = new Map<number, PageHighlight[]>()
+    for (const a of annotations) {
+      const anchor = parseAnchor(a.anchor)
+      if (!anchor || anchor.version !== version) continue
+      m.set(anchor.page, [...(m.get(anchor.page) ?? []), { id: a.id, anchor }])
+    }
+    return m
+  }, [annotations, version])
 
   // Stable ref callback: the observer is built once per scroller element.
   const obsRef = useRef<ResizeObserver | null>(null)
@@ -96,6 +151,8 @@ export default function PdfReader({ file, errorUrl }: { file: string; errorUrl?:
 
   const onScroll = (e: UIEvent<HTMLDivElement>) => {
     const scroller = e.currentTarget
+    if (selBar) setSelBar(null)
+    if (popup) setPopup(null)
     if (rafRef.current !== null) return
     rafRef.current = requestAnimationFrame(() => {
       rafRef.current = null
@@ -233,6 +290,121 @@ export default function PdfReader({ file, errorUrl }: { file: string; errorUrl?:
     return cb
   }
 
+  // --- Highlights -----------------------------------------------------------
+  // Floaters are position:fixed inside the CSS-zoomed root, so viewport px are
+  // divided by the zoom factor; the clamp keeps them on screen.
+  const place = (left: number, top: number, w: number, h: number) => ({
+    left: Math.max(8, Math.min(left, window.innerWidth - w)) / zoom,
+    top: Math.max(8, Math.min(top, window.innerHeight - h)) / zoom,
+  })
+
+  const openPopup = (id: number, anchor: Anchor, comment: string, x: number, y: number) => {
+    setDraft(comment)
+    setDraftColor(anchor.color)
+    setPopup({ id, anchor, comment, ...place(x, y + 6, 300, 240) })
+  }
+
+  // A real text selection inside a page: show the color toolbar at its end.
+  const onMouseUp = () => {
+    const sel = window.getSelection()
+    if (!sel || sel.isCollapsed || sel.rangeCount === 0 || !sel.toString().trim()) return
+    const range = sel.getRangeAt(0)
+    const node = range.startContainer
+    const el = node.nodeType === Node.ELEMENT_NODE ? (node as Element) : node.parentElement
+    if (!el?.closest('.react-pdf__Page')) return
+    const rects = range.getClientRects()
+    const last = rects[rects.length - 1]
+    if (!last) return
+    // Captured now: the selection may collapse before the toolbar click.
+    const anchor = selectionToAnchor(version, HIGHLIGHT_COLORS[0])
+    if (!anchor) {
+      setHlError("Couldn't capture that selection (it may span two pages). Select the text again.")
+      return
+    }
+    setHlError('')
+    setSelBar({ anchor, ...place(last.left, last.bottom + 6, 170, 40) })
+  }
+
+  const createHighlight = async (color: string) => {
+    const bar = selBar
+    if (!bar) return
+    setSelBar(null)
+    window.getSelection()?.removeAllRanges()
+    const anchor = { ...bar.anchor, color }
+    setHlBusy(true)
+    setHlError('')
+    try {
+      const r = await api.createAnnotation({ source_id: sourceId, anchor, comment: '', project_id: projectId })
+      await onAnnotationsChanged()
+      // Comment box opens on the new highlight; dismissing it keeps the highlight.
+      setDraft('')
+      setDraftColor(color)
+      setPopup({ id: r.id, anchor, comment: '', left: bar.left, top: bar.top })
+    } catch (err) {
+      setHlError(`Couldn't save highlight: ${(err as Error).message}`)
+    } finally {
+      setHlBusy(false)
+    }
+  }
+
+  // Plain clicks hit-test the page's highlight rects (the overlay ignores the
+  // pointer so text under a highlight stays selectable).
+  const onClick = (e: MouseEvent<HTMLDivElement>) => {
+    const sel = window.getSelection()
+    if (sel && !sel.isCollapsed && sel.toString().trim()) return
+    const pageEl = (e.target as Element).closest?.<HTMLElement>('.react-pdf__Page')
+    if (!pageEl) return
+    const list = byPage.get(Number(pageEl.getAttribute('data-page-number')))
+    if (!list?.length) return
+    const box = pageEl.getBoundingClientRect()
+    if (!box.width || !box.height) return
+    const nx = (e.clientX - box.left) / box.width
+    const ny = (e.clientY - box.top) / box.height
+    const hit = list.find(({ anchor }) =>
+      anchor.rects.some((r) => nx >= r.x && nx <= r.x + r.w && ny >= r.y && ny <= r.y + r.h),
+    )
+    if (!hit) return
+    const comment = annotations.find((a) => a.id === hit.id)?.comment ?? ''
+    openPopup(hit.id, hit.anchor, comment, e.clientX, e.clientY)
+  }
+
+  const canSave = !!popup && !hlBusy && (draft !== popup.comment || draftColor !== popup.anchor.color)
+
+  const savePopup = async () => {
+    if (!popup || !canSave) return
+    setHlBusy(true)
+    setHlError('')
+    try {
+      await api.updateAnnotation(
+        popup.id,
+        draftColor !== popup.anchor.color
+          ? { comment: draft, color: draftColor, source_id: sourceId }
+          : { comment: draft },
+      )
+      await onAnnotationsChanged()
+      setPopup(null)
+    } catch (err) {
+      setHlError(`Couldn't save annotation: ${(err as Error).message}`)
+    } finally {
+      setHlBusy(false)
+    }
+  }
+
+  const deletePopup = async () => {
+    if (!popup) return
+    setHlBusy(true)
+    setHlError('')
+    try {
+      await api.deleteAnnotation(popup.id)
+      await onAnnotationsChanged()
+      setPopup(null)
+    } catch (err) {
+      setHlError(`Couldn't delete highlight: ${(err as Error).message}`)
+    } finally {
+      setHlBusy(false)
+    }
+  }
+
   const onReaderKey = (e: KeyboardEvent<HTMLDivElement>) => {
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f') {
       e.preventDefault()
@@ -307,7 +479,18 @@ export default function PdfReader({ file, errorUrl }: { file: string; errorUrl?:
           </button>
         )}
       </div>
-      <div className="pdf-scroller" ref={attachScroller} onScroll={onScroll} tabIndex={0}>
+      <div
+        className="pdf-scroller"
+        ref={attachScroller}
+        onScroll={onScroll}
+        tabIndex={0}
+        onMouseDown={() => {
+          if (selBar) setSelBar(null)
+          if (popup) setPopup(null)
+        }}
+        onMouseUp={onMouseUp}
+        onClick={onClick}
+      >
         <Document
           file={file}
           options={pdfDocumentOptions}
@@ -340,12 +523,93 @@ export default function PdfReader({ file, errorUrl }: { file: string; errorUrl?:
                   loading={<div className="pdf-page-loading" style={{ width: pageWidth, height: estPageHeight(width) }} />}
                   renderTextLayer
                   renderAnnotationLayer
-                />
+                >
+                  {byPage.has(pn) && (
+                    <div className="pdf-highlights" aria-hidden>
+                      {byPage.get(pn)!.map(({ id, anchor }) =>
+                        anchor.rects.map((r, k) => (
+                          <div
+                            key={`${id}-${k}`}
+                            className="pdf-highlight"
+                            data-annotation-id={id}
+                            style={{
+                              left: `${r.x * 100}%`,
+                              top: `${r.y * 100}%`,
+                              width: `${r.w * 100}%`,
+                              height: `${r.h * 100}%`,
+                              backgroundColor: anchor.color,
+                            }}
+                          />
+                        )),
+                      )}
+                    </div>
+                  )}
+                </Page>
               </div>
             )
           })}
         </Document>
       </div>
+      {selBar && (
+        <div
+          className="pdf-floater pdf-selbar"
+          style={{ top: selBar.top, left: selBar.left }}
+          // keep the selection alive and the scroller from re-handling the click
+          onMouseDown={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+          }}
+          onMouseUp={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <span className="small">Highlight</span>
+          <ColorSwatches onChange={createHighlight} label="Highlight in" />
+        </div>
+      )}
+      {popup && (
+        <div
+          className="pdf-floater pdf-popup"
+          style={{ top: popup.top, left: popup.left }}
+          role="dialog"
+          aria-label="Highlight"
+          onMouseDown={(e) => e.stopPropagation()}
+          onMouseUp={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') setPopup(null)
+            else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+              e.preventDefault()
+              savePopup()
+            }
+          }}
+        >
+          {popup.anchor.quote && <p className="pdf-quote small">“{popup.anchor.quote}”</p>}
+          <textarea
+            rows={3}
+            autoFocus
+            placeholder="Add a comment…"
+            aria-label="Highlight comment"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+          />
+          <div className="pdf-popup-actions">
+            <ColorSwatches value={draftColor} onChange={setDraftColor} />
+            <span>
+              <button type="button" className="link danger-link" disabled={hlBusy} onClick={deletePopup}>
+                Delete
+              </button>{' '}
+              <button type="button" disabled={!canSave} onClick={savePopup}>
+                {hlBusy ? 'Saving…' : 'Save'}
+              </button>
+            </span>
+          </div>
+        </div>
+      )}
+      {hlError && (
+        <p className="error pdf-hl-error" role="alert">
+          {hlError}
+        </p>
+      )}
     </div>
   )
 }

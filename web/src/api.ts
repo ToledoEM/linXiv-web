@@ -1,4 +1,5 @@
 import type {
+  Annotation,
   Author,
   AuthorDetail,
   AuthorUpdate,
@@ -23,6 +24,7 @@ import type {
   TrashListing,
   UserSettings,
 } from './types'
+import type { Anchor } from './pdfAnchor'
 
 export class ApiError extends Error {
   status: number
@@ -198,6 +200,13 @@ export const api = {
     form.append('file', file)
     return request('POST', '/api/backup/restore', form)
   },
+  annotations: (paper: string) => request<Annotation[]>('GET', `/api/annotations${qs({ paper })}`),
+  createAnnotation: (body: { source_id: string; anchor: Anchor; comment?: string; project_id?: number | null }) =>
+    request<{ id: number }>('POST', '/api/annotations', body),
+  /** A color change re-creates the annotation server-side; the result carries the new id. */
+  updateAnnotation: (id: number, body: { comment?: string; color?: string; source_id?: string }) =>
+    request<{ id: number }>('PATCH', `/api/annotations/${id}`, body),
+  deleteAnnotation: (id: number) => request('DELETE', `/api/annotations/${id}`),
   orcidBackfill: () =>
     request<{ checked: number; updated: { author_id: number; full_name: string; doi: string }[]; errored: number }>(
       'POST',

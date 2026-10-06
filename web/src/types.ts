@@ -241,3 +241,15 @@ export interface Job {
   finished_at: number | null
   cancel_requested: boolean
 }
+
+/** `annotation list` row; `anchor` is the raw JSON string (parse with parseAnchor). */
+export interface Annotation {
+  id: number
+  uuid: string
+  source_fk: number
+  project_id: number | null
+  anchor: string
+  comment: string
+  created_at: string
+  updated_at: string
+}

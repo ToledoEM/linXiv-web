@@ -319,3 +319,19 @@ a.button:hover { filter: brightness(0.95); text-decoration: none; }
 [data-density="compact"] .pick-row { padding: 0.3rem 0.6rem; }
 [data-density="compact"] .project-grid, [data-density="compact"] .tiles { gap: 0.5rem; }
 [data-density="compact"] .content { padding-top: 1rem; }
+.pdf-highlights { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
+.pdf-highlight { position: absolute; mix-blend-mode: multiply; opacity: 0.4; border-radius: 1px; }
+.pdf-floater { position: fixed; z-index: 30; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18); }
+.pdf-selbar { display: flex; align-items: center; gap: 0.5rem; padding: 0.35rem 0.6rem; }
+.pdf-popup { width: 300px; display: grid; gap: 0.5rem; padding: 0.6rem; }
+.pdf-popup textarea { font-size: 0.9rem; }
+.pdf-popup-actions { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; }
+.pdf-quote { margin: 0; font-style: italic; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.hl-swatches { gap: 0.4rem; }
+.hl-swatches .swatch-btn { width: 1rem; height: 1rem; border: 1px solid rgba(0, 0, 0, 0.2); }
+button.danger-link { color: var(--danger); }
+.pdf-hl-error { margin: 0; padding: 0.4rem 0.75rem; border-top: 1px solid var(--border); }
+.hl-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.6rem; }
+.hl-item { display: grid; gap: 0.35rem; border-left: 4px solid var(--hl, var(--accent)); }
+.hl-item blockquote { margin: 0; font-style: italic; }
+.hl-meta { display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; }

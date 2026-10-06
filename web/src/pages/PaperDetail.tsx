@@ -1,8 +1,9 @@
 import { lazy, Suspense, useCallback, useEffect, useState, type FormEvent } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { api, pdfUrl } from '../api'
-import type { Paper, PaperVersions } from '../types'
+import type { Annotation, Paper, PaperVersions } from '../types'
 import { Authors, ErrorText } from '../components'
+import Highlights from '../Highlights'
 import MetadataEditor from '../MetadataEditor'
 import Notes from '../Notes'
 import { MathText } from '../tex'
@@ -25,6 +26,20 @@ export default function PaperDetail() {
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [editingMeta, setEditingMeta] = useState(false)
   const [sourceNote, setSourceNote] = useState('')
+  const [annotations, setAnnotations] = useState<Annotation[]>([])
+
+  const loadAnnotations = useCallback(
+    () =>
+      api
+        .annotations(id)
+        .then(setAnnotations)
+        .catch(() => setAnnotations([])),
+    [id],
+  )
+
+  useEffect(() => {
+    loadAnnotations()
+  }, [loadAnnotations])
 
   const load = useCallback(async () => {
     try {
@@ -213,8 +228,21 @@ export default function PaperDetail() {
       </div>
       {showPdf && paper.has_pdf && (
         <Suspense fallback={<p className="muted">Loading viewer…</p>}>
-          <PdfReader key={sid} file={pdfUrl(sid)} errorUrl={pdfUrl(sid)} />
+          <PdfReader
+            key={sid}
+            file={pdfUrl(sid)}
+            errorUrl={pdfUrl(sid)}
+            sourceId={sid}
+            version={paper.version}
+            projectId={fromProjectId}
+            annotations={annotations}
+            onAnnotationsChanged={loadAnnotations}
+          />
         </Suspense>
+      )}
+
+      {(paper.has_pdf || annotations.length > 0) && (
+        <Highlights annotations={annotations} sourceId={sid} version={paper.version} onChanged={loadAnnotations} />
       )}
 
       {sid.startsWith('arxiv:') && (
