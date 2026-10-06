@@ -128,7 +128,24 @@ tr:last-child td { border-bottom: none; }
 .detail dt { color: var(--muted); }
 .detail dd { margin: 0; overflow-wrap: anywhere; }
 .abstract { max-width: 75ch; }
-iframe.pdf { width: 100%; height: 85vh; border: 1px solid var(--border); border-radius: var(--radius); margin-top: 1rem; background: #fff; }
+/* PDF reader (PdfReader.tsx) */
+.pdf-reader { margin-top: 1rem; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); overflow: hidden; }
+.pdf-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 0.4rem 0.75rem; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.pdf-page-pill { display: flex; align-items: center; gap: 0.35rem; }
+.pdf-page-pill input { width: 3.5rem; text-align: center; padding: 0.2rem 0.3rem; }
+.pdf-find { display: flex; align-items: center; gap: 0.45rem; }
+.pdf-find input { width: 12rem; padding: 0.25rem 0.45rem; }
+.pdf-find-count { min-width: 3.5rem; text-align: right; font-variant-numeric: tabular-nums; }
+.pdf-scroller { height: calc(85vh / var(--zoom, 1)); overflow: auto; background: var(--surface-2); padding: 0.5rem 0; outline: none; }
+.pdf-page-slot { margin: 0.5rem auto; width: fit-content; }
+.pdf-page-slot .react-pdf__Page { box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18); }
+.pdf-page-loading { background: #fff; }
+.pdf-status { padding: 3rem 1rem; }
+/* pdf.js boxes every link annotation; hide the border, keep links clickable. */
+.annotationLayer .linkAnnotation { border: 0 !important; outline: 0 !important; }
+/* Find marks: the text layer glyphs are transparent (canvas draws them), so only paint a background. */
+.pdf-find-mark { background: rgba(255, 213, 79, 0.45); color: transparent; border-radius: 2px; }
+.pdf-find-current { background: rgba(255, 138, 43, 0.65); }
 
 .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: 0.75rem; }
 .tile { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem; }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useState, type FormEvent } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { api, pdfUrl } from '../api'
 import type { Paper, PaperVersions } from '../types'
@@ -6,6 +6,9 @@ import { Authors, ErrorText } from '../components'
 import MetadataEditor from '../MetadataEditor'
 import Notes from '../Notes'
 import { MathText } from '../tex'
+
+// pdf.js is large: load the reader only when a PDF is opened.
+const PdfReader = lazy(() => import('../PdfReader'))
 
 export default function PaperDetail() {
   const id = useParams()['*'] ?? ''
@@ -208,7 +211,11 @@ export default function PaperDetail() {
           </>
         )}
       </div>
-      {showPdf && paper.has_pdf && <iframe className="pdf" src={pdfUrl(sid)} title={paper.title} />}
+      {showPdf && paper.has_pdf && (
+        <Suspense fallback={<p className="muted">Loading viewer…</p>}>
+          <PdfReader key={sid} file={pdfUrl(sid)} errorUrl={pdfUrl(sid)} />
+        </Suspense>
+      )}
 
       {sid.startsWith('arxiv:') && (
         <>
