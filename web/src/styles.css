@@ -406,3 +406,35 @@ kbd { display: inline-block; margin-right: 0.25rem; padding: 0.05rem 0.4rem; fon
 .layout-preview { display: grid; gap: 0.4rem; padding: 0.6rem 0.75rem; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-2); }
 .layout-preview p { margin: 0; }
 .layout-sample { margin: 0; max-height: 14rem; overflow: auto; word-break: break-all; }
+
+/* Library batch edit metadata (BatchMetadata.tsx) */
+.content:has(.library-batch) { max-width: 1900px; }
+.batch-toggle { border-radius: 999px; padding: 0.2rem 0.9rem; font-size: 0.87rem; background: transparent; border: 1px solid var(--accent); color: var(--accent); margin-left: 0.5rem; }
+.batch-toggle.active { background: var(--accent); color: var(--surface); }
+.library-batch { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(22rem, 1fr); gap: 1.25rem; align-items: start; }
+.library-main { min-width: 0; }
+.batch-panel { overflow-x: hidden; position: sticky; top: 1rem; max-height: calc(100vh / var(--zoom, 1) - 2rem); overflow-y: auto; display: grid; gap: 0.75rem; border-color: var(--accent); }
+.batch-head { display: grid; gap: 0.4rem; }
+.batch-head p { margin: 0; }
+.batch-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.6rem; }
+.batch-card { display: grid; gap: 0.35rem; padding: 0.6rem 0.7rem; border: 1px solid var(--border); border-left: 4px solid var(--border); border-radius: var(--radius); background: var(--surface-2); }
+.batch-card.st-match { border-left-color: var(--accent); }
+.batch-card.st-saved { border-left-color: var(--success); opacity: 0.8; }
+.batch-card.st-error { border-left-color: var(--danger); }
+.batch-card-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.3rem 0.5rem; align-items: baseline; }
+.batch-card { min-width: 0; }
+.batch-title { font-weight: 600; min-width: 0; }
+.batch-status { white-space: nowrap; flex-shrink: 0; }
+.batch-status.st-saved { background: var(--success); color: var(--surface); }
+.batch-status.st-error { background: var(--danger); color: var(--surface); }
+.batch-card select { width: 100%; }
+.batch-diff { width: 100%; font-size: 0.85rem; table-layout: fixed; }
+.batch-diff .check-col { width: 1.8rem; }
+.batch-diff th { width: 7rem; }
+.batch-diff td { overflow-wrap: anywhere; }
+.batch-diff th, .batch-diff td { padding: 0.25rem 0.4rem; vertical-align: top; text-align: left; border-bottom: 1px solid var(--border); }
+.batch-diff th { color: var(--muted); font-weight: 500; white-space: nowrap; }
+.diff-old { color: var(--muted); text-decoration: line-through; white-space: pre-line; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.diff-new { white-space: pre-line; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+.batch-foot { display: flex; align-items: center; gap: 0.75rem; position: sticky; bottom: -0.9rem; background: var(--surface); padding: 0.5rem 0; border-top: 1px solid var(--border); }
+@media (max-width: 1000px) { .library-batch { grid-template-columns: 1fr; } .batch-panel { position: static; max-height: none; } }

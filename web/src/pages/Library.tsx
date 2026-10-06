@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { api, idPath } from '../api'
 import type { Paper } from '../types'
+import BatchMetadata from '../BatchMetadata'
 import { ErrorText } from '../components'
 import { AddToProjectBar } from '../projectParts'
 import { toggled } from '../projects'
@@ -36,6 +37,9 @@ export default function Library() {
   const [papers, setPapers] = useState<Paper[] | null>(null)
   const [error, setError] = useState('')
   const [selected, setSelected] = useState<Set<string>>(new Set())
+  // Batch edit metadata: panel beside the table, driven by the row selection.
+  const [batch, setBatch] = useState(false)
+  const [reload, setReload] = useState(0)
 
   useEffect(() => {
     api.allTags().then(setTags).catch(() => setTags([]))
@@ -69,9 +73,15 @@ export default function Library() {
       cancelled = true
       clearTimeout(t)
     }
-  }, [q, tag, sort, pdf])
+  }, [q, tag, sort, pdf, reload])
 
   const allShownSelected = !!papers?.length && papers.every((p) => selected.has(p.source_id))
+  // Batch cards follow table order; selected papers hidden by a filter go last.
+  const batchIds = useMemo(() => {
+    const shown = (papers ?? []).map((p) => p.source_id).filter((sid) => selected.has(sid))
+    return [...shown, ...[...selected].filter((sid) => !shown.includes(sid))]
+  }, [papers, selected])
+  const titles = useMemo(() => Object.fromEntries((papers ?? []).map((p) => [p.source_id, p.title])), [papers])
 
   return (
     <section>
@@ -92,6 +102,14 @@ export default function Library() {
             </button>
           ))}
         </div>
+        <button
+          type="button"
+          className={batch ? 'batch-toggle active' : 'batch-toggle'}
+          aria-pressed={batch}
+          onClick={() => setBatch((b) => !b)}
+        >
+          batch edit
+        </button>
         <span className="grow" />
         <select aria-label="Sort" value={sort} onChange={(e) => setSort(e.target.value)}>
           {SORTS.map((o) => (
@@ -124,76 +142,88 @@ export default function Library() {
         <p className="muted small">Full text and notes could not be searched ({deepError}); showing other matches.</p>
       )}
       <AddToProjectBar selected={selected} onSelect={setSelected} />
-      {papers && papers.length === 0 && <p className="muted">No papers.</p>}
-      {papers && papers.length > 0 && (
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th className="check-col">
-                  <input
-                    type="checkbox"
-                    aria-label="Select all shown"
-                    checked={allShownSelected}
-                    onChange={() => {
-                      const next = new Set(selected)
-                      for (const p of papers) {
-                        if (allShownSelected) next.delete(p.source_id)
-                        else next.add(p.source_id)
-                      }
-                      setSelected(next)
-                    }}
-                  />
-                </th>
-                <th>Title</th>
-                <th>Authors</th>
-                <th>Published</th>
-                <th>Category</th>
-                <th>Tags</th>
-                <th>PDF</th>
-              </tr>
-            </thead>
-            <tbody>
-              {papers.map((p) => (
-                <tr key={p.source_id}>
-                  <td className="check-col">
-                    <input
-                      type="checkbox"
-                      aria-label={`Select ${p.source_id}`}
-                      checked={selected.has(p.source_id)}
-                      onChange={() => setSelected((s) => toggled(s, p.source_id))}
-                    />
-                  </td>
-                  <td>
-                    <Link to={`/paper/${idPath(p.source_id)}`}>
-                      <MathText forceInline>{p.title}</MathText>
-                    </Link>
-                    {p.deep_match && (
-                      <span className="pill deep-pill" title="Matched in the indexed full text or a note">
-                        full text / notes
-                      </span>
-                    )}
-                  </td>
-                  <td className="small">
-                    {p.authors?.slice(0, 3).join(', ')}
-                    {p.authors?.length > 3 && ' et al.'}
-                  </td>
-                  <td className="nowrap">{p.published}</td>
-                  <td>{p.category}</td>
-                  <td>
-                    {p.tags?.map((t) => (
-                      <span key={t} className="pill">
-                        {t}
-                      </span>
-                    ))}
-                  </td>
-                  <td>{p.has_pdf ? '✓' : ''}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <div className={batch ? 'library-batch' : undefined}>
+        <div className="library-main">
+          {papers && papers.length === 0 && <p className="muted">No papers.</p>}
+          {papers && papers.length > 0 && (
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th className="check-col">
+                      <input
+                        type="checkbox"
+                        aria-label="Select all shown"
+                        checked={allShownSelected}
+                        onChange={() => {
+                          const next = new Set(selected)
+                          for (const p of papers) {
+                            if (allShownSelected) next.delete(p.source_id)
+                            else next.add(p.source_id)
+                          }
+                          setSelected(next)
+                        }}
+                      />
+                    </th>
+                    <th>Title</th>
+                    <th>Authors</th>
+                    <th>Published</th>
+                    <th>Category</th>
+                    <th>Tags</th>
+                    <th>PDF</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {papers.map((p) => (
+                    <tr key={p.source_id}>
+                      <td className="check-col">
+                        <input
+                          type="checkbox"
+                          aria-label={`Select ${p.source_id}`}
+                          checked={selected.has(p.source_id)}
+                          onChange={() => setSelected((s) => toggled(s, p.source_id))}
+                        />
+                      </td>
+                      <td>
+                        <Link to={`/paper/${idPath(p.source_id)}`}>
+                          <MathText forceInline>{p.title}</MathText>
+                        </Link>
+                        {p.deep_match && (
+                          <span className="pill deep-pill" title="Matched in the indexed full text or a note">
+                            full text / notes
+                          </span>
+                        )}
+                      </td>
+                      <td className="small">
+                        {p.authors?.slice(0, 3).join(', ')}
+                        {p.authors?.length > 3 && ' et al.'}
+                      </td>
+                      <td className="nowrap">{p.published}</td>
+                      <td>{p.category}</td>
+                      <td>
+                        {p.tags?.map((t) => (
+                          <span key={t} className="pill">
+                            {t}
+                          </span>
+                        ))}
+                      </td>
+                      <td>{p.has_pdf ? '✓' : ''}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
-      )}
+        {batch && (
+          <BatchMetadata
+            selected={batchIds}
+            titles={titles}
+            onSaved={() => setReload((n) => n + 1)}
+            onSkip={(sid) => setSelected((s) => toggled(s, sid))}
+          />
+        )}
+      </div>
     </section>
   )
 }
