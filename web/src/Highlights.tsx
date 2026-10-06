@@ -4,6 +4,7 @@ import ColorSwatches from './ColorSwatches'
 import { ErrorText } from './components'
 import { parseAnchor } from './pdfAnchor'
 import type { Annotation } from './types'
+import { submitOnCtrlEnter } from './submitShortcut'
 
 function HighlightItem({
   annotation,
@@ -62,7 +63,13 @@ function HighlightItem({
       )}
       {editing ? (
         <>
-          <textarea rows={3} aria-label="Comment" value={draft} onChange={(e) => setDraft(e.target.value)} />
+          <textarea
+            rows={3}
+            aria-label="Comment"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={submitOnCtrlEnter(() => !busy && changed && save())}
+          />
           {anchor && <ColorSwatches value={color} onChange={setColor} />}
           <div className="actions">
             <button type="button" disabled={busy || !changed} onClick={save}>

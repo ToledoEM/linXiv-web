@@ -18,6 +18,7 @@ import Projects from './pages/Projects'
 import ProjectDetail from './pages/ProjectDetail'
 import ReadingLists from './pages/ReadingLists'
 import { setTexEnabled } from './texStore'
+import { useGlobalShortcuts } from './shortcuts'
 
 const NAV: NavItem[] = [
   { to: '/', label: 'Home', icon: '⌂', end: true },
@@ -38,6 +39,7 @@ type AuthState = { checked: boolean; enabled: boolean; authenticated: boolean }
 export default function App() {
   const [auth, setAuth] = useState<AuthState>({ checked: false, enabled: false, authenticated: false })
   const navigate = useNavigate()
+  useGlobalShortcuts()
 
   useEffect(() => {
     setUnauthorizedHandler(() => setAuth((a) => ({ ...a, authenticated: false })))

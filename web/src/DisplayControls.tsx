@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   DEFAULT_ZOOM,
   MAX_ZOOM,
@@ -6,6 +6,7 @@ import {
   ZOOM_STEP,
   loadDensity,
   loadZoom,
+  onZoomChange,
   saveDensity,
   saveZoom,
   type Density,
@@ -21,6 +22,7 @@ export default function DisplayControls() {
   const [zoom, setZoom] = useState(loadZoom)
   const [density, setDensity] = useState(loadDensity)
   const step = (z: number) => setZoom(saveZoom(z))
+  useEffect(() => onZoomChange(setZoom), [])
 
   return (
     <>

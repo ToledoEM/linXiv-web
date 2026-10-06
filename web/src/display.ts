@@ -56,11 +56,21 @@ export function applyDensity(density: Density): void {
   document.documentElement.dataset.density = normalizeDensity(density)
 }
 
+const ZOOM_EVENT = 'lxw-zoom-change'
+
 export function saveZoom(zoom: number): number {
   const next = clampZoom(zoom)
   write(ZOOM_KEY, String(next))
   applyZoom(next)
+  window.dispatchEvent(new CustomEvent<number>(ZOOM_EVENT, { detail: next }))
   return next
+}
+
+/** Keeps zoom readouts (Settings) and canvas resolution (PDF reader) in step with key zooms. */
+export function onZoomChange(fn: (zoom: number) => void): () => void {
+  const handler = (e: Event) => fn((e as CustomEvent<number>).detail)
+  window.addEventListener(ZOOM_EVENT, handler)
+  return () => window.removeEventListener(ZOOM_EVENT, handler)
 }
 
 export function saveDensity(density: Density): Density {

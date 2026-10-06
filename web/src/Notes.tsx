@@ -3,6 +3,7 @@ import { api } from './api'
 import { ErrorText } from './components'
 import { MathText } from './tex'
 import type { Note, Project } from './types'
+import { submitOnCtrlEnter } from './submitShortcut'
 
 const when = (ts: string) => ts.replace('T', ' ').slice(0, 16)
 const words = (s: string) => (s.trim() ? s.trim().split(/\s+/).length : 0)
@@ -53,7 +54,7 @@ function NoteEditor({
   }
 
   return (
-    <div className="card note-editor">
+    <div className="card note-editor" onKeyDown={submitOnCtrlEnter(save)}>
       <label className="field">
         <span>Scope</span>
         {initial || projects.length === 0 ? (

@@ -4,6 +4,7 @@ import { api, idPath } from '../api'
 import { ErrorText } from '../components'
 import { MathText } from '../tex'
 import type { Author, AuthorDetail as Detail, AuthorUpdate, MergeCandidates } from '../types'
+import { formSubmitOnCtrlEnter } from '../submitShortcut'
 
 type Field = keyof AuthorUpdate
 const FIELDS: { key: Field; label: string; placeholder: string }[] = [
@@ -63,7 +64,7 @@ function EditForm({ author, onSaved, onCancel }: { author: Detail; onSaved: () =
   }
 
   return (
-    <form className="card author-form" onSubmit={submit}>
+    <form className="card author-form" onSubmit={submit} onKeyDown={formSubmitOnCtrlEnter}>
       {FIELDS.map(({ key, label, placeholder }) => (
         <label key={key} className="field">
           <span>{label}</span>

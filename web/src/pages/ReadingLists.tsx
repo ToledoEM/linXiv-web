@@ -6,6 +6,7 @@ import { DeleteButton, Swatch } from '../projectParts'
 import { hasTag, READING_LIST_TAG } from '../projects'
 import { MathText } from '../tex'
 import type { Project } from '../types'
+import { formSubmitOnCtrlEnter } from '../submitShortcut'
 
 /** A reading list IS a project carrying the reserved `reading-list` tag (desktop ReadingListsPage). */
 function NewReadingList({ onCreated, onCancel }: { onCreated: () => Promise<void>; onCancel: () => void }) {
@@ -28,7 +29,7 @@ function NewReadingList({ onCreated, onCancel }: { onCreated: () => Promise<void
   }
 
   return (
-    <form className="card project-form" onSubmit={submit}>
+    <form className="card project-form" onSubmit={submit} onKeyDown={formSubmitOnCtrlEnter}>
       <label className="field">
         <span>Name</span>
         <input

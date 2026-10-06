@@ -9,8 +9,10 @@ import OrcidBackfill from '../OrcidBackfill'
 import ThemePicker from '../ThemePicker'
 import VersionMonitor from '../VersionMonitor'
 import { clearHistory, historySize } from '../searchHistory'
+import { SHORTCUTS } from '../shortcuts'
 import type { UserSettings } from '../types'
 import { setTexEnabled } from '../texStore'
+import { formSubmitOnCtrlEnter } from '../submitShortcut'
 
 const CONTACTS: { key: 'ARXIV_MAILTO' | 'CROSSREF_MAILTO' | 'OPENALEX_MAILTO'; label: string; hint: string }[] = [
   { key: 'ARXIV_MAILTO', label: 'arXiv', hint: 'Sent in the User-Agent of arXiv requests.' },
@@ -84,7 +86,7 @@ export default function Settings() {
         <DisplayControls />
       </div>
 
-      <form onSubmit={submit}>
+      <form onSubmit={submit} onKeyDown={formSubmitOnCtrlEnter}>
         <div className="card settings-section">
           <h3>Contacts</h3>
           <p className="muted small">
@@ -225,6 +227,23 @@ export default function Settings() {
         </div>
         <ErrorText error={error} />
       </form>
+      <div className="card settings-section">
+        <h3>Keyboard shortcuts</h3>
+        <table className="shortcut-table">
+          <tbody>
+            {SHORTCUTS.map((s) => (
+              <tr key={s.id}>
+                <td className="nowrap">
+                  {s.keys.map((k) => (
+                    <kbd key={k}>{k}</kbd>
+                  ))}
+                </td>
+                <td>{s.description}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
       <FeedRules />
       <Backup />
       <VersionMonitor />

@@ -3,6 +3,7 @@ import { api } from './api'
 import { ErrorText } from './components'
 import { MathText } from './tex'
 import type { LookupSource, MetadataCandidate, Paper } from './types'
+import { formSubmitOnCtrlEnter } from './submitShortcut'
 
 type Form = {
   title: string
@@ -258,7 +259,7 @@ export default function MetadataEditor({
         )}
       </div>
 
-      <form className="card project-form" onSubmit={save}>
+      <form className="card project-form" onSubmit={save} onKeyDown={formSubmitOnCtrlEnter}>
         <label className="field">
           <span>Title</span>
           <input value={form.title} onChange={(e) => set({ title: e.target.value })} required />

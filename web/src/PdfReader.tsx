@@ -4,7 +4,6 @@ import {
   useMemo,
   useRef,
   useState,
-  type KeyboardEvent,
   type MouseEvent,
   type UIEvent,
 } from 'react'
@@ -13,7 +12,7 @@ import 'react-pdf/dist/Page/AnnotationLayer.css'
 import 'react-pdf/dist/Page/TextLayer.css'
 import { api } from './api'
 import ColorSwatches from './ColorSwatches'
-import { loadZoom } from './display'
+import { loadZoom, onZoomChange } from './display'
 import { HIGHLIGHT_COLORS, parseAnchor, selectionToAnchor, type Anchor } from './pdfAnchor'
 import {
   buildPageIndex,
@@ -28,6 +27,8 @@ import {
   type HighlightRange,
   type PageIndex,
 } from './pdfFind'
+import { registerPdfReader } from './shortcuts'
+import { submitOnCtrlEnter } from './submitShortcut'
 import type { Annotation } from './types'
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString()
@@ -85,7 +86,10 @@ export default function PdfReader({
   const findInputRef = useRef<HTMLInputElement | null>(null)
   // Armed on a find jump; the target page's text-layer render completes it.
   const findScrollPendingRef = useRef(false)
-  const zoom = useMemo(() => loadZoom(), [])
+  const [zoom, setZoomState] = useState(loadZoom)
+  useEffect(() => onZoomChange(setZoomState), [])
+  // Ctrl/Cmd+F and "/" open this reader's find bar while it is mounted (shortcuts.ts).
+  useEffect(() => registerPdfReader(), [])
   const dpr = Math.min(MAX_CANVAS_DPR, (window.devicePixelRatio || 1) * zoom)
   const [selBar, setSelBar] = useState<SelBar | null>(null)
   const [popup, setPopup] = useState<Popup | null>(null)
@@ -186,13 +190,19 @@ export default function PdfReader({
   // Clamped: a query edit can shrink the match list under findCur.
   const cur = Math.min(findCur, Math.max(matches.length - 1, 0))
 
+  // Bumped on every open request; the effect focuses once the bar is committed
+  // (a rAF can run before React renders a bar opened from a window key listener).
+  const [findFocusTick, setFindFocusTick] = useState(0)
   const openFind = useCallback(() => {
     setFindOpen(true)
-    requestAnimationFrame(() => {
-      findInputRef.current?.focus()
-      findInputRef.current?.select()
-    })
+    setFindFocusTick((t) => t + 1)
   }, [])
+
+  useEffect(() => {
+    if (!findFocusTick) return
+    findInputRef.current?.focus()
+    findInputRef.current?.select()
+  }, [findFocusTick])
 
   useEffect(() => {
     window.addEventListener(PDF_FIND_EVENT, openFind)
@@ -405,16 +415,9 @@ export default function PdfReader({
     }
   }
 
-  const onReaderKey = (e: KeyboardEvent<HTMLDivElement>) => {
-    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f') {
-      e.preventDefault()
-      openFind()
-    }
-  }
-
   const pageWidth = width ? width - PAGE_INSET : undefined
   return (
-    <div className="pdf-reader" onKeyDown={onReaderKey}>
+    <div className="pdf-reader">
       <div className="pdf-toolbar">
         <form
           className="pdf-page-pill"
@@ -577,10 +580,7 @@ export default function PdfReader({
           onClick={(e) => e.stopPropagation()}
           onKeyDown={(e) => {
             if (e.key === 'Escape') setPopup(null)
-            else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-              e.preventDefault()
-              savePopup()
-            }
+            else submitOnCtrlEnter(savePopup)(e)
           }}
         >
           {popup.anchor.quote && <p className="pdf-quote small">“{popup.anchor.quote}”</p>}

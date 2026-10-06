@@ -3,6 +3,7 @@ import { api } from './api'
 import { ErrorText } from './components'
 import { failedMessage, hasTag, PRESET_COLORS, READING_LIST_TAG } from './projects'
 import type { Project, ProjectInput } from './types'
+import { formSubmitOnCtrlEnter, isSubmitChord } from './submitShortcut'
 
 /** Chips plus a text box: Enter or blur adds, Backspace on empty removes the last. */
 function TagInput({ value, onChange, id }: { value: string[]; onChange: (tags: string[]) => void; id: string }) {
@@ -13,7 +14,14 @@ function TagInput({ value, onChange, id }: { value: string[]; onChange: (tags: s
     setDraft('')
   }
   const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
+    if (isSubmitChord(e)) {
+      // Keep a typed-but-uncommitted tag: add it, then submit once the form has re-rendered.
+      e.preventDefault()
+      e.stopPropagation()
+      const form = e.currentTarget.form
+      commit()
+      setTimeout(() => form?.requestSubmit())
+    } else if (e.key === 'Enter') {
       e.preventDefault()
       commit()
     } else if (e.key === 'Backspace' && !draft && value.length) {
@@ -93,7 +101,7 @@ export function ProjectForm({
   const pickColor = (c: string) => set({ color_hex: value.color_hex === c && !isEdit ? null : c })
 
   return (
-    <form className="card project-form" onSubmit={submit}>
+    <form className="card project-form" onSubmit={submit} onKeyDown={formSubmitOnCtrlEnter}>
       <label className="field">
         <span>Name</span>
         <input id={`${idp}-name`} value={value.name} onChange={(e) => set({ name: e.target.value })} required autoFocus />
