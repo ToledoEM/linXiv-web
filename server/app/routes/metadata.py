@@ -15,6 +15,7 @@ import json
 import re
 import xml.etree.ElementTree as ET
 from typing import Annotated, Literal
+from urllib.parse import quote
 
 import httpx
 from fastapi import APIRouter, HTTPException, Request
@@ -30,6 +31,11 @@ MAX_TEXT_BYTES = 100_000
 MAX_RESULTS = 5
 NCBI = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
 NCBI_MAX_BYTES = 5 * 1024 * 1024
+BIORXIV = "https://api.biorxiv.org"
+BIORXIV_MAX_BYTES = 2 * 1024 * 1024
+# bioRxiv and medRxiv share the 10.1101 DOI prefix; bioRxiv also uses 10.64898.
+BIORXIV_SERVERS = ("biorxiv", "medrxiv")
+DOI_RE = re.compile(r"^10\.\d{4,9}/\S+$")
 Author = Annotated[str, Field(min_length=1, max_length=500)]
 _MONTHS = {
     m: i
@@ -266,11 +272,66 @@ async def _pubmed(term: str) -> list[dict]:
         raise HTTPException(status_code=502, detail="PubMed lookup failed (bad XML)") from e
 
 
+def _biorxiv_author(name: str) -> str:
+    """bioRxiv lists authors as "Last, I. N."; the library stores "I. N. Last"."""
+    last, _, first = name.partition(",")
+    return f"{first.strip()} {last.strip()}".strip()
+
+
+async def _biorxiv(doi: str) -> list[dict]:
+    """Latest version of a bioRxiv/medRxiv preprint by DOI (the API has no title search)."""
+    # "." / ".." segments would be normalized away by the URL layer, changing the API path.
+    if not DOI_RE.match(doi) or any(seg in (".", "..") for seg in doi.split("/")):
+        return []
+    path = quote(doi, safe="/")
+    async with _http() as client:
+        for server in BIORXIV_SERVERS:
+            try:
+                r = await client.get(f"{BIORXIV}/details/{server}/{path}")
+            except httpx.HTTPError as e:
+                raise HTTPException(status_code=502, detail=f"bioRxiv lookup failed: {e}") from e
+            if r.status_code != 200 or len(r.content) > BIORXIV_MAX_BYTES:
+                raise HTTPException(
+                    status_code=502, detail=f"bioRxiv lookup failed ({r.status_code})"
+                )
+            try:
+                rows = [x for x in r.json().get("collection") or [] if isinstance(x, dict)]
+            except ValueError as e:
+                raise HTTPException(
+                    status_code=502, detail="bioRxiv lookup failed (bad reply)"
+                ) from e
+            if not rows:
+                continue
+            rows.sort(
+                key=lambda x: (
+                    int(str(x.get("version") or 0)) if str(x.get("version") or "0").isdigit() else 0
+                )
+            )
+            first, latest = rows[0], rows[-1]
+            version = latest.get("version") or "1"
+            authors = [a.strip() for a in str(latest.get("authors") or "").split(";") if a.strip()]
+            return [
+                _candidate(
+                    source="biorxiv",
+                    ref=f"{server}:{doi}v{version}",
+                    title=(latest.get("title") or "").strip() or None,
+                    authors=[_biorxiv_author(a) for a in authors],
+                    # The first version's posting date, as arXiv's "published" is v1's.
+                    published=first.get("date"),
+                    summary=(latest.get("abstract") or "").strip() or None,
+                    category=latest.get("category"),
+                    doi=latest.get("doi") or doi,
+                    url=f"https://www.{server}.org/content/{doi}v{version}",
+                )
+            ]
+    return []
+
+
 @router.get("/papers/{source_id:path}/lookup")
 async def lookup(
     request: Request,
     source_id: str,
-    source: Literal["crossref", "arxiv", "openalex", "pubmed"] = "crossref",
+    source: Literal["crossref", "arxiv", "openalex", "pubmed", "biorxiv"] = "crossref",
 ):
     """Candidate metadata for a library paper. Matches by identifier when the
     paper has one the source understands (DOI, arXiv id), otherwise by title."""
@@ -284,6 +345,13 @@ async def lookup(
         return {"match": "doi", "candidates": await _crossref_doi(request, doi)}
     if source == "arxiv" and arxiv_id:
         return {"match": "arxiv", "candidates": await _search(request, "arxiv", f"id:{arxiv_id}")}
+    if source == "biorxiv":
+        if not doi:
+            raise HTTPException(
+                status_code=400,
+                detail="bioRxiv/medRxiv lookup needs a DOI (the API has no title search)",
+            )
+        return {"match": "doi", "candidates": await _biorxiv(doi)}
     if source == "pubmed":
         # Not every DOI is indexed in PubMed; fall back to the title.
         if doi and (found := await _pubmed(f"{doi}[doi]")):

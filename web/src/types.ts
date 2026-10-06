@@ -210,7 +210,7 @@ export interface MetadataInput {
   url: string | null
 }
 
-export type LookupSource = 'crossref' | 'arxiv' | 'openalex' | 'pubmed'
+export type LookupSource = 'crossref' | 'arxiv' | 'openalex' | 'pubmed' | 'biorxiv'
 
 /** One metadata match from GET /api/papers/{id}/lookup. */
 export interface MetadataCandidate {

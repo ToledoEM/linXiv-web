@@ -31,6 +31,7 @@ const SOURCES: { value: LookupSource; label: string }[] = [
   { value: 'arxiv', label: 'arXiv' },
   { value: 'openalex', label: 'OpenAlex' },
   { value: 'pubmed', label: 'PubMed' },
+  { value: 'biorxiv', label: 'bioRxiv / medRxiv' },
 ]
 
 const MATCH_LABEL = { doi: 'by DOI', arxiv: 'by arXiv id', title: 'by title' }
@@ -155,7 +156,14 @@ export default function MetadataEditor({
   const [form, setForm] = useState<Form>(() => fromPaper(paper))
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  const [source, setSource] = useState<LookupSource>(paper.source_id.startsWith('arxiv:') ? 'arxiv' : 'crossref')
+  // bioRxiv/medRxiv DOIs (10.1101/…, bioRxiv's newer 10.64898/…) default to their own API.
+  const [source, setSource] = useState<LookupSource>(
+    paper.source_id.startsWith('arxiv:')
+      ? 'arxiv'
+      : /^10\.(1101|64898)\//.test(paper.doi ?? '')
+        ? 'biorxiv'
+        : 'crossref',
+  )
   const [looking, setLooking] = useState(false)
   const [lookupError, setLookupError] = useState('')
   const [found, setFound] = useState<{ match: keyof typeof MATCH_LABEL; candidates: MetadataCandidate[] } | null>(null)

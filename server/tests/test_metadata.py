@@ -166,3 +166,79 @@ def test_lookup_route_not_swallowed_by_library(client, fake):
     assert r.status_code == 400  # no title: reached the lookup route, not paper get
     assert fake.calls == [["paper", "get", "--", "arxiv:hep-th/9901001"]]
     assert json.loads(r.text)["detail"] == "paper has no title to search by"
+
+
+def _biorxiv(monkeypatch, replies: dict, seen: list):
+    def handler(req: httpx.Request) -> httpx.Response:
+        seen.append(req.url)
+        assert req.url.host == "api.biorxiv.org"
+        server = req.url.raw_path.decode().split("/")[2]
+        body = replies.get(server)
+        if isinstance(body, int):
+            return httpx.Response(body)
+        return httpx.Response(
+            200, json=body or {"messages": [{"status": "no posts found"}], "collection": []}
+        )
+
+    monkeypatch.setattr(
+        metadata, "_http", lambda: httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    )
+
+
+def test_lookup_biorxiv_latest_version(client, fake, monkeypatch):
+    seen: list = []
+    _biorxiv(monkeypatch, {"biorxiv": fixture("biorxiv-details.json")}, seen)
+    doi = "10.1101/2020.03.22.002386"
+    fake.on("paper", "get", result={"source_id": f"doi:{doi}", "doi": doi, "title": "X"})
+    r = client.get(f"/api/papers/doi:{doi}/lookup", params={"source": "biorxiv"}).json()
+    assert r["match"] == "doi"
+    (c,) = r["candidates"]
+    assert c["source"] == "biorxiv"
+    assert c["ref"] == f"biorxiv:{doi}v3"
+    assert c["published"] == "2020-03-22"  # first version's posting date
+    assert c["authors"] == ["D. E. Gordon", "G. M. Jang", "M. Bouhaddou"]
+    assert c["url"] == f"https://www.biorxiv.org/content/{doi}v3"
+    assert c["category"] == "systems biology" and c["doi"] == doi
+    assert [u.raw_path.decode() for u in seen] == [f"/details/biorxiv/{doi}"]
+
+
+def test_lookup_medrxiv_fallback_and_not_found(client, fake, monkeypatch):
+    seen: list = []
+    med = fixture("biorxiv-details.json")
+    _biorxiv(monkeypatch, {"medrxiv": med}, seen)
+    doi = "10.1101/2020.02.11.20021493"
+    fake.on("paper", "get", result={"source_id": f"doi:{doi}", "doi": doi, "title": "X"})
+    (c,) = client.get(f"/api/papers/doi:{doi}/lookup", params={"source": "biorxiv"}).json()[
+        "candidates"
+    ]
+    assert c["ref"].startswith("medrxiv:") and c["url"].startswith("https://www.medrxiv.org/")
+    assert [u.raw_path.decode().split("/")[2] for u in seen] == ["biorxiv", "medrxiv"]
+
+    _biorxiv(monkeypatch, {}, [])
+    r = client.get(f"/api/papers/doi:{doi}/lookup", params={"source": "biorxiv"}).json()
+    assert r == {"match": "doi", "candidates": []}
+
+
+def test_lookup_biorxiv_needs_doi_and_encodes_it(client, fake, monkeypatch):
+    fake.on("paper", "get", result={"source_id": SID, "doi": None, "title": "T"})
+    r = client.get(f"/api/papers/{SID}/lookup", params={"source": "biorxiv"})
+    assert r.status_code == 400 and "needs a DOI" in r.json()["detail"]
+
+    seen: list = []
+    _biorxiv(monkeypatch, {}, seen)
+    fake.on("paper", "get", result={"source_id": SID, "doi": "10.1101/a?b#c", "title": "T"})
+    client.get(f"/api/papers/{SID}/lookup", params={"source": "biorxiv"})
+    assert seen and all(u.host == "api.biorxiv.org" for u in seen)
+    assert seen[0].raw_path.decode() == "/details/biorxiv/10.1101/a%3Fb%23c"
+
+    seen.clear()
+    fake.on("paper", "get", result={"source_id": SID, "doi": "10.1101/../../pub", "title": "T"})
+    r = client.get(f"/api/papers/{SID}/lookup", params={"source": "biorxiv"}).json()
+    assert r["candidates"] == [] and seen == []
+
+
+def test_lookup_biorxiv_errors(client, fake, monkeypatch):
+    _biorxiv(monkeypatch, {"biorxiv": 503}, [])
+    fake.on("paper", "get", result={"source_id": SID, "doi": "10.1101/x", "title": "T"})
+    r = client.get(f"/api/papers/{SID}/lookup", params={"source": "biorxiv"})
+    assert r.status_code == 502 and "bioRxiv" in r.json()["detail"]
