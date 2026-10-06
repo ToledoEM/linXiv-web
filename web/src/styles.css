@@ -388,3 +388,9 @@ button.danger-link { color: var(--danger); }
 .suggest-list { position: absolute; top: calc(100% + 2px); left: 0; right: 0; z-index: 20; list-style: none; margin: 0; padding: 0.25rem 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: 0 4px 16px rgba(0, 0, 0, 0.14); max-height: 18rem; overflow-y: auto; }
 .suggest-list li { padding: 0.35rem 0.7rem; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .suggest-list li:hover, .suggest-list li.active { background: var(--accent-soft); }
+.query-builder { display: grid; gap: 0.5rem; margin-bottom: 1rem; }
+.clause-row { display: flex; align-items: center; gap: 0.5rem; }
+.clause-row select { flex-shrink: 0; }
+.clause-actions { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+.query-preview { max-width: 45%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.8rem; opacity: 0.75; }
+@media (max-width: 700px) { .clause-row { flex-wrap: wrap; } .query-preview { max-width: 100%; } }

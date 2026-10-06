@@ -7,6 +7,7 @@ export default function SuggestInput({
   value,
   onValueChange,
   enabled,
+  onKeyDown: onKeyDownProp,
   ...rest
 }: Omit<InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange'> & {
   value: string
@@ -24,7 +25,13 @@ export default function SuggestInput({
     setActive(-1)
   }
 
+  // Runs first; a caller's onKeyDown sees `defaultPrevented` when a suggestion took the key.
   const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    handleKey(e)
+    onKeyDownProp?.(e)
+  }
+
+  const handleKey = (e: KeyboardEvent<HTMLInputElement>) => {
     if (!items.length) return
     if (e.key === 'ArrowDown') {
       e.preventDefault()

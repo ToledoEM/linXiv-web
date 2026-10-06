@@ -1,9 +1,11 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { api, idPath } from '../api'
 import type { Paper, SearchResult, Source } from '../types'
 import { Authors, ErrorText } from '../components'
 import { addTerm, DEFAULT_HISTORY_MAX } from '../searchHistory'
+import QueryBuilder from '../QueryBuilder'
+import { makeClause, type Clause } from '../searchQuery'
 import SuggestInput from '../SuggestInput'
 import { MathText } from '../tex'
 
@@ -51,6 +53,11 @@ export default function Search() {
   const [rows, setRows] = useState<Record<string, RowState>>({})
   // linXiv settings `search_history_enabled` / `search_history_max` (desktop Settings → Search).
   const [history, setHistory] = useState({ enabled: true, max: DEFAULT_HISTORY_MAX })
+  // Advanced clause builder: arXiv query syntax, so arXiv tab only (desktop parity).
+  const [advancedOpen, setAdvancedOpen] = useState(false)
+  const [clauses, setClauses] = useState<Clause[]>(() => [makeClause()])
+  // A built query was already recorded clause by clause; don't store the syntax string too.
+  const insertedRef = useRef('')
 
   useEffect(() => {
     api
@@ -61,7 +68,7 @@ export default function Search() {
 
   const run = async (tab: Tab) => {
     if (!q.trim()) return
-    if (history.enabled) addTerm(q, history.max)
+    if (history.enabled && q.trim() !== insertedRef.current) addTerm(q, history.max)
     setBusy(true)
     setError('')
     setRows({})
@@ -87,8 +94,17 @@ export default function Search() {
     run(source)
   }
 
+  const insertQuery = (query: string) => {
+    // Desktop records each clause term, not the built query string.
+    if (history.enabled) for (const c of clauses) addTerm(c.value, history.max)
+    insertedRef.current = query
+    setQ(query)
+    setAdvancedOpen(false)
+  }
+
   const switchTab = (tab: Tab) => {
     setSource(tab)
+    if (tab !== 'arxiv') setAdvancedOpen(false)
     setResults(null)
     if (q.trim()) run(tab)
   }
@@ -149,7 +165,20 @@ export default function Search() {
           <option value="oldest">Oldest first</option>
         </select>
         <button disabled={busy}>{busy ? 'Searching…' : 'Search'}</button>
+        {source === 'arxiv' && (
+          <button
+            type="button"
+            className="link"
+            aria-expanded={advancedOpen}
+            onClick={() => setAdvancedOpen((v) => !v)}
+          >
+            Advanced {advancedOpen ? '▴' : '▾'}
+          </button>
+        )}
       </form>
+      {source === 'arxiv' && advancedOpen && (
+        <QueryBuilder clauses={clauses} onChange={setClauses} onInsert={insertQuery} historyEnabled={history.enabled} />
+      )}
       <ErrorText error={error} />
       {results && (
         <p className="muted small">
