@@ -198,7 +198,7 @@ def test_lookup_biorxiv_latest_version(client, fake, monkeypatch):
     assert c["published"] == "2020-03-22"  # first version's posting date
     assert c["authors"] == ["D. E. Gordon", "G. M. Jang", "M. Bouhaddou"]
     assert c["url"] == f"https://www.biorxiv.org/content/{doi}v3"
-    assert c["category"] == "systems biology" and c["doi"] == doi
+    assert c["category"] == "bioRxiv" and c["doi"] == doi  # the server, not the subject
     assert [u.raw_path.decode() for u in seen] == [f"/details/biorxiv/{doi}"]
 
 
@@ -212,6 +212,7 @@ def test_lookup_medrxiv_fallback_and_not_found(client, fake, monkeypatch):
         "candidates"
     ]
     assert c["ref"].startswith("medrxiv:") and c["url"].startswith("https://www.medrxiv.org/")
+    assert c["category"] == "medRxiv"
     assert [u.raw_path.decode().split("/")[2] for u in seen] == ["biorxiv", "medrxiv"]
 
     _biorxiv(monkeypatch, {}, [])

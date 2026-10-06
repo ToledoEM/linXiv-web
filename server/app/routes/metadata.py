@@ -35,6 +35,8 @@ BIORXIV = "https://api.biorxiv.org"
 BIORXIV_MAX_BYTES = 2 * 1024 * 1024
 # bioRxiv and medRxiv share the 10.1101 DOI prefix; bioRxiv also uses 10.64898.
 BIORXIV_SERVERS = ("biorxiv", "medrxiv")
+# The preprint server IS the journal; the API's subject ("molecular biology") is not.
+BIORXIV_JOURNAL = {"biorxiv": "bioRxiv", "medrxiv": "medRxiv"}
 DOI_RE = re.compile(r"^10\.\d{4,9}/\S+$")
 Author = Annotated[str, Field(min_length=1, max_length=500)]
 _MONTHS = {
@@ -319,7 +321,7 @@ async def _biorxiv(doi: str) -> list[dict]:
                     # The first version's posting date, as arXiv's "published" is v1's.
                     published=first.get("date"),
                     summary=(latest.get("abstract") or "").strip() or None,
-                    category=latest.get("category"),
+                    category=BIORXIV_JOURNAL[server],
                     doi=latest.get("doi") or doi,
                     url=f"https://www.{server}.org/content/{doi}v{version}",
                 )
