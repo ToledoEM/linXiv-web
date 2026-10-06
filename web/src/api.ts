@@ -56,6 +56,19 @@ export function projectExportUrl(id: number, format: ExportFormat, pdfs = false)
 }
 
 let onUnauthorized: () => void = () => {}
+/** Database snapshot download (GET; the browser streams it with the session cookie). */
+export const BACKUP_URL = '/api/backup'
+
+export interface BackupImportReport {
+  papers: number
+  notes: number
+  projects: number
+  authors: number
+  tags: number
+  annotations: number
+  pdf_refs_cleared: number
+}
+
 export function setUnauthorizedHandler(fn: () => void) {
   onUnauthorized = fn
 }
@@ -175,6 +188,16 @@ export const api = {
   addFeedRule: (rule: Pick<FeedRule, 'field' | 'keywords' | 'action'>) =>
     request<{ rule_id: number }>('POST', '/api/feed/rules', rule),
   deleteFeedRule: (id: number) => request('DELETE', `/api/feed/rules/${id}`),
+  importBackup: (file: File) => {
+    const form = new FormData()
+    form.append('file', file)
+    return request<BackupImportReport>('POST', '/api/backup/import', form)
+  },
+  restoreBackup: (file: File) => {
+    const form = new FormData()
+    form.append('file', file)
+    return request('POST', '/api/backup/restore', form)
+  },
   orcidBackfill: () =>
     request<{ checked: number; updated: { author_id: number; full_name: string; doi: string }[]; errored: number }>(
       'POST',

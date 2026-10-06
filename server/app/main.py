@@ -14,6 +14,7 @@ from .jobs import Jobs
 from .routes import (
     add,
     authors,
+    backup,
     feed,
     imports,
     library,
@@ -78,6 +79,7 @@ def create_app(
     app.include_router(imports.router, dependencies=guarded)
     app.include_router(authors.router, dependencies=guarded)
     app.include_router(feed.router, dependencies=guarded)
+    app.include_router(backup.router, dependencies=guarded)
     app.include_router(projects.router, dependencies=guarded)
     app.include_router(notes.router, dependencies=guarded)
     app.include_router(versions.router, dependencies=guarded)

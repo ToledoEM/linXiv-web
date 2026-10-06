@@ -276,3 +276,34 @@ def test_real_cli_feed_offline(settings):
     assert c.delete(f"/api/feed/rules/{rule['rule_id']}").status_code == 404
     body = {"arxiv_id": "2610.03647", "version": 1, "permanent": True}
     assert c.post("/api/feed/dismiss", json=body).json() == {"ok": True}
+
+
+def test_real_cli_backup_restore_import(settings):
+    c = TestClient(create_app(replace(settings, linxiv_bin=BIN)))
+    bib = b"@misc{bk1, title={Keep Me}, author={Doe, Jane}, year={2021}}\n"
+    assert c.post("/api/import/bibtex", files={"file": ("a.bib", bib)}).status_code == 200
+    r = c.get("/api/backup")
+    assert r.status_code == 200, r.text
+    snapshot = r.content
+    assert snapshot.startswith(b"SQLite format 3\x00")
+
+    # Hard-delete the paper, then restore the snapshot: it comes back.
+    sid = "local:bk1"
+    assert c.delete(f"/api/papers/{sid}").status_code == 200
+    assert c.delete(f"/api/trash/papers/{sid}").status_code == 200
+    assert c.get(f"/api/papers/{sid}").status_code == 404
+    r = c.post("/api/backup/restore", files={"file": ("b.db", snapshot)})
+    assert r.status_code == 200, r.text
+    assert c.get(f"/api/papers/{sid}").status_code == 200
+    assert (settings.data_dir / "papers.pre-restore").is_file()
+
+    # Hard-delete again; an insert-only import brings it back too.
+    assert c.delete(f"/api/papers/{sid}").status_code == 200
+    assert c.delete(f"/api/trash/papers/{sid}").status_code == 200
+    r = c.post("/api/backup/import", files={"file": ("b.db", snapshot)})
+    assert r.status_code == 200, r.text
+    assert r.json()["papers"] >= 1
+    assert c.get(f"/api/papers/{sid}").status_code == 200
+
+    bad = b"SQLite format 3\x00" + b"\x00" * 200
+    assert c.post("/api/backup/restore", files={"file": ("b.db", bad)}).status_code == 400

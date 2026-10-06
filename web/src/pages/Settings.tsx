@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { api } from '../api'
+import Backup from '../Backup'
 import { ErrorText } from '../components'
 import FeedRules from '../FeedRules'
 import FullTextIndex from '../FullTextIndex'
@@ -180,6 +181,7 @@ export default function Settings() {
         <ErrorText error={error} />
       </form>
       <FeedRules />
+      <Backup />
       <VersionMonitor />
       <FullTextIndex />
       <OrcidBackfill />
