@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { api } from '../api'
 import Backup from '../Backup'
+import DisplayControls from '../DisplayControls'
 import { ErrorText } from '../components'
 import FeedRules from '../FeedRules'
 import FullTextIndex from '../FullTextIndex'
@@ -74,10 +75,11 @@ export default function Settings() {
 
       <div className="card settings-section">
         <h3>Appearance</h3>
-        <p className="muted small">Theme and mode are stored in this browser.</p>
+        <p className="muted small">Theme, mode, zoom and density are stored in this browser.</p>
         <div className="settings-theme">
           <ThemePicker />
         </div>
+        <DisplayControls />
       </div>
 
       <form onSubmit={submit}>
