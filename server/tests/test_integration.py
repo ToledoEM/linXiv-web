@@ -353,3 +353,20 @@ def test_real_cli_graph(settings):
     assert len([e for e in v["edges"] if e["target"].startswith("author::")]) == 3
     single = c.get("/api/graph", params={"exclude_single_authors": "true"}).json()
     assert [a["label"] for a in single["authors"]] == ["Jane Doe"]
+
+
+def test_real_cli_library_search_includes_notes(settings):
+    c = TestClient(create_app(replace(settings, linxiv_bin=BIN)))
+    bib = (
+        b"@misc{ls1, title={Plain Title}, author={Doe, Jane}, year={2021}}\n"
+        b"@misc{ls2, title={Abstract Holder}, author={Roe, Rich}, year={2022},"
+        b" abstract={We study the wombat population.}}\n"
+    )
+    assert c.post("/api/import/bibtex", files={"file": ("a.bib", bib)}).status_code == 200
+    note = {"source_id": "local:ls1", "title": "reading", "content": "compare with quokka data"}
+    assert c.post("/api/notes", json=note).status_code == 200
+    hits = c.get("/api/papers", params={"q": "quokka"}).json()
+    assert [(p["source_id"], p.get("deep_match")) for p in hits] == [("local:ls1", True)]
+    abstract = c.get("/api/papers", params={"q": "wombat"}).json()
+    assert [p["source_id"] for p in abstract] == ["local:ls2"]
+    assert not abstract[0].get("deep_match")

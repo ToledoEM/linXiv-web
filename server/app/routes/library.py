@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Query, Request
+from fastapi import APIRouter, Query, Request, Response
 from pydantic import BaseModel, Field
 
 from ..cli import CLIError
@@ -30,8 +30,13 @@ async def search(
     )
 
 
+# Full-text/notes search kicks in from this many characters (desktop LibraryPage).
+DEEP_SEARCH_MIN = 3
+DEEP_SEARCH_LIMIT = 200
+
+
 def _matches(paper: dict, needle: str) -> bool:
-    fields = [paper.get("title"), paper.get("source_id"), paper.get("doi")]
+    fields = [paper.get("title"), paper.get("summary"), paper.get("source_id"), paper.get("doi")]
     fields += paper.get("authors") or []
     fields += paper.get("tags") or []
     return any(needle in str(f).lower() for f in fields if f)
@@ -40,6 +45,7 @@ def _matches(paper: dict, needle: str) -> bool:
 @router.get("/papers")
 async def list_papers(
     request: Request,
+    response: Response,
     q: str | None = None,
     fulltext: bool = False,
     tag: str | None = None,
@@ -50,9 +56,12 @@ async def list_papers(
     dir: Literal["asc", "desc"] | None = None,
     pdf: Literal["has", "none"] | None = None,
 ):
-    """Library listing. `fulltext` uses linXiv's TeX-source index (`paper search`);
-    otherwise `q`/`tag`/`pdf` filter `linxiv list` by title, id, DOI, authors, tags
-    and whether a PDF is saved."""
+    """Library listing. `q`/`tag`/`pdf` filter `linxiv list` by title, abstract,
+    id, DOI, authors, tags and whether a PDF is saved. A `q` of 3+ characters also
+    takes `paper search` hits (indexed TeX full text and note titles/bodies);
+    papers found only that way carry `deep_match: true`. If that search fails the
+    plain matches still return, with an `X-Deep-Search-Error` header.
+    `fulltext` alone returns the `paper search` hits only."""
     if q and fulltext:
         return await run(
             request, ["paper", "search", "--limit", str(limit), "--", ident(q, "query")]
@@ -70,13 +79,28 @@ async def list_papers(
     if not filtering or not isinstance(papers, list):
         return papers
     needle = ident(q, "query").lower() if q else None
-    hits = [
-        p
-        for p in papers
-        if (needle is None or _matches(p, needle))
-        and (tag is None or tag in (p.get("tags") or []))
-        and (pdf is None or bool(p.get("has_pdf")) == (pdf == "has"))
-    ]
+    deep: set[str] = set()
+    if needle and len(needle.strip()) >= DEEP_SEARCH_MIN:
+        try:
+            found = await run(
+                request,
+                ["paper", "search", "--limit", str(DEEP_SEARCH_LIMIT), "--", ident(q, "query")],
+            )
+            deep = {str(p.get("source_id")) for p in found or [] if isinstance(p, dict)}
+        except CLIError as e:
+            response.headers["X-Deep-Search-Error"] = (
+                e.message[:200].encode("ascii", "replace").decode()
+            )
+    hits = []
+    for p in papers:
+        if tag is not None and tag not in (p.get("tags") or []):
+            continue
+        if pdf is not None and bool(p.get("has_pdf")) != (pdf == "has"):
+            continue
+        if needle is None or _matches(p, needle):
+            hits.append(p)
+        elif p.get("source_id") in deep:
+            hits.append({**p, "deep_match": True})
     return hits[offset : offset + limit]
 
 

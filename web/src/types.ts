@@ -32,6 +32,8 @@ export interface Paper {
   tags: string[]
   has_pdf: boolean
   pdf_path?: string | null
+  /** Library search: found only via indexed full text or a note. */
+  deep_match?: boolean
   source?: string
   /** arXiv TeX source fetched and indexed for full-text search. */
   downloaded_source?: boolean

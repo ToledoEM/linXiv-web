@@ -29,7 +29,7 @@ export default function Library() {
   const [q, setQ] = useState('')
   const [params] = useSearchParams()
   const [tag, setTag] = useState(() => params.get('tag') ?? '')
-  const [fulltext, setFulltext] = useState(false)
+  const [deepError, setDeepError] = useState('')
   const [sort, setSort] = useState<string>(SORTS[0].value)
   const [pdf, setPdf] = useState<PdfFilter>('all')
   const [tags, setTags] = useState<string[]>([])
@@ -46,15 +46,17 @@ export default function Library() {
     const t = setTimeout(() => {
       const [by, dir] = sort.split('_') as [string, 'asc' | 'desc']
       api
-        .papers({
-          q: q.trim() || undefined,
-          tag: tag || undefined,
-          fulltext: fulltext || undefined,
-          sort: by,
-          dir,
-          pdf: pdf === 'all' ? undefined : pdf,
-          limit: 500,
-        })
+        .papers(
+          {
+            q: q.trim() || undefined,
+            tag: tag || undefined,
+            sort: by,
+            dir,
+            pdf: pdf === 'all' ? undefined : pdf,
+            limit: 500,
+          },
+          (res) => !cancelled && setDeepError(res.headers.get('X-Deep-Search-Error') ?? ''),
+        )
         .then((p) => {
           if (!cancelled) {
             setPapers(p)
@@ -67,7 +69,7 @@ export default function Library() {
       cancelled = true
       clearTimeout(t)
     }
-  }, [q, tag, fulltext, sort, pdf])
+  }, [q, tag, sort, pdf])
 
   const allShownSelected = !!papers?.length && papers.every((p) => selected.has(p.source_id))
 
@@ -84,7 +86,6 @@ export default function Library() {
               key={f.value}
               className={pdf === f.value ? 'chip active' : 'chip'}
               aria-pressed={pdf === f.value}
-              disabled={fulltext}
               onClick={() => setPdf(f.value)}
             >
               {f.label}
@@ -92,7 +93,7 @@ export default function Library() {
           ))}
         </div>
         <span className="grow" />
-        <select aria-label="Sort" value={sort} onChange={(e) => setSort(e.target.value)} disabled={fulltext}>
+        <select aria-label="Sort" value={sort} onChange={(e) => setSort(e.target.value)}>
           {SORTS.map((o) => (
             <option key={o.value} value={o.value}>
               {o.label}
@@ -103,15 +104,13 @@ export default function Library() {
       <div className="toolbar">
         <input
           className="grow"
-          placeholder={fulltext ? 'Full-text search (indexed TeX sources)' : 'Filter by title, author, id, tag…'}
+          type="search"
+          aria-label="Search library"
+          placeholder="Search by title, abstract, author, id, full text or notes…"
           value={q}
           onChange={(e) => setQ(e.target.value)}
         />
-        <label className="check">
-          <input type="checkbox" checked={fulltext} onChange={(e) => setFulltext(e.target.checked)} />
-          Full text
-        </label>
-        <select value={tag} onChange={(e) => setTag(e.target.value)} disabled={fulltext}>
+        <select aria-label="Tag" value={tag} onChange={(e) => setTag(e.target.value)}>
           <option value="">All tags</option>
           {tags.map((t) => (
             <option key={t} value={t}>
@@ -121,6 +120,9 @@ export default function Library() {
         </select>
       </div>
       <ErrorText error={error} />
+      {deepError && (
+        <p className="muted small">Full text and notes could not be searched ({deepError}); showing other matches.</p>
+      )}
       <AddToProjectBar selected={selected} onSelect={setSelected} />
       {papers && papers.length === 0 && <p className="muted">No papers.</p>}
       {papers && papers.length > 0 && (
@@ -166,6 +168,11 @@ export default function Library() {
                     <Link to={`/paper/${idPath(p.source_id)}`}>
                       <MathText forceInline>{p.title}</MathText>
                     </Link>
+                    {p.deep_match && (
+                      <span className="pill deep-pill" title="Matched in the indexed full text or a note">
+                        full text / notes
+                      </span>
+                    )}
                   </td>
                   <td className="small">
                     {p.authors?.slice(0, 3).join(', ')}

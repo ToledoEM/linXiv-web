@@ -76,7 +76,12 @@ export function setUnauthorizedHandler(fn: () => void) {
   onUnauthorized = fn
 }
 
-async function request<T>(method: string, url: string, body?: unknown): Promise<T> {
+async function request<T>(
+  method: string,
+  url: string,
+  body?: unknown,
+  onResponse?: (res: Response) => void,
+): Promise<T> {
   const headers: Record<string, string> = {}
   let payload: BodyInit | undefined
   if (body instanceof FormData) {
@@ -90,6 +95,7 @@ async function request<T>(method: string, url: string, body?: unknown): Promise<
     if (token) headers['X-CSRF-Token'] = token
   }
   const res = await fetch(url, { method, headers, body: payload, credentials: 'same-origin' })
+  onResponse?.(res)
   if (res.status === 401 && !url.endsWith('/login')) onUnauthorized()
   const text = await res.text()
   const data = text ? JSON.parse(text) : null
@@ -123,7 +129,9 @@ export const api = {
   fetch: (id: string, source: Source) =>
     request<Paper>('POST', `/api/papers/${idPath(id)}/fetch${qs({ source })}`),
 
-  papers: (params: {
+  /** `onResponse` sees the raw response, e.g. the `X-Deep-Search-Error` header. */
+  papers: (
+    params: {
     q?: string
     tag?: string
     fulltext?: boolean
@@ -131,8 +139,9 @@ export const api = {
     sort?: string
     dir?: 'asc' | 'desc'
     pdf?: 'has' | 'none'
-  }) =>
-    request<Paper[]>('GET', `/api/papers${qs(params)}`),
+    },
+    onResponse?: (res: Response) => void,
+  ) => request<Paper[]>('GET', `/api/papers${qs(params)}`, undefined, onResponse),
   paper: (id: string) => request<Paper>('GET', `/api/papers/${idPath(id)}`),
   versions: (id: string) => request<PaperVersions>('GET', `/api/papers/${idPath(id)}/versions`),
   deletePaper: (id: string) => request('DELETE', `/api/papers/${idPath(id)}`),

@@ -224,3 +224,52 @@ def test_import_rejects_non_pdf_and_oversize(client, fake):
     r = client.post("/api/pdfs/import", files={"file": ("x.pdf", big, "application/pdf")})
     assert r.status_code == 413
     assert fake.calls == []
+
+
+def _lib(fake, deep):
+    papers = [
+        {
+            "source_id": "arxiv:1",
+            "title": "Attention",
+            "summary": "",
+            "tags": ["ml"],
+            "has_pdf": True,
+        },
+        {"source_id": "arxiv:2", "title": "Other", "summary": "uses softmax gating", "tags": []},
+        {"source_id": "arxiv:3", "title": "Third", "summary": "", "tags": ["ml"], "has_pdf": False},
+        {"source_id": "arxiv:4", "title": "Fourth", "summary": "", "tags": [], "has_pdf": True},
+    ]
+    fake.on("list", result=papers)
+    fake.on("paper", "search", result=deep)
+
+
+def test_search_merges_fulltext_and_notes(client, fake):
+    _lib(fake, [{"source_id": "arxiv:3"}, {"source_id": "arxiv:2"}, {"source_id": "gone:9"}])
+    r = client.get("/api/papers", params={"q": "softmax"})
+    assert r.status_code == 200, r.text
+    rows = [(p["source_id"], p.get("deep_match", False)) for p in r.json()]
+    # list order kept; abstract match is a plain match; deep-only hit flagged; unknown id dropped
+    assert rows == [("arxiv:2", False), ("arxiv:3", True)]
+    assert ["paper", "search", "--limit", "200", "--", "softmax"] in fake.calls
+
+
+def test_search_deep_hits_respect_filters(client, fake):
+    _lib(fake, [{"source_id": "arxiv:3"}, {"source_id": "arxiv:4"}])
+    r = client.get("/api/papers", params={"q": "quokka", "tag": "ml", "pdf": "none"})
+    assert [p["source_id"] for p in r.json()] == ["arxiv:3"]
+
+
+def test_short_query_skips_deep_search(client, fake):
+    _lib(fake, [{"source_id": "arxiv:4"}])
+    r = client.get("/api/papers", params={"q": "tt"})
+    assert [p["source_id"] for p in r.json()] == ["arxiv:1"]
+    assert not [c for c in fake.calls if c[:2] == ["paper", "search"]]
+
+
+def test_deep_search_failure_keeps_plain_hits(client, fake):
+    _lib(fake, None)
+    fake.on("paper", "search", result=CLIError(502, "fts index unavailable"))
+    r = client.get("/api/papers", params={"q": "attention"})
+    assert r.status_code == 200
+    assert [p["source_id"] for p in r.json()] == ["arxiv:1"]
+    assert r.headers["X-Deep-Search-Error"] == "fts index unavailable"

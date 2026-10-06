@@ -71,8 +71,8 @@ export default function FullTextIndex() {
     <div className="card settings-section">
       <h3>Full-text index</h3>
       <p className="muted small">
-        Fetches the LaTeX source that authors uploaded to arXiv and indexes its text, so the Library&apos;s Full text
-        search finds words inside papers. Papers are fetched about 7 seconds apart to respect arXiv&apos;s rate limit; the
+        Fetches the LaTeX source that authors uploaded to arXiv and indexes its text, so the Library search
+        finds words inside papers. Papers are fetched about 7 seconds apart to respect arXiv&apos;s rate limit; the
         rest of the app stays usable meanwhile.
       </p>
       {pending && (
