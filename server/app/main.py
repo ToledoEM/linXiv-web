@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, Request
@@ -10,6 +12,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from . import settings as settings_mod
 from .auth import Auth, require_auth
 from .cli import CLIError, LinxivCLI, Runner
+from .fulltext_worker import FullTextWorker
 from .jobs import Jobs
 from .routes import (
     add,
@@ -53,12 +56,29 @@ def create_app(
     settings: settings_mod.Settings | None = None, runner: Runner | None = None
 ) -> FastAPI:
     settings = settings or settings_mod.load()
-    app = FastAPI(title="linXiv-web", version=__version__, docs_url=None, redoc_url=None)
+
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        # The background indexer runs against the real CLI only; tests drive
+        # FullTextWorker.step() directly.
+        task = asyncio.create_task(app.state.fulltext_worker.run()) if runner is None else None
+        try:
+            yield
+        finally:
+            if task:
+                task.cancel()
+
+    app = FastAPI(
+        title="linXiv-web", version=__version__, docs_url=None, redoc_url=None, lifespan=lifespan
+    )
     app.state.settings = settings
     app.state.auth = Auth(settings)
     app.state.jobs = Jobs()
     app.state.cli = runner or LinxivCLI(
         settings.linxiv_bin, env={"LINXIV_DATA_DIR": str(settings.data_dir)}
+    )
+    app.state.fulltext_worker = FullTextWorker(
+        app.state.cli, app.state.jobs, settings.timeout_short, settings.timeout_long
     )
     app.add_middleware(SecurityHeaders)
 

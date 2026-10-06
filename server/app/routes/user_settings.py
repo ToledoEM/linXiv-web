@@ -28,6 +28,7 @@ DEFAULTS: dict[str, object] = {
     "rss_cache_retention_days": 30,
     "search_history_enabled": True,
     "search_history_max": 200,
+    "full_text_worker_enabled": False,
 }
 FEED_KEYS = ("home_feed_url", "rss_cache_retention_days")
 EMAIL = r"^$|^[^@\s]+@[^@\s]+\.[^@\s]+$"
@@ -46,6 +47,7 @@ class SettingsPatch(BaseModel):
     rss_cache_retention_days: int | None = Field(None, ge=1, le=3650)
     search_history_enabled: bool | None = None
     search_history_max: int | None = Field(None, ge=1, le=10_000)
+    full_text_worker_enabled: bool | None = None
 
 
 async def _current(request: Request) -> dict:
@@ -73,4 +75,7 @@ async def update_settings(request: Request, body: SettingsPatch):
         await run(request, ["settings", "update", "--", key, arg])
     if any(k in patch for k in FEED_KEYS):
         clear_feed_cache(request)
+    if "full_text_worker_enabled" in patch:
+        # Start or stop the background indexer now, not at its next poll.
+        request.app.state.fulltext_worker.wake()
     return await _current(request)

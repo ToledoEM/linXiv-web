@@ -6,6 +6,8 @@ import type { Job } from './types'
 const KIND = 'index-sources'
 const LIMITS = [10, 25, 50, 100]
 const POLL_MS = 1500
+// Background worker progress is slow (one paper every ~22 s); refresh its counts this often.
+const WORKER_POLL_MS = 15000
 
 /** Backfill full-text search: fetch arXiv TeX source for papers that lack it, as a background job. */
 export default function FullTextIndex() {
@@ -13,6 +15,8 @@ export default function FullTextIndex() {
   const [job, setJob] = useState<Job | null>(null)
   const [limit, setLimit] = useState(25)
   const [error, setError] = useState('')
+  const [bgOn, setBgOn] = useState<boolean | null>(null)
+  const [worker, setWorker] = useState<Awaited<ReturnType<typeof api.fullTextWorker>> | null>(null)
 
   const loadPending = useCallback(() => {
     api
@@ -20,6 +24,37 @@ export default function FullTextIndex() {
       .then(setPending)
       .catch((err) => setError((err as Error).message))
   }, [])
+
+  useEffect(() => {
+    api
+      .settings()
+      .then((r) => setBgOn(r.settings.full_text_worker_enabled))
+      .catch(() => setBgOn(false))
+  }, [])
+
+  // While the background indexer is on, its backlog and counters are the only progress signal.
+  useEffect(() => {
+    if (!bgOn) return
+    const tick = () => {
+      loadPending()
+      api.fullTextWorker().then(setWorker).catch(() => {})
+    }
+    tick()
+    const t = setInterval(tick, WORKER_POLL_MS)
+    return () => clearInterval(t)
+  }, [bgOn, loadPending])
+
+  const toggleBackground = async (next: boolean) => {
+    setError('')
+    setBgOn(next) // optimistic; reverted if the setting can't be saved
+    try {
+      const r = await api.updateSettings({ full_text_worker_enabled: next })
+      setBgOn(r.settings.full_text_worker_enabled)
+    } catch (err) {
+      setBgOn(!next)
+      setError((err as Error).message)
+    }
+  }
 
   // Pick up the latest job, so a reload shows one still running.
   useEffect(() => {
@@ -80,6 +115,38 @@ export default function FullTextIndex() {
           {pending.pending} of {pending.arxiv_papers} arXiv paper{pending.arxiv_papers === 1 ? '' : 's'} not indexed yet.
         </p>
       )}
+      <label className="check">
+        <input
+          type="checkbox"
+          checked={!!bgOn}
+          disabled={bgOn === null}
+          onChange={(e) => toggleBackground(e.target.checked)}
+        />
+        Index full text in the background
+      </label>
+      <p className="muted small">
+        Off by default: each paper is a multi-megabyte download stored in your library database. While on, the server
+        keeps indexing one paper about every 20 seconds until none are left. A paper that fails is retried a few times,
+        then left until the server restarts, so the count can settle above zero.
+      </p>
+      {bgOn && worker && (
+        <p className="small">
+          {worker.current ? (
+            <>
+              Indexing <span className="mono">{worker.current}</span>…
+            </>
+          ) : pending?.pending === 0 ? (
+            'Every arXiv paper is indexed.'
+          ) : (
+            'Waiting between papers…'
+          )}{' '}
+          <span className="muted">
+            This session: {worker.indexed} indexed, {worker.skipped} without TeX source, {worker.failed} failed.
+          </span>
+          {worker.last_error && <span className="muted"> Last error: {worker.last_error}</span>}
+        </p>
+      )}
+      <p className="muted small">Or index a batch now:</p>
       <div className="actions">
         <label className="check">
           Papers per run

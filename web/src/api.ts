@@ -281,6 +281,16 @@ export const api = {
       `/api/papers/${idPath(id)}/source`,
       { force },
     ),
+  fullTextWorker: () =>
+    request<{
+      enabled: boolean
+      current: string | null
+      indexed: number
+      skipped: number
+      failed: number
+      parked: number
+      last_error: string | null
+    }>('GET', '/api/sources/worker'),
   sourcesPending: () => request<{ pending: number; arxiv_papers: number }>('GET', '/api/sources/pending'),
   startIndexSources: (limit: number) => request<Job>('POST', '/api/jobs/index-sources', { limit }),
   jobs: (kind: string) => request<Job[]>('GET', `/api/jobs${qs({ kind })}`),

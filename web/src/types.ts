@@ -73,6 +73,8 @@ export interface UserSettings {
   /** Record search terms for autocomplete (kept in this browser). */
   search_history_enabled: boolean
   search_history_max: number
+  /** Background full-text indexer (shared linXiv setting, off by default). */
+  full_text_worker_enabled: boolean
 }
 
 /** One cached feed entry (`feed get`). arxiv_id/version are null for non-arXiv items. */

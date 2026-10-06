@@ -68,6 +68,12 @@ def _pending(papers: object) -> list[str]:
     ]
 
 
+@router.get("/sources/worker")
+async def worker_status(request: Request):
+    """Background indexer (Settings toggle `full_text_worker_enabled`): session counters."""
+    return request.app.state.fulltext_worker.public()
+
+
 @router.get("/sources/pending")
 async def pending(request: Request):
     papers = await run(request, ["list"])
