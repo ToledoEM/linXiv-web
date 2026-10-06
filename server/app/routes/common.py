@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import os
+import tempfile
+from pathlib import Path
 from typing import Any
 
-from fastapi import HTTPException, Request
+from fastapi import HTTPException, Request, UploadFile
 
 from ..cli import Runner
 from ..settings import Settings
@@ -31,3 +34,33 @@ def ident(value: str, what: str = "id") -> str:
 async def run(request: Request, args: list[str], long: bool = False, raw: bool = False) -> Any:
     s = settings(request)
     return await runner(request)(args, s.timeout_long if long else s.timeout_short, raw=raw)
+
+
+_CHUNK = 1024 * 1024
+
+
+async def save_upload(
+    request: Request, file: UploadFile, suffix: str, magic: bytes, bad_type: str
+) -> Path:
+    """Stream an upload to a temp file, capped at `max_upload_mb`, and require it
+    to start with `magic`. The caller unlinks the returned path."""
+    limit = settings(request).max_upload_mb * 1024 * 1024
+    fd, name = tempfile.mkstemp(prefix="lxw-upload-", suffix=suffix)
+    tmp = Path(name)
+    try:
+        size = 0
+        head = b""
+        with os.fdopen(fd, "wb") as out:
+            while chunk := await file.read(_CHUNK):
+                size += len(chunk)
+                if size > limit:
+                    raise HTTPException(status_code=413, detail="file too large")
+                if len(head) < len(magic):
+                    head += chunk[: len(magic) - len(head)]
+                out.write(chunk)
+        if head != magic:
+            raise HTTPException(status_code=400, detail=bad_type)
+    except BaseException:
+        tmp.unlink(missing_ok=True)
+        raise
+    return tmp

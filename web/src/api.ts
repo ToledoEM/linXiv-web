@@ -219,6 +219,24 @@ export const api = {
   deleteAnnotation: (id: number) => request('DELETE', `/api/annotations/${id}`),
   graph: (excludeSingleAuthors: boolean) =>
     request<GraphView>('GET', `/api/graph${qs({ exclude_single_authors: excludeSingleAuthors || undefined })}`),
+  previewProjectImport: (file: File) => {
+    const form = new FormData()
+    form.append('file', file)
+    return request<{
+      project_name: string
+      description: string
+      paper_count: number
+      note_count: number
+      annotation_count: number
+      has_pdfs: boolean
+    }>('POST', '/api/projects/import/preview', form)
+  },
+  importProject: (file: File, onConflict: 'merge' | 'overwrite') => {
+    const form = new FormData()
+    form.append('file', file)
+    form.append('on_conflict', onConflict)
+    return request<{ project_id: number }>('POST', '/api/projects/import', form)
+  },
   orcidBackfill: () =>
     request<{ checked: number; updated: { author_id: number; full_name: string; doi: string }[]; errored: number }>(
       'POST',

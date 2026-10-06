@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import io
+import zipfile
 from pathlib import Path
 
 from app.cli import CLIError
@@ -219,3 +221,76 @@ def test_export_errors_clean_up(client, fake):
     fake.on("project", "get", result=CLIError(404, "Project 9 not found"))
     assert client.get("/api/projects/9/export").status_code == 404
     assert client.get("/api/projects/1/export", params={"format": "pdf"}).status_code == 422
+
+
+def _lxproj(entries: dict[str, bytes], compress=zipfile.ZIP_DEFLATED) -> bytes:
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", compress) as z:
+        for name, data in entries.items():
+            z.writestr(name, data)
+    return buf.getvalue()
+
+
+GOOD = {"manifest.json": b'{"project": {"name": "P"}}', "pdfs/doi:10.1/x_v1.pdf": b"%PDF-1.4"}
+
+
+def test_import_preview(client, fake):
+    seen = {}
+
+    def preview(argv):
+        seen["path"] = Path(argv[-1])
+        seen["exists"] = seen["path"].is_file()
+        return fixture("project-import-preview.json")
+
+    fake.on("project", "import", result=preview)
+    r = client.post("/api/projects/import/preview", files={"file": ("p.lxproj", _lxproj(GOOD))})
+    assert r.status_code == 200, r.text
+    assert r.json()["project_name"] == "Test Proej"
+    assert fake.calls[-1][:4] == ["project", "import", "--preview", "--"]
+    assert seen["exists"] and not seen["path"].exists()
+
+
+def test_import_commit(client, fake):
+    fake.on("project", "import", result={"project_id": 7})
+    data = _lxproj(GOOD)
+    r = client.post(
+        "/api/projects/import",
+        files={"file": ("p.lxproj", data)},
+        data={"on_conflict": "overwrite"},
+    )
+    assert r.json() == {"project_id": 7}
+    assert fake.calls[-1][:4] == ["project", "import", "--on-conflict=overwrite", "--"]
+    client.post("/api/projects/import", files={"file": ("p.lxproj", data)})
+    assert fake.calls[-1][2] == "--on-conflict=merge"
+    bad = client.post(
+        "/api/projects/import", files={"file": ("p.lxproj", data)}, data={"on_conflict": "replace"}
+    )
+    assert bad.status_code == 422
+
+
+def test_import_rejects_bad_archives(client, fake):
+    fake.on("project", "import", result={"project_id": 1})
+    cases = {
+        "not a zip": b"hello",
+        "no manifest": _lxproj({"x.txt": b"hi"}),
+        "traversal": _lxproj({"manifest.json": b"{}", "pdfs/../../etc/x.pdf": b"x"}),
+        "absolute": _lxproj({"manifest.json": b"{}", "/abs.pdf": b"x"}),
+        "backslash": _lxproj({"manifest.json": b"{}", "pdfs\\..\\x.pdf": b"x"}),
+    }
+    for label, data in cases.items():
+        r = client.post("/api/projects/import/preview", files={"file": (f"{label}.lxproj", data)})
+        assert r.status_code == 400, (label, r.text)
+    # 1 MB upload cap in tests; unpacked size is capped at 4x that
+    big = _lxproj(
+        {"manifest.json": b"{}", **{f"pdfs/{i}.pdf": b"\0" * 1_000_000 for i in range(5)}}
+    )
+    r = client.post("/api/projects/import/preview", files={"file": ("big.lxproj", big)})
+    assert r.status_code in (400, 413), r.text
+    assert fake.calls == []
+
+
+def test_import_cli_rejects_manifest(client, fake):
+    fake.on("project", "import", result=CLIError(502, "key must be a string at line 1 column 2"))
+    r = client.post("/api/projects/import/preview", files={"file": ("p.lxproj", _lxproj(GOOD))})
+    assert r.status_code == 400
+    assert "not a valid .lxproj" in r.json()["detail"]

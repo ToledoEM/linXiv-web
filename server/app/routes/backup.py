@@ -8,7 +8,6 @@ whole database after the CLI copies the current one to `papers.pre-restore`
 
 from __future__ import annotations
 
-import os
 import shutil
 import tempfile
 import time
@@ -19,13 +18,12 @@ from fastapi.responses import FileResponse
 from starlette.background import BackgroundTask
 
 from ..cli import CLIError
-from .common import run, settings
+from .common import run, save_upload
 from .feed import clear_feed_cache
 
 router = APIRouter(prefix="/api", tags=["backup"])
 
 SQLITE_MAGIC = b"SQLite format 3\x00"
-_CHUNK = 1024 * 1024
 
 
 @router.get("/backup")
@@ -50,27 +48,9 @@ async def download_backup(request: Request):
 
 
 async def _save_upload(request: Request, file: UploadFile) -> Path:
-    """Stream the upload to a temp file (size-capped) and check the SQLite header."""
-    limit = settings(request).max_upload_mb * 1024 * 1024
-    fd, name = tempfile.mkstemp(prefix="lxw-backup-", suffix=".db")
-    tmp = Path(name)
-    try:
-        size = 0
-        head = b""
-        with os.fdopen(fd, "wb") as out:
-            while chunk := await file.read(_CHUNK):
-                size += len(chunk)
-                if size > limit:
-                    raise HTTPException(status_code=413, detail="file too large")
-                if len(head) < len(SQLITE_MAGIC):
-                    head += chunk[: len(SQLITE_MAGIC) - len(head)]
-                out.write(chunk)
-        if head != SQLITE_MAGIC:
-            raise HTTPException(status_code=400, detail="not a linXiv backup (SQLite) file")
-    except BaseException:
-        tmp.unlink(missing_ok=True)
-        raise
-    return tmp
+    return await save_upload(
+        request, file, ".db", SQLITE_MAGIC, "not a linXiv backup (SQLite) file"
+    )
 
 
 def _cli_bad_file(e: CLIError) -> bool:

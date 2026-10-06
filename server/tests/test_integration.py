@@ -379,3 +379,29 @@ def test_real_cli_search_history_settings(settings):
     body = {"search_history_enabled": False, "search_history_max": 25}
     got = c.patch("/api/settings", json=body).json()["settings"]
     assert (got["search_history_enabled"], got["search_history_max"]) == (False, 25)
+
+
+def test_real_cli_project_import_roundtrip(settings):
+    c = TestClient(create_app(replace(settings, linxiv_bin=BIN)))
+    bib = b"@misc{im1, title={Round Trip}, author={Doe, Jane}, year={2021}}\n"
+    assert c.post("/api/import/bibtex", files={"file": ("a.bib", bib)}).status_code == 200
+    pid = c.post("/api/projects", json={"name": "Trip", "description": "d"}).json()["id"]
+    c.post(f"/api/projects/{pid}/papers", json={"source_ids": ["local:im1"]})
+    note = {"source_id": "local:im1", "title": "n", "content": "c", "project_id": pid}
+    assert c.post("/api/notes", json=note).status_code == 200
+    archive = c.get(f"/api/projects/{pid}/export").content
+
+    files = {"file": ("trip.lxproj", archive)}
+    preview = c.post("/api/projects/import/preview", files=files).json()
+    assert (preview["project_name"], preview["paper_count"], preview["note_count"]) == (
+        "Trip",
+        1,
+        1,
+    )
+    r = c.post("/api/projects/import", files=files, data={"on_conflict": "merge"})
+    assert r.status_code == 200, r.text
+    new_id = r.json()["project_id"]
+    assert new_id != pid
+    assert [p["source_id"] for p in c.get(f"/api/projects/{new_id}/papers").json()] == ["local:im1"]
+    bad = c.post("/api/projects/import/preview", files={"file": ("x.lxproj", b"PK\x03\x04junk")})
+    assert bad.status_code == 400

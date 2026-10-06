@@ -9,16 +9,17 @@ from __future__ import annotations
 import re
 import shutil
 import tempfile
+import zipfile
 from pathlib import Path
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from starlette.background import BackgroundTask
 
 from ..cli import CLIError
-from .common import ident, run
+from .common import ident, run, save_upload, settings
 
 router = APIRouter(prefix="/api", tags=["projects"])
 
@@ -194,3 +195,86 @@ async def restore_project(request: Request, project_id: int):
 async def delete_project(request: Request, project_id: int):
     """Soft delete: the project moves to the trash."""
     return await run(request, ["project", "delete", "--", str(project_id)])
+
+
+# --- .lxproj import (`project import`) --------------------------------------
+# linxiv reads every bundled PDF fully into memory and trusts the archive, so the
+# zip is checked here first: sane entry names, bounded count and unpacked size.
+ZIP_MAGIC = b"PK\x03\x04"
+MAX_ARCHIVE_ENTRIES = 10_000
+MAX_COMPRESSION_RATIO = 200
+
+
+def _check_lxproj(path: Path, max_unpacked: int) -> None:
+    try:
+        with zipfile.ZipFile(path) as z:
+            infos = z.infolist()
+    except zipfile.BadZipFile as e:
+        raise HTTPException(status_code=400, detail="not a .lxproj (zip) archive") from e
+    if len(infos) > MAX_ARCHIVE_ENTRIES:
+        raise HTTPException(status_code=400, detail="archive has too many entries")
+    if not any(i.filename == "manifest.json" for i in infos):
+        raise HTTPException(status_code=400, detail="not a .lxproj archive: manifest.json missing")
+    total = 0
+    for i in infos:
+        name = i.filename
+        # PDF names carry the paper id, which may itself contain "/" (DOIs).
+        if name.startswith(("/", "\\")) or "\\" in name or ".." in name.split("/"):
+            raise HTTPException(status_code=400, detail=f"unsafe path in archive: {name[:120]}")
+        total += i.file_size
+        if i.file_size > 1_000_000 and i.file_size > MAX_COMPRESSION_RATIO * max(
+            i.compress_size, 1
+        ):
+            raise HTTPException(status_code=400, detail="archive entry is suspiciously compressed")
+    if total > max_unpacked:
+        raise HTTPException(status_code=413, detail="archive unpacks too large")
+
+
+async def _lxproj_upload(request: Request, file: UploadFile) -> Path:
+    tmp = await save_upload(request, file, ".lxproj", ZIP_MAGIC, "not a .lxproj (zip) archive")
+    try:
+        _check_lxproj(tmp, 4 * settings(request).max_upload_mb * 1024 * 1024)
+    except BaseException:
+        tmp.unlink(missing_ok=True)
+        raise
+    return tmp
+
+
+def _import_error(e: CLIError) -> HTTPException | None:
+    msg = e.message.lower()
+    if "not a valid .lxproj" in msg or "zip archive" in msg or "line " in msg:
+        return HTTPException(status_code=400, detail=f"not a valid .lxproj file: {e.message}")
+    return None
+
+
+@router.post("/projects/import/preview")
+async def preview_project_import(request: Request, file: UploadFile):
+    """Archive summary (name, description, counts, PDFs) without touching the library."""
+    tmp = await _lxproj_upload(request, file)
+    try:
+        return await run(request, ["project", "import", "--preview", "--", str(tmp)], long=True)
+    except CLIError as e:
+        raise (_import_error(e) or e) from e
+    finally:
+        tmp.unlink(missing_ok=True)
+
+
+@router.post("/projects/import")
+async def import_project(
+    request: Request,
+    file: UploadFile,
+    on_conflict: Annotated[Literal["merge", "overwrite"], Form()] = "merge",
+):
+    """Always creates a NEW project. `merge` keeps stored metadata of papers already
+    in the library; `overwrite` rewrites it from the archive. Returns `project_id`."""
+    tmp = await _lxproj_upload(request, file)
+    try:
+        return await run(
+            request,
+            ["project", "import", f"--on-conflict={on_conflict}", "--", str(tmp)],
+            long=True,
+        )
+    except CLIError as e:
+        raise (_import_error(e) or e) from e
+    finally:
+        tmp.unlink(missing_ok=True)

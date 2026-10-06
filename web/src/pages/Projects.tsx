@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../api'
 import { ErrorText } from '../components'
+import ProjectImport from '../ProjectImport'
 import { DeleteButton, ProjectForm, Swatch } from '../projectParts'
 import { MathText } from '../tex'
 import type { Project, ProjectInput } from '../types'
@@ -71,6 +72,7 @@ export default function Projects() {
   const [projects, setProjects] = useState<Project[] | null>(null)
   const [archivedCount, setArchivedCount] = useState(0)
   const [creating, setCreating] = useState(false)
+  const [importing, setImporting] = useState(false)
   const [editing, setEditing] = useState<number | null>(null)
   const [busy, setBusy] = useState<number | null>(null)
   const [error, setError] = useState('')
@@ -123,6 +125,7 @@ export default function Projects() {
     setShowArchived(archived)
     setProjects(null)
     setCreating(false)
+    setImporting(false)
     setEditing(null)
   }
 
@@ -141,13 +144,18 @@ export default function Projects() {
             </button>
           )
         )}
-        {!showArchived && !creating && (
-          <button className="page-head-action" onClick={() => setCreating(true)}>
-            New project
-          </button>
+        {!showArchived && !creating && !importing && (
+          <span className="page-head-action actions-inline">
+            <button className="link" onClick={() => setImporting(true)}>
+              Import…
+            </button>
+            <button onClick={() => setCreating(true)}>New project</button>
+          </span>
         )}
       </div>
       <ErrorText error={error} />
+
+      {importing && <ProjectImport onCancel={() => setImporting(false)} />}
 
       {creating && (
         <ProjectForm
