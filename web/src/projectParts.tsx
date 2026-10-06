@@ -1,7 +1,8 @@
-import { useState, type FormEvent, type KeyboardEvent } from 'react'
+import { useEffect, useState, type FormEvent, type KeyboardEvent } from 'react'
+import { api } from './api'
 import { ErrorText } from './components'
-import { hasTag, PRESET_COLORS, READING_LIST_TAG } from './projects'
-import type { ProjectInput } from './types'
+import { failedMessage, hasTag, PRESET_COLORS, READING_LIST_TAG } from './projects'
+import type { Project, ProjectInput } from './types'
 
 /** Chips plus a text box: Enter or blur adds, Backspace on empty removes the last. */
 function TagInput({ value, onChange, id }: { value: string[]; onChange: (tags: string[]) => void; id: string }) {
@@ -160,5 +161,105 @@ export function DeleteButton({ busy, onConfirm }: { busy: boolean; onConfirm: ()
         Cancel
       </button>
     </>
+  )
+}
+
+/** Add the selected papers to an existing or new project (desktop Library SelectionBar); `selected` holds source_ids. */
+export function AddToProjectBar({
+  selected,
+  onSelect,
+}: {
+  selected: Set<string>
+  onSelect: (ids: Set<string>) => void
+}) {
+  const [projects, setProjects] = useState<Project[] | null>(null)
+  const [target, setTarget] = useState('')
+  const [name, setName] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const [done, setDone] = useState('')
+
+  useEffect(() => {
+    api
+      .projects('active')
+      .then(setProjects)
+      .catch((err) => setError((err as Error).message))
+  }, [])
+
+  const addTo = async (projectId: number, label: string, created: boolean) => {
+    const ids = [...selected]
+    const r = await api.addProjectPapers(projectId, ids)
+    if (r.failed.length) {
+      // Keep only the failures selected so a retry can't re-add the rest.
+      onSelect(new Set(r.failed))
+      setError(created ? `Project created, but ${failedMessage(r.failed.length, ids.length)}` : failedMessage(r.failed.length, ids.length))
+    } else {
+      onSelect(new Set())
+      setDone(`Added ${ids.length} paper${ids.length === 1 ? '' : 's'} to ${label}.`)
+    }
+  }
+
+  const go = async (fn: () => Promise<void>) => {
+    setBusy(true)
+    setError('')
+    setDone('')
+    try {
+      await fn()
+    } catch (err) {
+      setError((err as Error).message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const addExisting = () =>
+    go(async () => {
+      const p = projects?.find((x) => String(x.id) === target)
+      if (p) await addTo(p.id, p.name, false)
+    })
+
+  const addNew = () =>
+    go(async () => {
+      const label = name.trim()
+      const { id } = await api.createProject({ name: label, description: '', color_hex: null, project_tags: [] })
+      // The project exists either way; clear the name so a retry can't duplicate it.
+      setName('')
+      setProjects(await api.projects('active'))
+      await addTo(id, label, true)
+    })
+
+  if (!selected.size) return done ? <p className="success small">{done}</p> : null
+
+  return (
+    <div className="selection-bar">
+      <span>{selected.size} selected</span>
+      <select aria-label="Project" value={target} onChange={(e) => setTarget(e.target.value)} disabled={busy}>
+        <option value="">Choose project…</option>
+        {projects?.map((p) => (
+          <option key={p.id} value={p.id}>
+            {p.name}
+          </option>
+        ))}
+      </select>
+      <button onClick={addExisting} disabled={busy || !target}>
+        Add to project
+      </button>
+      <span className="muted small">or</span>
+      <input
+        placeholder="New project name"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        onKeyDown={(e) => e.key === 'Enter' && name.trim() && !busy && addNew()}
+        disabled={busy}
+      />
+      <button onClick={addNew} disabled={busy || !name.trim()}>
+        Create and add
+      </button>
+      <span className="grow" />
+      <button className="link" onClick={() => onSelect(new Set())} disabled={busy}>
+        Clear
+      </button>
+      {error && <p className="error selection-bar-msg">{error}</p>}
+    </div>
   )
 }

@@ -337,3 +337,19 @@ def test_real_cli_annotations(settings):
     assert got == ("#54b9f5", "Some text", "edited")
     assert c.delete(f"/api/annotations/{new_id}").status_code == 200
     assert c.get("/api/annotations", params={"paper": sid}).json() == []
+
+
+def test_real_cli_graph(settings):
+    c = TestClient(create_app(replace(settings, linxiv_bin=BIN)))
+    bib = (
+        b"@misc{g1, title={One}, author={Doe, Jane and Roe, Rich}, year={2021}, keywords={ml}}\n"
+        b"@misc{g2, title={Two}, author={Doe, Jane}, year={2022}}\n"
+    )
+    assert c.post("/api/import/bibtex", files={"file": ("a.bib", bib)}).status_code == 200
+    v = c.get("/api/graph").json()
+    assert sorted(p["label"] for p in v["papers"]) == ["One", "Two"]
+    authors = {a["label"]: a["paper_count"] for a in v["authors"]}
+    assert authors == {"Jane Doe": 2, "Rich Roe": 1}
+    assert len([e for e in v["edges"] if e["target"].startswith("author::")]) == 3
+    single = c.get("/api/graph", params={"exclude_single_authors": "true"}).json()
+    assert [a["label"] for a in single["authors"]] == ["Jane Doe"]

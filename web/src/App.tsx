@@ -13,6 +13,7 @@ import AddPaper from './pages/AddPaper'
 import Trash from './pages/Trash'
 import AuthorDetail from './pages/AuthorDetail'
 import Authors from './pages/Authors'
+import Graph from './pages/Graph'
 import Projects from './pages/Projects'
 import ProjectDetail from './pages/ProjectDetail'
 import ReadingLists from './pages/ReadingLists'
@@ -23,6 +24,7 @@ const NAV: NavItem[] = [
   { to: '/library', label: 'Library', icon: '▤' },
   { to: '/projects', label: 'Projects', icon: '◫' },
   { to: '/reading', label: 'Reading', icon: '☰' },
+  { to: '/graph', label: 'Graph', icon: '⋈' },
   { to: '/search', label: 'Search', icon: '⌕' },
   { to: '/add', label: 'Add Paper', icon: '＋' },
   { to: '/upload', label: 'Upload', icon: '⇪' },
@@ -74,6 +76,7 @@ export default function App() {
           <Route path="/projects" element={<Projects />} />
           <Route path="/projects/:id" element={<ProjectDetail />} />
           <Route path="/reading" element={<ReadingLists />} />
+          <Route path="/graph" element={<Graph />} />
           <Route path="/search" element={<Search />} />
           <Route path="/paper/*" element={<PaperDetail />} />
           <Route path="/add" element={<AddPaper />} />

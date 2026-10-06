@@ -24,6 +24,7 @@ import type {
   TrashListing,
   UserSettings,
 } from './types'
+import type { GraphView } from './graph/model'
 import type { Anchor } from './pdfAnchor'
 
 export class ApiError extends Error {
@@ -207,6 +208,8 @@ export const api = {
   updateAnnotation: (id: number, body: { comment?: string; color?: string; source_id?: string }) =>
     request<{ id: number }>('PATCH', `/api/annotations/${id}`, body),
   deleteAnnotation: (id: number) => request('DELETE', `/api/annotations/${id}`),
+  graph: (excludeSingleAuthors: boolean) =>
+    request<GraphView>('GET', `/api/graph${qs({ exclude_single_authors: excludeSingleAuthors || undefined })}`),
   orcidBackfill: () =>
     request<{ checked: number; updated: { author_id: number; full_name: string; doi: string }[]; errored: number }>(
       'POST',

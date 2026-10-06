@@ -17,6 +17,7 @@ from .routes import (
     authors,
     backup,
     feed,
+    graph,
     imports,
     library,
     metadata,
@@ -82,6 +83,7 @@ def create_app(
     app.include_router(feed.router, dependencies=guarded)
     app.include_router(backup.router, dependencies=guarded)
     app.include_router(annotations.router, dependencies=guarded)
+    app.include_router(graph.router, dependencies=guarded)
     app.include_router(projects.router, dependencies=guarded)
     app.include_router(notes.router, dependencies=guarded)
     app.include_router(versions.router, dependencies=guarded)
