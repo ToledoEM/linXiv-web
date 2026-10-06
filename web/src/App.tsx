@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Navigate, Route, Routes, useNavigate } from 'react-router-dom'
+import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { api, setUnauthorizedHandler } from './api'
 import Sidebar, { type NavItem } from './Sidebar'
 import Login from './pages/Login'
@@ -19,18 +19,19 @@ import ProjectDetail from './pages/ProjectDetail'
 import ReadingLists from './pages/ReadingLists'
 import { setTexEnabled } from './texStore'
 import { useGlobalShortcuts } from './shortcuts'
+import { hiddenPageFor, useSidebarPages } from './sidebarPages'
 
 const NAV: NavItem[] = [
   { to: '/', label: 'Home', icon: '⌂', end: true },
   { to: '/library', label: 'Library', icon: '▤' },
   { to: '/projects', label: 'Projects', icon: '◫' },
-  { to: '/reading', label: 'Reading', icon: '☰' },
-  { to: '/graph', label: 'Graph', icon: '⋈' },
-  { to: '/search', label: 'Search', icon: '⌕' },
-  { to: '/add', label: 'Add Paper', icon: '＋' },
-  { to: '/upload', label: 'Upload', icon: '⇪' },
+  { to: '/reading', label: 'Reading', icon: '☰', pageKey: 'reading' },
+  { to: '/graph', label: 'Graph', icon: '⋈', pageKey: 'graph' },
+  { to: '/search', label: 'Search', icon: '⌕', pageKey: 'search' },
+  { to: '/add', label: 'Add Paper', icon: '＋', pageKey: 'add' },
+  { to: '/upload', label: 'Upload', icon: '⇪', pageKey: 'upload' },
   { to: '/authors', label: 'Authors', icon: '◎' },
-  { to: '/trash', label: 'Trash', icon: '⌫' },
+  { to: '/trash', label: 'Trash', icon: '⌫', pageKey: 'trash' },
   { to: '/settings', label: 'Settings', icon: '⚙' },
 ]
 
@@ -39,7 +40,14 @@ type AuthState = { checked: boolean; enabled: boolean; authenticated: boolean }
 export default function App() {
   const [auth, setAuth] = useState<AuthState>({ checked: false, enabled: false, authenticated: false })
   const navigate = useNavigate()
+  const { pathname } = useLocation()
+  const pages = useSidebarPages()
   useGlobalShortcuts()
+
+  // A page switched off in Settings → Sidebar is unreachable by URL too (desktop AppShell).
+  useEffect(() => {
+    if (hiddenPageFor(pathname, pages)) navigate('/', { replace: true })
+  }, [pathname, pages, navigate])
 
   useEffect(() => {
     setUnauthorizedHandler(() => setAuth((a) => ({ ...a, authenticated: false })))
@@ -70,7 +78,7 @@ export default function App() {
 
   return (
     <div className="layout">
-      <Sidebar items={NAV} onLogout={auth.enabled ? logout : undefined} />
+      <Sidebar items={NAV.filter((i) => !i.pageKey || pages[i.pageKey])} onLogout={auth.enabled ? logout : undefined} />
       <main className="content">
         <Routes>
           <Route path="/" element={<Home />} />

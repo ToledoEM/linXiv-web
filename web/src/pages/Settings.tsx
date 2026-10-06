@@ -10,6 +10,7 @@ import ThemePicker from '../ThemePicker'
 import VersionMonitor from '../VersionMonitor'
 import { clearHistory, historySize } from '../searchHistory'
 import { SHORTCUTS } from '../shortcuts'
+import { PAGE_OPTIONS, setSidebarPage, useSidebarPages } from '../sidebarPages'
 import type { UserSettings } from '../types'
 import { setTexEnabled } from '../texStore'
 import { formSubmitOnCtrlEnter } from '../submitShortcut'
@@ -29,6 +30,7 @@ export default function Settings() {
   const [status, setStatus] = useState('')
   const [busy, setBusy] = useState(false)
   const [historyCount, setHistoryCount] = useState(historySize)
+  const pages = useSidebarPages()
 
   useEffect(() => {
     api
@@ -227,6 +229,24 @@ export default function Settings() {
         </div>
         <ErrorText error={error} />
       </form>
+      <div className="card settings-section">
+        <h3>Sidebar</h3>
+        <p className="muted small">
+          Choose which pages appear in the sidebar. Home, Library, Projects, Authors and Settings always do. Stored in
+          this browser.
+        </p>
+        <div className="sidebar-toggles">
+          {PAGE_OPTIONS.map((o) => (
+            <label key={o.key} className="check">
+              <input type="checkbox" checked={pages[o.key]} onChange={(e) => setSidebarPage(o.key, e.target.checked)} />
+              <span>
+                {o.label} <span className="muted small">· {o.description}</span>
+              </span>
+            </label>
+          ))}
+        </div>
+      </div>
+
       <div className="card settings-section">
         <h3>Keyboard shortcuts</h3>
         <table className="shortcut-table">

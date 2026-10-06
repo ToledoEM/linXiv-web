@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import ThemePicker from './ThemePicker'
+import type { PageKey } from './sidebarPages'
 
-export type NavItem = { to: string; label: string; icon: string; end?: boolean }
+export type NavItem = { to: string; label: string; icon: string; end?: boolean; pageKey?: PageKey }
 
 const STORAGE_KEY = 'lxw.sidebar.collapsed'
 
