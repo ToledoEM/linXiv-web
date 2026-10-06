@@ -166,6 +166,11 @@ export const api = {
   updateAuthor: (id: number, body: AuthorUpdate) =>
     request<{ updated_author_id: number }>('PATCH', `/api/authors/${id}`, body),
   deleteAuthor: (id: number) => request('DELETE', `/api/authors/${id}`),
+  orcidBackfill: () =>
+    request<{ checked: number; updated: { author_id: number; full_name: string; doi: string }[]; errored: number }>(
+      'POST',
+      '/api/orcid/backfill',
+    ),
   mergeCandidates: (id: number) => request<MergeCandidates>('GET', `/api/authors/${id}/merge-candidates`),
   mergeAuthors: (id: number, duplicateIds: number[]) =>
     request<{ canonical_id: number; merged_ids: number[] }>('POST', `/api/authors/${id}/merge`, {

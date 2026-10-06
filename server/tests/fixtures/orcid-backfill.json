@@ -1,0 +1,61 @@
+{
+  "checked": 20,
+  "updated": [
+    {
+      "author_id": 52,
+      "full_name": "Pushmeet Kohli",
+      "doi": "10.1038/s41586-021-03819-2"
+    },
+    {
+      "author_id": 27,
+      "full_name": "Russ Bates",
+      "doi": "10.1038/s41586-021-03819-2"
+    },
+    {
+      "author_id": 45,
+      "full_name": "Michalina Pacholska",
+      "doi": "10.1038/s41586-021-03819-2"
+    },
+    {
+      "author_id": 16,
+      "full_name": "Yann LeCun",
+      "doi": "10.1038/nature14539"
+    },
+    {
+      "author_id": 44,
+      "full_name": "Martin Steinegger",
+      "doi": "10.1038/s41586-021-03819-2"
+    },
+    {
+      "author_id": 39,
+      "full_name": "Trevor Back",
+      "doi": "10.1038/s41586-021-03819-2"
+    },
+    {
+      "author_id": 10,
+      "full_name": "Bob Coecke",
+      "doi": "10.4204/EPTCS.394.6"
+    },
+    {
+      "author_id": 14,
+      "full_name": "Jian Sun",
+      "doi": "10.1109/CVPR.2016.90"
+    },
+    {
+      "author_id": 11,
+      "full_name": "Kaiming He",
+      "doi": "10.1109/CVPR.2016.90"
+    },
+    {
+      "author_id": 29,
+      "full_name": "Anna Potapenko",
+      "doi": "10.1038/s41586-021-03819-2"
+    },
+    {
+      "author_id": 26,
+      "full_name": "Kathryn Tunyasuvunakool",
+      "doi": "10.1038/s41586-021-03819-2"
+    }
+  ],
+  "errored": 0
+}

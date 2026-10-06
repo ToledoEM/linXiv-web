@@ -246,3 +246,13 @@ def test_real_cli_sources_offline(settings):
     r = c.post("/api/papers/local:src1/source")
     assert r.status_code == 400, r.text
     assert "arXiv" in r.json()["detail"]
+
+
+def test_real_cli_orcid_backfill_offline(settings):
+    c = TestClient(create_app(replace(settings, linxiv_bin=BIN)))
+    bib = b"@misc{ob1, title={No DOI}, author={Doe, Jane}, year={2021}}\n"
+    assert c.post("/api/import/bibtex", files={"file": ("a.bib", bib)}).status_code == 200
+    r = c.post("/api/orcid/backfill", json={"limit": 5})
+    assert r.status_code == 200, r.text
+    assert r.json() == {"checked": 0, "updated": [], "errored": 0}
+    assert c.post("/api/orcid/backfill", json={"limit": 0}).status_code == 422

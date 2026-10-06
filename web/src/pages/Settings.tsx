@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { api } from '../api'
 import { ErrorText } from '../components'
 import FullTextIndex from '../FullTextIndex'
+import OrcidBackfill from '../OrcidBackfill'
 import ThemePicker from '../ThemePicker'
 import VersionMonitor from '../VersionMonitor'
 import type { UserSettings } from '../types'
@@ -146,6 +147,7 @@ export default function Settings() {
       </form>
       <VersionMonitor />
       <FullTextIndex />
+      <OrcidBackfill />
     </section>
   )
 }

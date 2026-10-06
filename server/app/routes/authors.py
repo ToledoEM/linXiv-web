@@ -67,6 +67,12 @@ class AuthorUpdate(BaseModel):
         return self
 
 
+class BackfillBody(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    limit: int = Field(20, ge=1, le=100)
+
+
 class AuthorMerge(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
 
@@ -81,6 +87,19 @@ async def list_authors(request: Request, hide_single: bool = False):
     if not hide_single or not isinstance(authors, list):
         return authors
     return [a for a in authors if (a.get("paper_count") or 0) > 1]
+
+
+@router.post("/orcid/backfill")
+async def orcid_backfill(request: Request, body: BackfillBody | None = None):
+    """`orcid backfill`: fill ORCIDs onto up to `limit` random ORCID-less authors via
+    the DOI of a linked paper (CrossRef, then OpenAlex). 409 if a pass is running."""
+    limit = (body or BackfillBody()).limit
+    try:
+        return await run(request, ["orcid", "backfill", f"--limit={limit}"], long=True)
+    except CLIError as e:
+        if "already in progress" in e.message:
+            raise HTTPException(status_code=409, detail=e.message) from e
+        raise
 
 
 @router.get("/authors/{author_id}/merge-candidates")

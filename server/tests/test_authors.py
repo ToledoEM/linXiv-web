@@ -119,3 +119,24 @@ def test_merge_candidates(client, fake):
     assert [c["author_id"] for c in body["name_candidates"]] == [7]
     keys = {"author_id", "orcid", "full_name", "first_name", "last_name"}
     assert set(body["name_candidates"][0]) == keys
+
+
+def test_orcid_backfill(client, fake):
+    fake.on("orcid", "backfill", result=fixture("orcid-backfill.json"))
+    r = client.post("/api/orcid/backfill")
+    assert r.status_code == 200, r.text
+    assert len(r.json()["updated"]) == 11
+    assert fake.calls[-1] == ["orcid", "backfill", "--limit=20"]
+    client.post("/api/orcid/backfill", json={"limit": 100})
+    assert fake.calls[-1] == ["orcid", "backfill", "--limit=100"]
+
+
+def test_orcid_backfill_validation(client, fake):
+    for body in ({"limit": 0}, {"limit": 101}, {"limit": "5"}, {"max": 5}):
+        assert client.post("/api/orcid/backfill", json=body).status_code == 422, body
+    assert fake.calls == []
+
+
+def test_orcid_backfill_busy(client, fake):
+    fake.on("orcid", "backfill", result=CLIError(502, "an ORCID backfill is already in progress"))
+    assert client.post("/api/orcid/backfill").status_code == 409
