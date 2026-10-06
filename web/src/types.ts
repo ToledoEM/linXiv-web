@@ -70,6 +70,9 @@ export interface UserSettings {
   /** RSS/Atom URL shown on Home; empty = no feed. */
   home_feed_url: string
   rss_cache_retention_days: number
+  /** Record search terms for autocomplete (kept in this browser). */
+  search_history_enabled: boolean
+  search_history_max: number
 }
 
 /** One cached feed entry (`feed get`). arxiv_id/version are null for non-arXiv items. */

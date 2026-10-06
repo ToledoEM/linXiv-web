@@ -370,3 +370,12 @@ def test_real_cli_library_search_includes_notes(settings):
     abstract = c.get("/api/papers", params={"q": "wombat"}).json()
     assert [p["source_id"] for p in abstract] == ["local:ls2"]
     assert not abstract[0].get("deep_match")
+
+
+def test_real_cli_search_history_settings(settings):
+    c = TestClient(create_app(replace(settings, linxiv_bin=BIN)))
+    got = c.get("/api/settings").json()["settings"]
+    assert (got["search_history_enabled"], got["search_history_max"]) == (True, 200)
+    body = {"search_history_enabled": False, "search_history_max": 25}
+    got = c.patch("/api/settings", json=body).json()["settings"]
+    assert (got["search_history_enabled"], got["search_history_max"]) == (False, 25)

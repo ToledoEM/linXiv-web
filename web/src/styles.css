@@ -382,3 +382,9 @@ button.danger-link { color: var(--danger); }
 .gp-tip-summary { margin-top: 0.25rem; font-size: 0.75rem; color: var(--muted); }
 @media (max-width: 700px) { .gp-column { position: static; width: auto; max-height: none; } .graph-stage { height: auto; } .graph-stage > div:first-child { position: relative !important; height: 60vh; } }
 .deep-pill { margin-left: 0.4rem; font-size: 0.72rem; vertical-align: middle; }
+
+.suggest { position: relative; display: flex; }
+.suggest > input { flex: 1; min-width: 0; }
+.suggest-list { position: absolute; top: calc(100% + 2px); left: 0; right: 0; z-index: 20; list-style: none; margin: 0; padding: 0.25rem 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: 0 4px 16px rgba(0, 0, 0, 0.14); max-height: 18rem; overflow-y: auto; }
+.suggest-list li { padding: 0.35rem 0.7rem; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.suggest-list li:hover, .suggest-list li.active { background: var(--accent-soft); }

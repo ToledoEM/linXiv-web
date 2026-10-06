@@ -26,6 +26,8 @@ DEFAULTS: dict[str, object] = {
     **{k: "" for k in MAILTO_KEYS},
     "home_feed_url": "",
     "rss_cache_retention_days": 30,
+    "search_history_enabled": True,
+    "search_history_max": 200,
 }
 FEED_KEYS = ("home_feed_url", "rss_cache_retention_days")
 EMAIL = r"^$|^[^@\s]+@[^@\s]+\.[^@\s]+$"
@@ -42,6 +44,8 @@ class SettingsPatch(BaseModel):
     OPENALEX_MAILTO: str | None = Field(None, max_length=254, pattern=EMAIL)
     home_feed_url: str | None = Field(None, max_length=512, pattern=FEED_URL)
     rss_cache_retention_days: int | None = Field(None, ge=1, le=3650)
+    search_history_enabled: bool | None = None
+    search_history_max: int | None = Field(None, ge=1, le=10_000)
 
 
 async def _current(request: Request) -> dict:

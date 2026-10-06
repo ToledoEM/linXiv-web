@@ -8,6 +8,7 @@ import FullTextIndex from '../FullTextIndex'
 import OrcidBackfill from '../OrcidBackfill'
 import ThemePicker from '../ThemePicker'
 import VersionMonitor from '../VersionMonitor'
+import { clearHistory, historySize } from '../searchHistory'
 import type { UserSettings } from '../types'
 import { setTexEnabled } from '../texStore'
 
@@ -25,6 +26,7 @@ export default function Settings() {
   const [error, setError] = useState('')
   const [status, setStatus] = useState('')
   const [busy, setBusy] = useState(false)
+  const [historyCount, setHistoryCount] = useState(historySize)
 
   useEffect(() => {
     api
@@ -169,6 +171,47 @@ export default function Settings() {
             />
             Render TeX ($…$) in titles and abstracts
           </label>
+        </div>
+
+        <div className="card settings-section">
+          <h3>Search</h3>
+          <label className="check">
+            <input
+              type="checkbox"
+              checked={draft.search_history_enabled}
+              onChange={(e) => set('search_history_enabled', e.target.checked)}
+            />
+            Save search terms for autocomplete suggestions
+          </label>
+          <label className="field">
+            <span>Max history entries</span>
+            <input
+              type="number"
+              min={1}
+              max={10000}
+              step={1}
+              required
+              disabled={!draft.search_history_enabled}
+              value={draft.search_history_max}
+              onChange={(e) => set('search_history_max', Math.trunc(Number(e.target.value)))}
+            />
+            <span className="muted small">
+              Oldest terms are pruned when the limit is reached. Terms are kept in this browser ({historyCount} saved).
+            </span>
+          </label>
+          <div className="actions">
+            <button
+              type="button"
+              className="link"
+              disabled={historyCount === 0}
+              onClick={() => {
+                clearHistory()
+                setHistoryCount(0)
+              }}
+            >
+              Clear search history
+            </button>
+          </div>
         </div>
 
         <div className="toolbar">

@@ -1,8 +1,10 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { api, idPath } from '../api'
 import type { Paper, SearchResult, Source } from '../types'
 import { Authors, ErrorText } from '../components'
+import { addTerm, DEFAULT_HISTORY_MAX } from '../searchHistory'
+import SuggestInput from '../SuggestInput'
 import { MathText } from '../tex'
 
 type RowState = { busy?: boolean; paper?: Paper; error?: string }
@@ -47,9 +49,19 @@ export default function Search() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [rows, setRows] = useState<Record<string, RowState>>({})
+  // linXiv settings `search_history_enabled` / `search_history_max` (desktop Settings → Search).
+  const [history, setHistory] = useState({ enabled: true, max: DEFAULT_HISTORY_MAX })
+
+  useEffect(() => {
+    api
+      .settings()
+      .then((r) => setHistory({ enabled: r.settings.search_history_enabled, max: r.settings.search_history_max }))
+      .catch(() => {})
+  }, [])
 
   const run = async (tab: Tab) => {
     if (!q.trim()) return
+    if (history.enabled) addTerm(q, history.max)
     setBusy(true)
     setError('')
     setRows({})
@@ -112,11 +124,14 @@ export default function Search() {
         ))}
       </div>
       <form className="toolbar" onSubmit={submit}>
-        <input
-          className="grow"
-          placeholder={source === 'local' ? 'Search your library: title, author, id, tag…' : 'Title, author, keywords…'}
+        <SuggestInput
+          aria-label="Search query"
+          placeholder={
+            source === 'local' ? 'Search your library: title, abstract, author, full text, notes…' : 'Title, author, keywords…'
+          }
           value={q}
-          onChange={(e) => setQ(e.target.value)}
+          onValueChange={setQ}
+          enabled={history.enabled}
           autoFocus
         />
         {source !== 'local' && (
