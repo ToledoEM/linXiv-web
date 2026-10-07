@@ -423,7 +423,7 @@ def test_schemas_endpoint_works_while_off(client, fake):
     r = client.get("/api/ai/schemas")
     assert r.status_code == 200
     tasks = {t["id"]: t for t in r.json()}
-    assert set(tasks) == {"test", "tags", "summary"}
+    assert set(tasks) == {"test", "tags", "summary", "cleanup"}
     for t in tasks.values():
         assert t["schema"]["$schema"] == "https://json-schema.org/draft/2020-12/schema"
         assert t["label"] and t["example"]
@@ -441,7 +441,7 @@ def test_examples_match_their_schemas():
             kind = {"boolean": bool, "array": list, "string": str}[prop["type"]]
             assert isinstance(value, kind)
             if kind is str:
-                assert prop["minLength"] <= len(value) <= prop["maxLength"]
+                assert prop.get("minLength", 0) <= len(value) <= prop["maxLength"]
             if kind is list:
                 assert len(value) <= prop["maxItems"]
                 assert all(
@@ -601,3 +601,80 @@ def test_extract_text_caps(tmp_path):
     assert len(text) == 30 and truncated is True
     text, truncated = extract_text(pdf)
     assert text.startswith("abcdefghij") and truncated is False
+
+
+# ---- metadata cleanup ----
+
+MESSY = {
+    "title": "PEROXISOME PROLIFERATORS REDUCE SPATIAL MEMORY IMPAIRMENT.",
+    "authors": ["INESTROSA, NIBALDO C", "Carvajal, Francisco J"],
+    "published": "2013-01-01",
+    "summary": "Abstract text.",
+    "category": "Journal of Alzheimer's disease : JAD",
+    "doi": "10.3233/jad-2012-120397",
+    "url": "https://example.org/x",
+    "tags": [],
+}
+
+
+def test_cleanup_returns_lookup_candidate(client, fake, monkeypatch):
+    seen: list = []
+    reply = {
+        "title": "Peroxisome  Proliferators Reduce Spatial Memory Impairment",
+        "authors": ["Nibaldo C. Inestrosa", "Francisco J. Carvajal"],
+        "journal": "Journal of Alzheimer's Disease",
+    }
+    _mock(monkeypatch, _summary_reply(reply), seen)
+    fake.on("settings", "get", result=_stored("openai"))
+    fake.on("paper", "get", result=MESSY)
+    r = client.post("/api/ai/cleanup/doi:10.3233/jad-2012-120397")
+    assert r.status_code == 200, r.text
+    assert r.json() == {
+        "match": "ai",
+        "candidates": [
+            {
+                "source": "ai",
+                "ref": "m-1",
+                "title": "Peroxisome Proliferators Reduce Spatial Memory Impairment",
+                "authors": ["Nibaldo C. Inestrosa", "Francisco J. Carvajal"],
+                "published": "2013-01-01",
+                "summary": "Abstract text.",
+                "category": "Journal of Alzheimer's Disease",
+                "doi": "10.3233/jad-2012-120397",
+                "url": "https://example.org/x",
+            }
+        ],
+    }
+    body = json.loads(seen[0].content)
+    sent = json.loads(body["messages"][1]["content"])
+    assert sent == {
+        "title": MESSY["title"],
+        "authors": MESSY["authors"],
+        "journal": MESSY["category"],
+    }
+    assert "Never invent" in body["messages"][0]["content"]
+    # Preview only: nothing written.
+    assert not any(c[:2] == ["paper", "repair"] for c in fake.calls)
+
+
+def test_cleanup_keeps_authors_when_count_changes(client, fake, monkeypatch):
+    reply = {"title": "", "authors": ["Only One"], "journal": ""}
+    _mock(monkeypatch, _summary_reply(reply), [])
+    fake.on("settings", "get", result=_stored("openai"))
+    fake.on("paper", "get", result=MESSY)
+    c = client.post("/api/ai/cleanup/p1").json()["candidates"][0]
+    assert c["authors"] == MESSY["authors"]
+    assert c["title"] == MESSY["title"] and c["category"] == MESSY["category"]
+
+
+def test_cleanup_refused_when_off_and_bad_reply(client, fake, monkeypatch):
+    fake.on("settings", "get", result={**_stored("openai"), "ai_enabled": False})
+    assert client.post("/api/ai/cleanup/p1").status_code == 409
+    _mock(
+        monkeypatch,
+        lambda req: httpx.Response(200, json={"choices": [{"message": {"content": "[]"}}]}),
+        [],
+    )
+    fake.on("settings", "get", result=_stored("openai"))
+    fake.on("paper", "get", result=MESSY)
+    assert client.post("/api/ai/cleanup/p1").status_code == 502

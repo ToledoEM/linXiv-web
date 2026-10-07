@@ -30,9 +30,13 @@ export const SOURCES: { value: LookupSource; label: string }[] = [
   { value: 'openalex', label: 'OpenAlex' },
   { value: 'pubmed', label: 'PubMed' },
   { value: 'biorxiv', label: 'bioRxiv / medRxiv' },
+  { value: 'ai', label: 'AI cleanup (title, authors, journal)' },
 ]
 
-export const MATCH_LABEL = { doi: 'by DOI', arxiv: 'by arXiv id', title: 'by title' }
+/** Lookup sources to offer: AI cleanup only while AI features are on. */
+export const sourcesFor = (aiOn: boolean) => SOURCES.filter((s) => aiOn || s.value !== 'ai')
+
+export const MATCH_LABEL = { doi: 'by DOI', arxiv: 'by arXiv id', title: 'by title', ai: 'from AI cleanup' }
 export type MatchKind = keyof typeof MATCH_LABEL
 
 export function fromPaper(p: Paper): Form {

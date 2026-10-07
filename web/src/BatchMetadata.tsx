@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { useAiEnabled } from './aiEnabled'
 import { api } from './api'
 import { ErrorText } from './components'
 import {
@@ -7,7 +8,7 @@ import {
   fromCandidate,
   fromPaper,
   MATCH_LABEL,
-  SOURCES,
+  sourcesFor,
   toMetadataInput,
   type Field,
   type MatchKind,
@@ -45,6 +46,7 @@ export default function BatchMetadata({
   onSkip: (sourceId: string) => void
 }) {
   const [source, setSource] = useState<LookupSource>('crossref')
+  const aiOn = useAiEnabled()
   const [items, setItems] = useState<Record<string, Item>>({})
   const [running, setRunning] = useState(false)
   const [progress, setProgress] = useState(0)
@@ -153,7 +155,7 @@ export default function BatchMetadata({
             disabled={running}
             onChange={(e) => setSource(e.target.value as LookupSource)}
           >
-            {SOURCES.map((s) => (
+            {sourcesFor(aiOn).map((s) => (
               <option key={s.value} value={s.value}>
                 {s.label}
               </option>
@@ -277,7 +279,7 @@ function statusLabel(it: Item, source: LookupSource): string {
     case 'looking':
       return 'looking up…'
     case 'nomatch':
-      return `no match ${it.match ? MATCH_LABEL[it.match] : ''} (${SOURCES.find((s) => s.value === source)?.label})`
+      return `no match ${it.match ? MATCH_LABEL[it.match] : ''} (${sourcesFor(true).find((s) => s.value === source)?.label})`
     case 'error':
       return 'lookup failed'
     case 'match':

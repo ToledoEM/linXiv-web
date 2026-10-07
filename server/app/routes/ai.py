@@ -1,5 +1,5 @@
 """AI routes: provider checks for Settings → AI (list models, test the
-connection), tag suggestions and paper summaries.
+connection), tag suggestions, paper summaries and metadata cleanup.
 
 All use the saved provider settings (never values from the request) and refuse
 while `ai_enabled` is off. Suggestions are only returned; the UI adds the tags
@@ -9,6 +9,7 @@ the user accepts through the normal tag routes.
 from __future__ import annotations
 
 import asyncio
+import json
 import re
 import time
 
@@ -87,6 +88,41 @@ SUMMARY_SYSTEM = (
     "numbers or citations. If only the abstract is given, stay close to it."
 )
 
+CLEANUP_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "title": {"type": "string", "minLength": 1, "maxLength": 1000},
+        "authors": {
+            "type": "array",
+            "items": {"type": "string", "minLength": 1, "maxLength": 200},
+            "maxItems": 500,
+        },
+        "journal": {"type": "string", "maxLength": 300},
+    },
+    "required": ["title", "authors", "journal"],
+    "additionalProperties": False,
+}
+CLEANUP_EXAMPLE = {
+    "title": "Peroxisome Proliferators Reduce Spatial Memory Impairment in a Mouse Model",
+    "authors": ["Nibaldo C. Inestrosa", "Francisco J. Carvajal"],
+    "journal": "Journal of Alzheimer's Disease",
+}
+CLEANUP_SYSTEM = (
+    "You clean up bibliographic metadata of one paper. Return the same title, authors and "
+    "journal with only formatting fixed:\n"
+    "- Title: fix ALL CAPS or broken capitalization, stray spaces and a trailing period. "
+    "Keep acronyms, gene and protein names, chemical formulas and $...$ math exactly. "
+    "Never reword.\n"
+    "- Authors: same people, same order, same count. Use 'Given Family' order (turn "
+    "'Family, Given' around), fix capitalization, add a period after a bare initial. "
+    "Never invent or expand names.\n"
+    "- Journal: the journal's usual full name in title case, without subtitles after ':' "
+    "(e.g. 'Brain : a journal of neurology' -> 'Brain'). Keep preprint servers as "
+    "'arXiv', 'bioRxiv', 'medRxiv'. Leave arXiv categories such as 'cs.CL' unchanged. "
+    "Return an empty string if there is no journal.\n"
+    "If a value is already clean, return it unchanged."
+)
+
 # What each AI function asks the model to return; shown in Settings → AI.
 TASKS = [
     {
@@ -106,6 +142,12 @@ TASKS = [
         "label": "Paper summary",
         "schema": SUMMARY_SCHEMA,
         "example": SUMMARY_EXAMPLE,
+    },
+    {
+        "id": "cleanup",
+        "label": "Metadata cleanup",
+        "schema": CLEANUP_SCHEMA,
+        "example": CLEANUP_EXAMPLE,
     },
 ]
 JSON_SCHEMA_DIALECT = "https://json-schema.org/draft/2020-12/schema"
@@ -274,4 +316,59 @@ async def summarize(request: Request, source_id: str, pdf: bool = False):
         "key_points": _text_list(raw.get("key_points"), 6, 300),
         "used_pdf": bool(body),
         "truncated": truncated,
+    }
+
+
+def _clean_str(value: object, max_len: int) -> str:
+    return re.sub(r"\s+", " ", value).strip()[:max_len] if isinstance(value, str) else ""
+
+
+@router.post("/cleanup/{source_id:path}")
+async def cleanup(request: Request, source_id: str):
+    """Formatting fixes for title, authors and journal, as one lookup candidate
+    (same shape as `GET /papers/{id}/lookup`) so the editor's diff + approve
+    flow applies. The other fields are the paper's current values."""
+    cfg = await _config(request)
+    sid = ident(source_id)
+    paper = await run(request, ["paper", "get", "--", sid])
+    title = paper.get("title") or ""
+    authors = [a for a in (paper.get("authors") or []) if isinstance(a, str)]
+    journal = paper.get("category") or paper.get("journal_ref") or ""
+    prompt = json.dumps(
+        {"title": title, "authors": authors, "journal": journal}, ensure_ascii=False
+    )
+    try:
+        raw = await ai.complete(
+            cfg,
+            prompt,
+            system=CLEANUP_SYSTEM,
+            schema=CLEANUP_SCHEMA,
+            example=CLEANUP_EXAMPLE,
+            max_tokens=4096,
+        )
+    except ai.AIError as e:
+        raise HTTPException(status_code=e.status, detail=e.message) from e
+    if not isinstance(raw, dict):
+        raise HTTPException(status_code=502, detail="The model returned no metadata")
+    new_title = _clean_str(raw.get("title"), 1000) or title
+    new_authors = [_clean_str(a, 200) for a in raw.get("authors") or [] if isinstance(a, str)]
+    # Same people only: a different count means the model added or dropped someone.
+    if len(new_authors) != len(authors) or not all(new_authors):
+        new_authors = authors
+    new_journal = _clean_str(raw.get("journal"), 300) or journal
+    return {
+        "match": "ai",
+        "candidates": [
+            {
+                "source": "ai",
+                "ref": cfg.model,
+                "title": new_title,
+                "authors": new_authors,
+                "published": paper.get("published"),
+                "summary": paper.get("summary"),
+                "category": new_journal or None,
+                "doi": paper.get("doi"),
+                "url": paper.get("url"),
+            }
+        ],
     }

@@ -155,10 +155,12 @@ export const api = {
   saveMetadata: (id: string, body: MetadataInput) =>
     request<Paper>('PUT', `/api/papers/${idPath(id)}/metadata`, body),
   lookupMetadata: (id: string, source: LookupSource) =>
-    request<{ match: 'doi' | 'arxiv' | 'title'; candidates: MetadataCandidate[] }>(
-      'GET',
-      `/api/papers/${idPath(id)}/lookup${qs({ source })}`,
-    ),
+    source === 'ai'
+      ? request<{ match: 'ai'; candidates: MetadataCandidate[] }>('POST', `/api/ai/cleanup/${idPath(id)}`)
+      : request<{ match: 'doi' | 'arxiv' | 'title'; candidates: MetadataCandidate[] }>(
+          'GET',
+          `/api/papers/${idPath(id)}/lookup${qs({ source })}`,
+        ),
 
   addTags: (id: string, tags: string[]) =>
     request<{ tags: string[] }>('POST', `/api/papers/${idPath(id)}/tags`, { tags }),

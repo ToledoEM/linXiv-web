@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { useAiEnabled } from './aiEnabled'
 import { api } from './api'
 import { ErrorText } from './components'
 import { MathText } from './tex'
@@ -8,7 +9,7 @@ import {
   fromCandidate,
   fromPaper,
   MATCH_LABEL,
-  SOURCES,
+  sourcesFor,
   toMetadataInput,
   type Field,
   type Form,
@@ -119,6 +120,7 @@ export default function MetadataEditor({
         : 'crossref',
   )
   const [looking, setLooking] = useState(false)
+  const aiOn = useAiEnabled()
   const [lookupError, setLookupError] = useState('')
   const [found, setFound] = useState<{ match: keyof typeof MATCH_LABEL; candidates: MetadataCandidate[] } | null>(null)
   const [comparing, setComparing] = useState<MetadataCandidate | null>(null)
@@ -161,7 +163,7 @@ export default function MetadataEditor({
         <div className="toolbar">
           <strong>Retrieve metadata</strong>
           <select aria-label="Lookup source" value={source} onChange={(e) => setSource(e.target.value as LookupSource)}>
-            {SOURCES.map((s) => (
+            {sourcesFor(aiOn).map((s) => (
               <option key={s.value} value={s.value}>
                 {s.label}
               </option>

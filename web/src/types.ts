@@ -279,7 +279,8 @@ export interface MetadataInput {
   url: string | null
 }
 
-export type LookupSource = 'crossref' | 'arxiv' | 'openalex' | 'pubmed' | 'biorxiv'
+/** 'ai' = AI metadata cleanup (POST /api/ai/cleanup), same candidate shape. */
+export type LookupSource = 'crossref' | 'arxiv' | 'openalex' | 'pubmed' | 'biorxiv' | 'ai'
 
 /** One metadata match from GET /api/papers/{id}/lookup. */
 export interface MetadataCandidate {
