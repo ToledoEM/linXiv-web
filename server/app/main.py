@@ -16,6 +16,7 @@ from .fulltext_worker import FullTextWorker
 from .jobs import Jobs
 from .routes import (
     add,
+    ai,
     annotations,
     authors,
     backup,
@@ -96,6 +97,7 @@ def create_app(
     # /papers/{id:path}.
     app.include_router(pdfs.router, dependencies=guarded)
     app.include_router(user_settings.router, dependencies=guarded)
+    app.include_router(ai.router, dependencies=guarded)
     app.include_router(add.router, dependencies=guarded)
     app.include_router(trash.router, dependencies=guarded)
     app.include_router(imports.router, dependencies=guarded)

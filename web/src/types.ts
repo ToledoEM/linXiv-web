@@ -79,6 +79,27 @@ export interface UserSettings {
   web_pdf_folder_layout: PdfLayout
   /** Write-only: always "" from the server; send a new key to set it, "" to remove. */
   NCBI_API_KEY: string
+  /** AI features master switch (off by default). */
+  ai_enabled: boolean
+  genai_provider: AiProvider
+  genai_model: string
+  /** Base URL of the OpenAI-compatible endpoint (generic provider only). */
+  genai_base_url: string
+  /** Write-only AI keys, like NCBI_API_KEY. */
+  GEMINI_API_KEY: string
+  OPENAI_API_KEY: string
+  ANTHROPIC_API_KEY: string
+  GENAI_API_KEY_TAG_GEN: string
+}
+
+export type AiProvider = 'gemini' | 'openai' | 'anthropic' | 'generic'
+export type AiKeyName = 'GEMINI_API_KEY' | 'OPENAI_API_KEY' | 'ANTHROPIC_API_KEY' | 'GENAI_API_KEY_TAG_GEN'
+
+export interface AiTestResult {
+  ok: boolean
+  provider: AiProvider
+  model: string
+  ms: number
 }
 
 export type PdfLayout = 'none' | 'year' | 'journal' | 'year/journal' | 'journal/year'
@@ -121,6 +142,8 @@ export interface SettingsResponse {
   env_overrides: string[]
   /** NCBI (PubMed) API key status; the key itself is never returned. */
   ncbi_api_key: NcbiKeyStatus
+  /** AI provider key statuses; the keys themselves are never returned. */
+  ai_keys: Record<AiKeyName, NcbiKeyStatus>
 }
 
 export interface NcbiKeyStatus {

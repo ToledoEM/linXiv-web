@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import AiSettings from '../AiSettings'
 import { api } from '../api'
 import Backup from '../Backup'
 import DisplayControls from '../DisplayControls'
@@ -12,7 +13,7 @@ import VersionMonitor from '../VersionMonitor'
 import { clearHistory, historySize } from '../searchHistory'
 import { SHORTCUTS } from '../shortcuts'
 import { PAGE_OPTIONS, setSidebarPage, useSidebarPages } from '../sidebarPages'
-import type { NcbiKeyStatus, UserSettings } from '../types'
+import type { AiKeyName, NcbiKeyStatus, UserSettings } from '../types'
 import { setTexEnabled } from '../texStore'
 import { formSubmitOnCtrlEnter } from '../submitShortcut'
 
@@ -27,6 +28,7 @@ export default function Settings() {
   const [draft, setDraft] = useState<UserSettings | null>(null)
   const [envOverrides, setEnvOverrides] = useState<string[]>([])
   const [ncbi, setNcbi] = useState<NcbiKeyStatus | null>(null)
+  const [aiKeys, setAiKeys] = useState<Record<AiKeyName, NcbiKeyStatus> | null>(null)
   const [storageMb, setStorageMb] = useState<number | null>(null)
   const [error, setError] = useState('')
   const [status, setStatus] = useState('')
@@ -42,6 +44,7 @@ export default function Settings() {
         setDraft(r.settings)
         setEnvOverrides(r.env_overrides)
         setNcbi(r.ncbi_api_key)
+        setAiKeys(r.ai_keys)
       })
       .catch((err) => setError((err as Error).message))
     api
@@ -53,7 +56,8 @@ export default function Settings() {
   if (!draft || !saved) return error ? <ErrorText error={error} /> : <p className="muted">Loading…</p>
 
   const set = <K extends keyof UserSettings>(key: K, value: UserSettings[K]) => {
-    setDraft({ ...draft, [key]: value })
+    // Functional update: one change may set several keys in a row (AI provider + model).
+    setDraft((d) => d && { ...d, [key]: value })
     setStatus('')
   }
 
@@ -70,6 +74,7 @@ export default function Settings() {
       setDraft(r.settings)
       setEnvOverrides(r.env_overrides)
       setNcbi(r.ncbi_api_key)
+      setAiKeys(r.ai_keys)
       setTexEnabled(r.settings.tex_rendering_enabled)
       setStatus('Saved.')
     } catch (err) {
@@ -159,6 +164,15 @@ export default function Settings() {
             </div>
           )}
         </div>
+
+        <AiSettings
+          draft={draft}
+          saved={saved}
+          keys={aiKeys}
+          envOverrides={envOverrides}
+          set={set}
+          onKeys={setAiKeys}
+        />
 
         <div className="card settings-section">
           <h3>Storage</h3>

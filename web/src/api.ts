@@ -1,4 +1,6 @@
 import type {
+  AiProvider,
+  AiTestResult,
   Annotation,
   Author,
   AuthorDetail,
@@ -308,4 +310,6 @@ export const api = {
   settings: () => request<SettingsResponse>('GET', '/api/settings'),
   updateSettings: (patch: Partial<UserSettings>) =>
     request<SettingsResponse>('PATCH', '/api/settings', patch),
+  aiModels: () => request<{ provider: AiProvider; models: string[] }>('GET', '/api/ai/models'),
+  aiTest: () => request<AiTestResult>('POST', '/api/ai/test'),
 }

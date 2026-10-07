@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import os
+from typing import Literal
 
 from fastapi import APIRouter, Request
 from pydantic import BaseModel, ConfigDict, Field
@@ -31,12 +32,26 @@ DEFAULTS: dict[str, object] = {
     "full_text_worker_enabled": False,
     # Last layout applied in Settings → PDF folders (web-only key; linXiv ignores it).
     "web_pdf_folder_layout": "none",
+    # AI features (web-only keys): off until the user opts in.
+    "ai_enabled": False,
+    "genai_provider": "gemini",
+    "genai_model": "",
+    "genai_base_url": "",
 }
 FEED_KEYS = ("home_feed_url", "rss_cache_retention_days")
 # NCBI E-utilities key for PubMed lookups (10 instead of 3 requests/s). A secret:
 # stored like any setting but never sent back; the env var of the same name wins.
 NCBI_KEY = "NCBI_API_KEY"
 NCBI_KEY_RE = r"^$|^[A-Za-z0-9]{20,64}$"
+# AI provider keys, write-only like NCBI_API_KEY; GENAI_API_KEY_TAG_GEN belongs
+# to the generic OpenAI-compatible endpoint.
+AI_KEYS = ("GEMINI_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GENAI_API_KEY_TAG_GEN")
+AI_KEY_RE = r"^$|^[\x21-\x7e]{8,256}$"
+SECRET_KEYS = (NCBI_KEY, *AI_KEYS)
+# Free-text values the CLI would otherwise JSON-parse ("123" -> int).
+QUOTED_KEYS = (*SECRET_KEYS, "genai_provider", "genai_model", "genai_base_url")
+MODEL_RE = r"^[A-Za-z0-9._:/@+-]{0,128}$"
+BASE_URL = r"^$|^[Hh][Tt][Tt][Pp][Ss]?://[^\s/?#]+[^\s?#]*$"
 EMAIL = r"^$|^[^@\s]+@[^@\s]+\.[^@\s]+$"
 FEED_URL = r"^$|^[Hh][Tt][Tt][Pp][Ss]?://[^\s/?#]+[^\s]*$"
 
@@ -55,31 +70,49 @@ class SettingsPatch(BaseModel):
     search_history_max: int | None = Field(None, ge=1, le=10_000)
     full_text_worker_enabled: bool | None = None
     NCBI_API_KEY: str | None = Field(None, max_length=64, pattern=NCBI_KEY_RE)
+    ai_enabled: bool | None = None
+    genai_provider: Literal["gemini", "openai", "anthropic", "generic"] | None = None
+    genai_model: str | None = Field(None, pattern=MODEL_RE)
+    genai_base_url: str | None = Field(None, max_length=512, pattern=BASE_URL)
+    GEMINI_API_KEY: str | None = Field(None, pattern=AI_KEY_RE)
+    OPENAI_API_KEY: str | None = Field(None, pattern=AI_KEY_RE)
+    ANTHROPIC_API_KEY: str | None = Field(None, pattern=AI_KEY_RE)
+    GENAI_API_KEY_TAG_GEN: str | None = Field(None, pattern=AI_KEY_RE)
 
 
 async def _current(request: Request) -> dict:
     raw = await run(request, ["settings", "get"])
     raw = raw if isinstance(raw, dict) else {}
     values = {k: raw.get(k, d) for k, d in DEFAULTS.items()}
-    for k in (*MAILTO_KEYS, "home_feed_url"):
+    for k in (*MAILTO_KEYS, "home_feed_url", "genai_model", "genai_base_url"):
         values[k] = values[k] or ""
-    env_overrides = [k for k in (*MAILTO_KEYS, NCBI_KEY) if os.environ.get(k)]
-    key, source = ncbi_api_key(raw)
+    env_overrides = [k for k in (*MAILTO_KEYS, *SECRET_KEYS) if os.environ.get(k)]
     return {
-        "settings": {**values, NCBI_KEY: ""},  # write-only: the stored key never leaves the server
+        # write-only: stored keys never leave the server
+        "settings": {**values, **{k: "" for k in SECRET_KEYS}},
         "env_overrides": env_overrides,
-        "ncbi_api_key": {"set": bool(key), "last4": key[-4:] if key else None, "source": source},
+        "ncbi_api_key": _status(raw, NCBI_KEY),
+        "ai_keys": {k: _status(raw, k) for k in AI_KEYS},
     }
 
 
-def ncbi_api_key(stored: dict) -> tuple[str, str | None]:
+def _status(stored: dict, name: str) -> dict:
+    key, source = secret(stored, name)
+    return {"set": bool(key), "last4": key[-4:] if key else None, "source": source}
+
+
+def secret(stored: dict, name: str) -> tuple[str, str | None]:
     """(key, "env" | "settings" | None) — the env var wins over the stored setting."""
-    if env := os.environ.get(NCBI_KEY, "").strip():
+    if env := os.environ.get(name, "").strip():
         return env, "env"
-    saved = stored.get(NCBI_KEY) if isinstance(stored, dict) else None
+    saved = stored.get(name) if isinstance(stored, dict) else None
     if isinstance(saved, str) and saved.strip():
         return saved.strip(), "settings"
     return "", None
+
+
+def ncbi_api_key(stored: dict) -> tuple[str, str | None]:
+    return secret(stored, NCBI_KEY)
 
 
 @router.get("/settings")
@@ -94,8 +127,8 @@ async def update_settings(request: Request, body: SettingsPatch):
         # The CLI JSON-parses the value, so bools/ints go as JSON; an email is
         # never valid JSON and stays a string.
         arg = json.dumps(value) if isinstance(value, bool | int) else value
-        if key == NCBI_KEY:
-            arg = json.dumps(value)  # quoted, so an all-digit key stays a string
+        if key in QUOTED_KEYS:
+            arg = json.dumps(value)  # quoted, so an all-digit value stays a string
         await run(request, ["settings", "update", "--", key, arg])
     if any(k in patch for k in FEED_KEYS):
         clear_feed_cache(request)

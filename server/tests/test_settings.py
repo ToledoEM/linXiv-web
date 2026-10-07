@@ -24,7 +24,15 @@ def test_get_settings_hides_unlisted_keys(client, fake, monkeypatch):
         "search_history_max": 200,
         "full_text_worker_enabled": False,
         "web_pdf_folder_layout": "none",
+        "ai_enabled": False,
+        "genai_provider": "gemini",
+        "genai_model": "",
+        "genai_base_url": "",
         "NCBI_API_KEY": "",
+        "GEMINI_API_KEY": "",
+        "OPENAI_API_KEY": "",
+        "ANTHROPIC_API_KEY": "",
+        "GENAI_API_KEY_TAG_GEN": "",
     }
     assert "p2p_relay_auth_token" not in r.text
     assert body["env_overrides"] == ["CROSSREF_MAILTO"]
