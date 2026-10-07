@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { api } from './api'
 import { ErrorText } from './components'
 import type { AiKeyName, AiProvider, AiTestResult, NcbiKeyStatus, UserSettings } from './types'
@@ -32,6 +32,7 @@ export default function AiSettings({
   envOverrides,
   set,
   onKeys,
+  footer,
 }: {
   draft: UserSettings
   saved: UserSettings
@@ -39,6 +40,8 @@ export default function AiSettings({
   envOverrides: string[]
   set: <K extends keyof UserSettings>(key: K, value: UserSettings[K]) => void
   onKeys: (keys: Record<AiKeyName, NcbiKeyStatus>) => void
+  /** Save / discard controls for this card. */
+  footer?: ReactNode
 }) {
   const [models, setModels] = useState<string[] | null>(null)
   const [test, setTest] = useState<AiTestResult | null>(null)
@@ -213,6 +216,7 @@ export default function AiSettings({
           <ErrorText error={error} />
         </>
       )}
+      {footer}
     </div>
   )
 }

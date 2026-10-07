@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import AiSettings from '../AiSettings'
 import { setAiEnabled } from '../aiEnabled'
 import { api } from '../api'
@@ -14,7 +14,7 @@ import VersionMonitor from '../VersionMonitor'
 import { clearHistory, historySize } from '../searchHistory'
 import { SHORTCUTS } from '../shortcuts'
 import { PAGE_OPTIONS, setSidebarPage, useSidebarPages } from '../sidebarPages'
-import type { AiKeyName, NcbiKeyStatus, UserSettings } from '../types'
+import type { AiKeyName, NcbiKeyStatus, SettingsResponse, UserSettings } from '../types'
 import { setTexEnabled } from '../texStore'
 import { formSubmitOnCtrlEnter } from '../submitShortcut'
 
@@ -24,6 +24,26 @@ const CONTACTS: { key: 'ARXIV_MAILTO' | 'CROSSREF_MAILTO' | 'OPENALEX_MAILTO'; l
   { key: 'OPENALEX_MAILTO', label: 'OpenAlex', hint: 'OpenAlex polite pool.' },
 ]
 
+// Each card saves on its own: only that card's keys go in its PATCH.
+type SectionId = 'contacts' | 'ai' | 'storage' | 'feed' | 'display' | 'search'
+const SECTIONS: Record<SectionId, (keyof UserSettings)[]> = {
+  contacts: ['ARXIV_MAILTO', 'CROSSREF_MAILTO', 'OPENALEX_MAILTO', 'NCBI_API_KEY'],
+  ai: [
+    'ai_enabled',
+    'genai_provider',
+    'genai_model',
+    'genai_base_url',
+    'GEMINI_API_KEY',
+    'OPENAI_API_KEY',
+    'ANTHROPIC_API_KEY',
+    'GENAI_API_KEY_TAG_GEN',
+  ],
+  storage: ['pdf_save_limit_mb'],
+  feed: ['home_feed_url', 'rss_cache_retention_days'],
+  display: ['tex_rendering_enabled'],
+  search: ['search_history_enabled', 'search_history_max'],
+}
+
 export default function Settings() {
   const [saved, setSaved] = useState<UserSettings | null>(null)
   const [draft, setDraft] = useState<UserSettings | null>(null)
@@ -32,8 +52,9 @@ export default function Settings() {
   const [aiKeys, setAiKeys] = useState<Record<AiKeyName, NcbiKeyStatus> | null>(null)
   const [storageMb, setStorageMb] = useState<number | null>(null)
   const [error, setError] = useState('')
-  const [status, setStatus] = useState('')
-  const [busy, setBusy] = useState(false)
+  const [status, setStatus] = useState<Partial<Record<SectionId, string>>>({})
+  const [errors, setErrors] = useState<Partial<Record<SectionId, string>>>({})
+  const [busy, setBusy] = useState<SectionId | null>(null)
   const [historyCount, setHistoryCount] = useState(historySize)
   const pages = useSidebarPages()
 
@@ -59,31 +80,64 @@ export default function Settings() {
   const set = <K extends keyof UserSettings>(key: K, value: UserSettings[K]) => {
     // Functional update: one change may set several keys in a row (AI provider + model).
     setDraft((d) => d && { ...d, [key]: value })
-    setStatus('')
+    setStatus({})
   }
 
-  const changes = (Object.keys(draft) as (keyof UserSettings)[]).filter((k) => draft[k] !== saved[k])
+  const changed = (id: SectionId) => SECTIONS[id].filter((k) => draft[k] !== saved[k])
+  const pick = (from: UserSettings, id: SectionId) => Object.fromEntries(SECTIONS[id].map((k) => [k, from[k]]))
 
-  const submit = async (e: FormEvent) => {
-    e.preventDefault()
-    setBusy(true)
-    setError('')
+  const apply = (id: SectionId, r: SettingsResponse) => {
+    setSaved(r.settings)
+    // Keep unsaved edits in the other cards.
+    setDraft((d) => d && ({ ...d, ...pick(r.settings, id) } as UserSettings))
+    setEnvOverrides(r.env_overrides)
+    setNcbi(r.ncbi_api_key)
+    setAiKeys(r.ai_keys)
+    setAiEnabled(r.settings.ai_enabled)
+    setTexEnabled(r.settings.tex_rendering_enabled)
+  }
+
+  const run = async (id: SectionId, fn: () => Promise<SettingsResponse>, done: string) => {
+    setBusy(id)
+    setErrors((e) => ({ ...e, [id]: '' }))
+    setStatus({})
     try {
-      const patch = Object.fromEntries(changes.map((k) => [k, draft[k]])) as Partial<UserSettings>
-      const r = await api.updateSettings(patch)
-      setSaved(r.settings)
-      setDraft(r.settings)
-      setEnvOverrides(r.env_overrides)
-      setNcbi(r.ncbi_api_key)
-      setAiKeys(r.ai_keys)
-      setAiEnabled(r.settings.ai_enabled)
-      setTexEnabled(r.settings.tex_rendering_enabled)
-      setStatus('Saved.')
+      apply(id, await fn())
+      setStatus({ [id]: done })
     } catch (err) {
-      setError((err as Error).message)
+      setErrors((e) => ({ ...e, [id]: (err as Error).message }))
     } finally {
-      setBusy(false)
+      setBusy(null)
     }
+  }
+
+  const save = (id: SectionId) => (e: FormEvent) => {
+    e.preventDefault()
+    const keys = changed(id)
+    if (!keys.length) return
+    run(id, () => api.updateSettings(Object.fromEntries(keys.map((k) => [k, draft[k]]))), 'Saved.')
+  }
+
+  const saveBar = (id: SectionId): ReactNode => {
+    const dirty = changed(id).length > 0
+    return (
+      <>
+        <div className="actions">
+          <button disabled={busy !== null || !dirty}>{busy === id ? 'Saving…' : 'Save'}</button>
+          {dirty && (
+            <button
+              type="button"
+              className="link"
+              onClick={() => setDraft((d) => d && ({ ...d, ...pick(saved, id) } as UserSettings))}
+            >
+              Discard changes
+            </button>
+          )}
+          {status[id] && <span className="muted small">{status[id]}</span>}
+        </div>
+        <ErrorText error={errors[id]} />
+      </>
+    )
   }
 
   return (
@@ -99,12 +153,10 @@ export default function Settings() {
         <DisplayControls />
       </div>
 
-      <form onSubmit={submit} onKeyDown={formSubmitOnCtrlEnter}>
+      <form onSubmit={save('contacts')} onKeyDown={formSubmitOnCtrlEnter}>
         <div className="card settings-section">
           <h3>Contacts &amp; API keys</h3>
-          <p className="muted small">
-            Email addresses linXiv sends to metadata services. Leave empty to send none.
-          </p>
+          <p className="muted small">Email addresses linXiv sends to metadata services. Leave empty to send none.</p>
           {CONTACTS.map((c) => (
             <label key={c.key} className="field">
               <span>{c.label}</span>
@@ -149,24 +201,18 @@ export default function Settings() {
               <button
                 type="button"
                 className="link danger-link"
-                disabled={busy}
-                onClick={async () => {
-                  setError('')
-                  try {
-                    const r = await api.updateSettings({ NCBI_API_KEY: '' })
-                    setNcbi(r.ncbi_api_key)
-                    setStatus('NCBI API key removed.')
-                  } catch (err) {
-                    setError((err as Error).message)
-                  }
-                }}
+                disabled={busy !== null}
+                onClick={() => run('contacts', () => api.updateSettings({ NCBI_API_KEY: '' }), 'NCBI API key removed.')}
               >
                 Remove NCBI API key
               </button>
             </div>
           )}
+          {saveBar('contacts')}
         </div>
+      </form>
 
+      <form onSubmit={save('ai')} onKeyDown={formSubmitOnCtrlEnter}>
         <AiSettings
           draft={draft}
           saved={saved}
@@ -174,8 +220,11 @@ export default function Settings() {
           envOverrides={envOverrides}
           set={set}
           onKeys={setAiKeys}
+          footer={saveBar('ai')}
         />
+      </form>
 
+      <form onSubmit={save('storage')} onKeyDown={formSubmitOnCtrlEnter}>
         <div className="card settings-section">
           <h3>Storage</h3>
           <label className="field">
@@ -193,8 +242,11 @@ export default function Settings() {
               {storageMb !== null && ` Currently using ${storageMb.toFixed(1)} MB.`}
             </span>
           </label>
+          {saveBar('storage')}
         </div>
+      </form>
 
+      <form onSubmit={save('feed')} onKeyDown={formSubmitOnCtrlEnter}>
         <div className="card settings-section">
           <h3>Home feed</h3>
           <label className="field">
@@ -226,8 +278,11 @@ export default function Settings() {
               Days of feed entries kept locally before pruning; permanently dismissed papers are always kept.
             </span>
           </label>
+          {saveBar('feed')}
         </div>
+      </form>
 
+      <form onSubmit={save('display')} onKeyDown={formSubmitOnCtrlEnter}>
         <div className="card settings-section">
           <h3>Display</h3>
           <label className="check">
@@ -238,8 +293,11 @@ export default function Settings() {
             />
             Render TeX ($…$) in titles and abstracts
           </label>
+          {saveBar('display')}
         </div>
+      </form>
 
+      <form onSubmit={save('search')} onKeyDown={formSubmitOnCtrlEnter}>
         <div className="card settings-section">
           <h3>Search</h3>
           <label className="check">
@@ -279,18 +337,8 @@ export default function Settings() {
               Clear search history
             </button>
           </div>
+          {saveBar('search')}
         </div>
-
-        <div className="toolbar">
-          <button disabled={busy || changes.length === 0}>{busy ? 'Saving…' : 'Save'}</button>
-          {changes.length > 0 && (
-            <button type="button" className="link" onClick={() => setDraft(saved)}>
-              Discard changes
-            </button>
-          )}
-          <span className="muted">{status}</span>
-        </div>
-        <ErrorText error={error} />
       </form>
       <div className="card settings-section">
         <h3>Sidebar</h3>
