@@ -21,3 +21,9 @@ web/dist/
 
 # OS
 .DS_Store
+
+# Double Safety
+CLAUDE.md
+ *.pem
+ *.key
+ credentials*
