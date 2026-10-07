@@ -38,6 +38,9 @@ ANTHROPIC = "https://api.anthropic.com/v1"
 ANTHROPIC_VERSION = "2023-06-01"
 
 TIMEOUT = 90
+# Local models (LM Studio, Ollama...) read long prompts slowly: a summary with
+# PDF text can take minutes on a laptop-class GPU.
+GENERIC_TIMEOUT = 300
 MAX_BYTES = 2 * 1024 * 1024
 MAX_PROMPT_CHARS = 200_000
 # OpenAI's /models lists every model; keep the ones that answer chat requests.
@@ -47,10 +50,12 @@ OPENAI_NON_CHAT = re.compile(
 
 
 class AIError(Exception):
-    def __init__(self, message: str, status: int = 502) -> None:
+    def __init__(self, message: str, status: int = 502, upstream: int | None = None) -> None:
         super().__init__(message)
         self.message = message
         self.status = status
+        # HTTP status the provider answered with, when it answered.
+        self.upstream = upstream
 
 
 @dataclass(frozen=True)
@@ -105,7 +110,8 @@ def _redact(text: str, cfg: AIConfig) -> str:
 async def _call(cfg: AIConfig, method: str, url: str, body: dict | None = None) -> Any:
     try:
         async with _http() as client:
-            r = await client.request(method, url, json=body, headers=_headers(cfg))
+            timeout = GENERIC_TIMEOUT if cfg.provider == "generic" else TIMEOUT
+            r = await client.request(method, url, json=body, headers=_headers(cfg), timeout=timeout)
     except httpx.HTTPError as e:
         # Exception type only: messages can carry the request URL.
         raise AIError(f"{cfg.label} request failed ({type(e).__name__})") from e
@@ -118,7 +124,7 @@ async def _call(cfg: AIConfig, method: str, url: str, body: dict | None = None) 
         except (ValueError, AttributeError):
             msg = None
         detail = f": {_redact(str(msg), cfg)}" if msg else ""
-        raise AIError(f"{cfg.label} error {r.status_code}{detail}")
+        raise AIError(f"{cfg.label} error {r.status_code}{detail}", upstream=r.status_code)
     try:
         return r.json()
     except ValueError as e:
@@ -163,8 +169,12 @@ def _schema_note(schema: dict, example: Any = None) -> str:
     return note
 
 
+THINK_BLOCK = re.compile(r"<think>.*?</think>", re.DOTALL | re.IGNORECASE)
+
+
 def _parse_json(text: str, cfg: AIConfig) -> Any:
-    text = text.strip()
+    # Reasoning models may put their thinking (which can contain braces) in the reply.
+    text = THINK_BLOCK.sub("", text).strip()
     try:
         return json.loads(text)
     except ValueError:
@@ -242,20 +252,42 @@ async def complete(
         if system:
             messages.insert(0, {"role": "system", "content": system})
         body = {"model": cfg.model, "messages": messages}
-        if cfg.provider == "openai":
-            body["max_completion_tokens"] = max_tokens
-            if schema is not None:
-                body["response_format"] = {
-                    "type": "json_schema",
-                    "json_schema": {"name": "result", "schema": schema},
-                }
-        else:
-            # Generic servers differ on response_format; the schema is in the prompt.
-            body["max_tokens"] = max_tokens
-        data = await _call(cfg, "POST", f"{_openai_base(cfg)}/chat/completions", body)
+        body["max_completion_tokens" if cfg.provider == "openai" else "max_tokens"] = max_tokens
+        if schema is not None:
+            # Structured output: the server constrains the reply to the schema, which
+            # also keeps thinking models (Qwen, DeepSeek...) from spending the token
+            # budget on reasoning before the JSON.
+            body["response_format"] = {
+                "type": "json_schema",
+                "json_schema": {"name": "result", "schema": schema},
+            }
+        url = f"{_openai_base(cfg)}/chat/completions"
         try:
-            text = data["choices"][0]["message"]["content"] or ""
+            data = await _call(cfg, "POST", url, body)
+        except AIError as e:
+            # Some OpenAI-compatible servers reject json_schema: retry once with the
+            # schema in the prompt only.
+            if (
+                cfg.provider != "generic"
+                or "response_format" not in body
+                or e.upstream
+                not in (
+                    400,
+                    422,
+                )
+            ):
+                raise
+            del body["response_format"]
+            data = await _call(cfg, "POST", url, body)
+        try:
+            choice = data["choices"][0]
+            text = choice["message"]["content"] or ""
         except (KeyError, IndexError, TypeError) as e:
             raise AIError(f"{cfg.label} returned no answer") from e
+        if not text.strip() and choice.get("finish_reason") == "length":
+            raise AIError(
+                f"{cfg.label}: the model used its whole token budget before answering "
+                "(thinking models spend it on reasoning). Try a non-thinking model."
+            )
 
     return _parse_json(text, cfg) if schema is not None else text

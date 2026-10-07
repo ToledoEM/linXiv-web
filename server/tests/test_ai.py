@@ -273,7 +273,7 @@ def test_connection_generic_parses_fenced_json(client, fake, monkeypatch):
     assert client.post("/api/ai/test").json()["ok"] is True
     body = json.loads(seen[0].content)
     assert str(seen[0].url) == "http://192.168.1.5:11434/v1/chat/completions"
-    assert "response_format" not in body and body["max_tokens"] == 256
+    assert body["response_format"]["type"] == "json_schema" and body["max_tokens"] == 256
     assert "JSON Schema" in body["messages"][0]["content"]
 
 
@@ -678,3 +678,62 @@ def test_cleanup_refused_when_off_and_bad_reply(client, fake, monkeypatch):
     fake.on("settings", "get", result=_stored("openai"))
     fake.on("paper", "get", result=MESSY)
     assert client.post("/api/ai/cleanup/p1").status_code == 502
+
+
+# ---- thinking models / generic structured output ----
+
+
+def test_generic_retries_without_response_format(client, fake, monkeypatch):
+    seen: list = []
+
+    def handler(req):
+        if "response_format" in json.loads(req.content):
+            return httpx.Response(400, json={"error": {"message": "response_format not supported"}})
+        return httpx.Response(200, json={"choices": [{"message": {"content": '{"ok": true}'}}]})
+
+    _mock(monkeypatch, handler, seen)
+    fake.on("settings", "get", result=_stored("generic"))
+    assert client.post("/api/ai/test").json()["ok"] is True
+    assert len(seen) == 2 and "response_format" not in json.loads(seen[1].content)
+
+
+def test_generic_server_error_not_retried(client, fake, monkeypatch):
+    seen: list = []
+    _mock(monkeypatch, lambda req: httpx.Response(500, json={"error": "boom"}), seen)
+    fake.on("settings", "get", result=_stored("generic"))
+    assert client.post("/api/ai/test").status_code == 502
+    assert len(seen) == 1
+
+
+def test_think_block_stripped(client, fake, monkeypatch):
+    reply = '<think>maybe {"ok": false} ... no</think>\n{"ok": true}'
+    _mock(monkeypatch, _summary_reply_raw(reply), [])
+    fake.on("settings", "get", result=_stored("generic"))
+    assert client.post("/api/ai/test").json()["ok"] is True
+
+
+def test_token_budget_used_by_thinking(client, fake, monkeypatch):
+    _mock(
+        monkeypatch,
+        lambda req: httpx.Response(
+            200, json={"choices": [{"message": {"content": ""}, "finish_reason": "length"}]}
+        ),
+        [],
+    )
+    fake.on("settings", "get", result=_stored("generic"))
+    r = client.post("/api/ai/test")
+    assert r.status_code == 502 and "token budget" in r.json()["detail"]
+
+
+def _summary_reply_raw(text):
+    return lambda req: httpx.Response(200, json={"choices": [{"message": {"content": text}}]})
+
+
+def test_generic_gets_longer_timeout(client, fake, monkeypatch):
+    seen: list = []
+    _mock(monkeypatch, lambda req: httpx.Response(200, json={"data": []}), seen)
+    fake.on("settings", "get", result=_stored("generic"))
+    client.get("/api/ai/models")
+    fake.on("settings", "get", result=_stored("openai"))
+    client.get("/api/ai/models")
+    assert [r.extensions["timeout"]["read"] for r in seen] == [ai.GENERIC_TIMEOUT, ai.TIMEOUT]
