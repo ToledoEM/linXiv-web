@@ -3,7 +3,16 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { api, idPath } from '../api'
 import type { Paper } from '../types'
 import BatchMetadata from '../BatchMetadata'
-import { ErrorText } from '../components'
+import { ErrorText, SortHeader } from '../components'
+import {
+  loadSort,
+  nextSort,
+  parsePaperSort,
+  saveSort,
+  sortPapers,
+  type PaperSort,
+  type PaperSortKey,
+} from '../paperSort'
 import { AddToProjectBar } from '../projectParts'
 import { toggled } from '../projects'
 import { MathText } from '../tex'
@@ -26,12 +35,31 @@ const SORTS = [
   { value: 'title_desc', label: 'Title Z–A' },
 ] as const
 
+// Title / Published headers drive the server sort (the dropdown); the other
+// columns sort the loaded rows on top of it.
+const SERVER_KEYS: Partial<Record<PaperSortKey, string>> = { title: 'title', published: 'published' }
+const SORT_KEY = 'lxw.librarySort'
+
+interface StoredSort {
+  server: string
+  column: PaperSort | null
+}
+
+function parseStored(raw: unknown): StoredSort {
+  const r = (raw ?? {}) as Record<string, unknown>
+  const server = SORTS.some((o) => o.value === r.server) ? (r.server as string) : SORTS[0].value
+  const column = parsePaperSort(r.column)
+  return { server, column: column && !SERVER_KEYS[column.key] ? column : null }
+}
+
 export default function Library() {
   const [q, setQ] = useState('')
   const [params] = useSearchParams()
   const [tag, setTag] = useState(() => params.get('tag') ?? '')
   const [deepError, setDeepError] = useState('')
-  const [sort, setSort] = useState<string>(SORTS[0].value)
+  const [stored] = useState(() => loadSort(SORT_KEY, parseStored, { server: SORTS[0].value, column: null }))
+  const [sort, setSort] = useState<string>(stored.server)
+  const [column, setColumn] = useState<PaperSort | null>(stored.column)
   const [pdf, setPdf] = useState<PdfFilter>('all')
   const [tags, setTags] = useState<string[]>([])
   const [papers, setPapers] = useState<Paper[] | null>(null)
@@ -42,7 +70,10 @@ export default function Library() {
   const [reload, setReload] = useState(0)
 
   useEffect(() => {
-    api.allTags().then(setTags).catch(() => setTags([]))
+    api
+      .allTags()
+      .then(setTags)
+      .catch(() => setTags([]))
   }, [])
 
   useEffect(() => {
@@ -75,12 +106,31 @@ export default function Library() {
     }
   }, [q, tag, sort, pdf, reload])
 
+  useEffect(() => saveSort(SORT_KEY, { server: sort, column }), [sort, column])
+
+  const shown = useMemo(() => (papers ? sortPapers(papers, column) : null), [papers, column])
+  const [serverBy, serverDir] = sort.split('_') as [string, 'asc' | 'desc']
+  const headerDir = (key: PaperSortKey) =>
+    column ? (column.key === key ? column.dir : null) : SERVER_KEYS[key] === serverBy ? serverDir : null
+  const sortBy = (key: PaperSortKey) => {
+    const next = nextSort(
+      column ?? (SERVER_KEYS[serverBy as PaperSortKey] ? { key: serverBy as PaperSortKey, dir: serverDir } : null),
+      key,
+    )
+    if (SERVER_KEYS[key]) {
+      setColumn(null)
+      setSort(`${SERVER_KEYS[key]}_${next.dir}`)
+    } else {
+      setColumn(next)
+    }
+  }
+
   const allShownSelected = !!papers?.length && papers.every((p) => selected.has(p.source_id))
   // Batch cards follow table order; selected papers hidden by a filter go last.
   const batchIds = useMemo(() => {
-    const shown = (papers ?? []).map((p) => p.source_id).filter((sid) => selected.has(sid))
-    return [...shown, ...[...selected].filter((sid) => !shown.includes(sid))]
-  }, [papers, selected])
+    const inTable = (shown ?? []).map((p) => p.source_id).filter((sid) => selected.has(sid))
+    return [...inTable, ...[...selected].filter((sid) => !inTable.includes(sid))]
+  }, [shown, selected])
   const titles = useMemo(() => Object.fromEntries((papers ?? []).map((p) => [p.source_id, p.title])), [papers])
 
   return (
@@ -111,7 +161,14 @@ export default function Library() {
           batch edit
         </button>
         <span className="grow" />
-        <select aria-label="Sort" value={sort} onChange={(e) => setSort(e.target.value)}>
+        <select
+          aria-label="Sort"
+          value={sort}
+          onChange={(e) => {
+            setColumn(null)
+            setSort(e.target.value)
+          }}
+        >
           {SORTS.map((o) => (
             <option key={o.value} value={o.value}>
               {o.label}
@@ -165,16 +222,16 @@ export default function Library() {
                         }}
                       />
                     </th>
-                    <th>Title</th>
-                    <th>Authors</th>
-                    <th>Published</th>
-                    <th>Category</th>
-                    <th>Tags</th>
-                    <th>PDF</th>
+                    <SortHeader label="Title" dir={headerDir('title')} onClick={() => sortBy('title')} />
+                    <SortHeader label="Authors" dir={headerDir('authors')} onClick={() => sortBy('authors')} />
+                    <SortHeader label="Published" dir={headerDir('published')} onClick={() => sortBy('published')} />
+                    <SortHeader label="Category" dir={headerDir('category')} onClick={() => sortBy('category')} />
+                    <SortHeader label="Tags" dir={headerDir('tags')} onClick={() => sortBy('tags')} />
+                    <SortHeader label="PDF" dir={headerDir('pdf')} onClick={() => sortBy('pdf')} />
                   </tr>
                 </thead>
                 <tbody>
-                  {papers.map((p) => (
+                  {shown?.map((p) => (
                     <tr key={p.source_id}>
                       <td className="check-col">
                         <input

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api, idPath, projectExportUrl, type ExportFormat } from '../api'
-import { ErrorText } from '../components'
+import { ErrorText, SortHeader } from '../components'
+import { loadSort, nextSort, parsePaperSort, saveSort, sortPapers, type PaperSortKey } from '../paperSort'
 import { DeleteButton, ProjectForm, Swatch } from '../projectParts'
 import { failedMessage, READING_LIST_TAG, toggled } from '../projects'
 import { MathText } from '../tex'
@@ -32,10 +33,7 @@ function AddPapers({
       .catch((err) => setError((err as Error).message))
   }, [])
 
-  const candidates = useMemo(
-    () => (library ?? []).filter((p) => !existing.includes(p.source_id)),
-    [library, existing],
-  )
+  const candidates = useMemo(() => (library ?? []).filter((p) => !existing.includes(p.source_id)), [library, existing])
   const needle = q.trim().toLowerCase()
   const shown = needle
     ? candidates.filter((p) => p.title.toLowerCase().includes(needle) || p.source_id.toLowerCase().includes(needle))
@@ -71,7 +69,9 @@ function AddPapers({
           !error && <p className="muted small">Loading…</p>
         ) : shown.length === 0 ? (
           <p className="muted small">
-            {candidates.length === 0 ? 'All library papers are already in this project.' : 'No papers match your search.'}
+            {candidates.length === 0
+              ? 'All library papers are already in this project.'
+              : 'No papers match your search.'}
           </p>
         ) : (
           shown.map((p) => (
@@ -134,6 +134,9 @@ function ExportPanel({ projectId, onClose }: { projectId: number; onClose: () =>
   )
 }
 
+// One choice for every project and reading list; none = project order.
+const SORT_KEY = 'lxw.projectSort'
+
 export default function ProjectDetail() {
   const { id } = useParams()
   const projectId = id && /^\d+$/.test(id) ? Number(id) : NaN
@@ -147,6 +150,10 @@ export default function ProjectDetail() {
   const [exporting, setExporting] = useState(false)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [busy, setBusy] = useState(false)
+  const [sort, setSort] = useState(() => loadSort(SORT_KEY, parsePaperSort, null))
+
+  useEffect(() => saveSort(SORT_KEY, sort), [sort])
+  const shown = useMemo(() => (papers ? sortPapers(papers, sort) : null), [papers, sort])
 
   const load = useCallback(async () => {
     if (Number.isNaN(projectId)) {
@@ -208,7 +215,7 @@ export default function ProjectDetail() {
       </section>
     )
   }
-  if (!project || !papers) return <p className="muted">Loading…</p>
+  if (!project || !papers || !shown) return <p className="muted">Loading…</p>
 
   const tags = project.project_tags.filter((t) => t.toLowerCase() !== READING_LIST_TAG)
   const allSelected = papers.length > 0 && papers.every((p) => selected.has(p.source_id))
@@ -254,7 +261,12 @@ export default function ProjectDetail() {
                   </button>
                   <button
                     disabled={busy}
-                    onClick={() => run(() => api.archiveProject(projectId), () => navigate('/projects'))}
+                    onClick={() =>
+                      run(
+                        () => api.archiveProject(projectId),
+                        () => navigate('/projects'),
+                      )
+                    }
                   >
                     Archive
                   </button>
@@ -262,7 +274,12 @@ export default function ProjectDetail() {
               )}
               <DeleteButton
                 busy={busy}
-                onConfirm={() => run(() => api.deleteProject(projectId), () => navigate('/projects'))}
+                onConfirm={() =>
+                  run(
+                    () => api.deleteProject(projectId),
+                    () => navigate('/projects'),
+                  )
+                }
               />
             </div>
           </div>
@@ -328,13 +345,27 @@ export default function ProjectDetail() {
                     onChange={() => setSelected(allSelected ? new Set() : new Set(papers.map((p) => p.source_id)))}
                   />
                 </th>
-                <th>Title</th>
-                <th>Authors</th>
-                <th>Published</th>
+                {(
+                  [
+                    ['title', 'Title'],
+                    ['authors', 'Authors'],
+                    ['published', 'Published'],
+                    ['category', 'Category'],
+                    ['tags', 'Tags'],
+                    ['pdf', 'PDF'],
+                  ] as [PaperSortKey, string][]
+                ).map(([key, label]) => (
+                  <SortHeader
+                    key={key}
+                    label={label}
+                    dir={sort?.key === key ? sort.dir : null}
+                    onClick={() => setSort((s) => nextSort(s, key))}
+                  />
+                ))}
               </tr>
             </thead>
             <tbody>
-              {papers.map((p) => (
+              {shown.map((p) => (
                 <tr key={p.source_id}>
                   <td className="check-col">
                     <input
@@ -355,6 +386,15 @@ export default function ProjectDetail() {
                     {p.authors?.length > 3 && ' et al.'}
                   </td>
                   <td className="nowrap">{p.published}</td>
+                  <td>{p.category}</td>
+                  <td>
+                    {p.tags?.map((t) => (
+                      <span key={t} className="pill">
+                        {t}
+                      </span>
+                    ))}
+                  </td>
+                  <td>{p.has_pdf ? '✓' : ''}</td>
                 </tr>
               ))}
             </tbody>
