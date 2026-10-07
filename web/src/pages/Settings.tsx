@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import AiSettings from '../AiSettings'
+import { setAiEnabled } from '../aiEnabled'
 import { api } from '../api'
 import Backup from '../Backup'
 import DisplayControls from '../DisplayControls'
@@ -75,6 +76,7 @@ export default function Settings() {
       setEnvOverrides(r.env_overrides)
       setNcbi(r.ncbi_api_key)
       setAiKeys(r.ai_keys)
+      setAiEnabled(r.settings.ai_enabled)
       setTexEnabled(r.settings.tex_rendering_enabled)
       setStatus('Saved.')
     } catch (err) {

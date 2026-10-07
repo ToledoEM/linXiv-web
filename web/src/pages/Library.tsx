@@ -2,7 +2,9 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { api, idPath } from '../api'
 import type { Paper } from '../types'
+import { useAiEnabled } from '../aiEnabled'
 import BatchMetadata from '../BatchMetadata'
+import BatchTags from '../BatchTags'
 import { ErrorText, SortHeader } from '../components'
 import {
   loadSort,
@@ -67,6 +69,10 @@ export default function Library() {
   const [selected, setSelected] = useState<Set<string>>(new Set())
   // Batch edit metadata: panel beside the table, driven by the row selection.
   const [batch, setBatch] = useState(false)
+  // Batch panel content: metadata lookup, or AI tag suggestions (when AI is on).
+  const [batchMode, setBatchMode] = useState<'metadata' | 'tags'>('metadata')
+  const aiOn = useAiEnabled()
+  const mode = aiOn ? batchMode : 'metadata'
   const [reload, setReload] = useState(0)
 
   useEffect(() => {
@@ -160,6 +166,26 @@ export default function Library() {
         >
           batch edit
         </button>
+        {batch && aiOn && (
+          <div className="chips" role="group" aria-label="Batch mode">
+            {(
+              [
+                ['metadata', 'Metadata'],
+                ['tags', 'AI tags'],
+              ] as const
+            ).map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                className={mode === value ? 'chip active' : 'chip'}
+                aria-pressed={mode === value}
+                onClick={() => setBatchMode(value)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
         <span className="grow" />
         <select
           aria-label="Sort"
@@ -272,7 +298,15 @@ export default function Library() {
             </div>
           )}
         </div>
-        {batch && (
+        {batch && mode === 'tags' && (
+          <BatchTags
+            selected={batchIds}
+            titles={titles}
+            onSaved={() => setReload((n) => n + 1)}
+            onSkip={(sid) => setSelected((s) => toggled(s, sid))}
+          />
+        )}
+        {batch && mode === 'metadata' && (
           <BatchMetadata
             selected={batchIds}
             titles={titles}

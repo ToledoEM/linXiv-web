@@ -1,11 +1,14 @@
 import { lazy, Suspense, useCallback, useEffect, useState, type FormEvent } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { api, pdfUrl } from '../api'
-import type { Annotation, Paper, PaperVersions } from '../types'
+import type { Annotation, Paper, PaperVersions, TagSuggestion } from '../types'
 import { Authors, ErrorText } from '../components'
+import { useAiEnabled } from '../aiEnabled'
 import Highlights from '../Highlights'
 import MetadataEditor from '../MetadataEditor'
 import Notes from '../Notes'
+import TagSuggestions from '../TagSuggestions'
+import { toggled } from '../projects'
 import { MathText } from '../tex'
 
 // pdf.js is large: load the reader only when a PDF is opened.
@@ -21,6 +24,9 @@ export default function PaperDetail() {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState('')
   const [newTag, setNewTag] = useState('')
+  const aiOn = useAiEnabled()
+  const [suggested, setSuggested] = useState<TagSuggestion[] | null>(null)
+  const [pickedTags, setPickedTags] = useState<Set<string>>(new Set())
   const [customUrl, setCustomUrl] = useState('')
   const [showPdf, setShowPdf] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -73,6 +79,16 @@ export default function PaperDetail() {
     const tags = newTag.split(',').map((t) => t.trim()).filter(Boolean)
     if (tags.length) act('tags', () => api.addTags(id, tags)).then(() => setNewTag(''))
   }
+
+  const suggestTags = () =>
+    act('suggest', async () => {
+      setSuggested(null)
+      const r = await api.suggestTags(id)
+      setSuggested(r.suggested)
+      setPickedTags(new Set(r.suggested.map((s) => s.tag)))
+    })
+
+  const addSuggested = () => act('tags', () => api.addTags(id, [...pickedTags])).then(() => setSuggested(null))
 
   const deletePaper = async () => {
     setBusy('delete')
@@ -196,7 +212,33 @@ export default function PaperDetail() {
           <input placeholder="add tags, comma separated" value={newTag} onChange={(e) => setNewTag(e.target.value)} />
           <button disabled={!!busy || !newTag.trim()}>Add</button>
         </form>
+        {aiOn && (
+          <button type="button" className="link" disabled={!!busy} onClick={suggestTags}>
+            {busy === 'suggest' ? 'Suggesting…' : 'Suggest tags'}
+          </button>
+        )}
       </div>
+      {suggested && (
+        <div className="tag-suggest card">
+          <span className="muted small">AI suggestions: click to toggle, then add the ticked ones.</span>
+          <TagSuggestions
+            suggestions={suggested}
+            picked={pickedTags}
+            disabled={!!busy}
+            onToggle={(t) => setPickedTags((s) => toggled(s, t))}
+          />
+          <div className="actions">
+            {suggested.length > 0 && (
+              <button type="button" disabled={!!busy || !pickedTags.size} onClick={addSuggested}>
+                Add {pickedTags.size} tag{pickedTags.size === 1 ? '' : 's'}
+              </button>
+            )}
+            <button type="button" className="link" disabled={!!busy} onClick={() => setSuggested(null)}>
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
 
       <Notes key={sid} sourceId={sid} defaultProjectId={fromProjectId} />
 

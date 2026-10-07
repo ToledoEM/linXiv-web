@@ -23,6 +23,7 @@ import type {
   SavedPdf,
   SearchResult,
   SettingsResponse,
+  TagSuggestion,
   Source,
   Stats,
   TrashListing,
@@ -312,4 +313,6 @@ export const api = {
     request<SettingsResponse>('PATCH', '/api/settings', patch),
   aiModels: () => request<{ provider: AiProvider; models: string[] }>('GET', '/api/ai/models'),
   aiTest: () => request<AiTestResult>('POST', '/api/ai/test'),
+  suggestTags: (id: string) =>
+    request<{ source_id: string; suggested: TagSuggestion[] }>('POST', `/api/ai/tags/${idPath(id)}`),
 }

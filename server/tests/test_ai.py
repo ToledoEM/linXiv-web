@@ -333,3 +333,82 @@ def test_complete_text_and_prompt_cap(monkeypatch):
     with pytest.raises(ai.AIError) as e:
         asyncio.run(ai.complete(cfg, "x" * (ai.MAX_PROMPT_CHARS + 1)))
     assert e.value.status == 413
+
+
+# ---- tag suggestions ----
+
+
+def _tag_reply(tags):
+    return lambda req: httpx.Response(
+        200, json={"choices": [{"message": {"content": json.dumps({"tags": tags})}}]}
+    )
+
+
+def test_suggest_tags(client, fake, monkeypatch):
+    seen: list = []
+    reply = [
+        "NLP",
+        " #attention  mechanism ",
+        "nlp",
+        "Transformers",
+        "",
+        "x" * 65,
+        7,
+        "machine translation",
+    ]
+    _mock(monkeypatch, _tag_reply(reply), seen)
+    fake.on("settings", "get", result=_stored("openai"))
+    fake.on(
+        "paper",
+        "get",
+        result={
+            "title": "Attention Is All You Need",
+            "summary": "The dominant sequence transduction models…",
+            "categories": ["cs.CL", "cs.LG"],
+            "tags": ["transformers"],
+        },
+    )
+    fake.on("tag", "list-all", result=["nlp", "transformers", "vision"])
+    r = client.post("/api/ai/tags/1706.03762")
+    assert r.status_code == 200, r.text
+    assert r.json() == {
+        "source_id": "1706.03762",
+        "suggested": [
+            {"tag": "nlp", "known": True},
+            {"tag": "attention mechanism", "known": False},
+            {"tag": "machine translation", "known": False},
+        ],
+    }
+    assert ["paper", "get", "--", "1706.03762"] in fake.calls
+    prompt = json.loads(seen[0].content)["messages"][1]["content"]
+    assert "Title: Attention Is All You Need" in prompt
+    assert "Categories: cs.CL, cs.LG" in prompt
+    assert "Current tags: transformers" in prompt
+    assert "Existing vocabulary: nlp, transformers, vision" in prompt
+    # Suggestions only: nothing written.
+    assert not any(c[:2] == ["tag", "add"] for c in fake.calls)
+
+
+def test_suggest_tags_caps_count(client, fake, monkeypatch):
+    _mock(monkeypatch, _tag_reply([f"t{i}" for i in range(20)]), [])
+    fake.on("settings", "get", result=_stored("openai"))
+    fake.on("paper", "get", result={"title": "T", "tags": []})
+    fake.on("tag", "list-all", result=[])
+    assert len(client.post("/api/ai/tags/p1").json()["suggested"]) == 8
+
+
+def test_suggest_tags_disabled_and_bad_reply(client, fake, monkeypatch):
+    fake.on("settings", "get", result={**_stored("openai"), "ai_enabled": False})
+    assert client.post("/api/ai/tags/p1").status_code == 409
+    assert not any(c[:2] == ["paper", "get"] for c in fake.calls)
+
+    _mock(
+        monkeypatch,
+        lambda req: httpx.Response(200, json={"choices": [{"message": {"content": '{"x": 1}'}}]}),
+        [],
+    )
+    fake.on("settings", "get", result=_stored("openai"))
+    fake.on("paper", "get", result={"title": "T", "tags": []})
+    fake.on("tag", "list-all", result=[])
+    r = client.post("/api/ai/tags/p1")
+    assert r.status_code == 502 and "no tags" in r.json()["detail"]
