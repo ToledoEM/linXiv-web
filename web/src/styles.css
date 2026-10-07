@@ -187,6 +187,10 @@ ul.plain { padding-left: 1.1rem; }
 .chip.active { border-color: var(--accent); background: var(--accent-soft); color: var(--text); }
 .chip-new { font-size: 0.75em; font-style: italic; opacity: 0.75; }
 .tag-suggest { margin: 0.6rem 0 0.9rem; display: grid; gap: 0.5rem; }
+.ai-schemas summary { cursor: pointer; }
+.ai-schemas[open] { display: grid; gap: 0.6rem; }
+.ai-schema { display: grid; gap: 0.25rem; }
+.ai-schema pre { margin: 0; padding: 0.5rem 0.7rem; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); overflow-x: auto; }
 
 .tabs { display: flex; gap: 0.25rem; border-bottom: 1px solid var(--border); margin-bottom: 1rem; overflow-x: auto; }
 .tab { background: none; border: none; border-bottom: 2px solid transparent; border-radius: 0; color: var(--muted); padding: 0.45rem 0.9rem; margin-bottom: -1px; }

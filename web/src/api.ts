@@ -1,5 +1,6 @@
 import type {
   AiProvider,
+  AiTask,
   AiTestResult,
   Annotation,
   Author,
@@ -313,6 +314,7 @@ export const api = {
     request<SettingsResponse>('PATCH', '/api/settings', patch),
   aiModels: () => request<{ provider: AiProvider; models: string[] }>('GET', '/api/ai/models'),
   aiTest: () => request<AiTestResult>('POST', '/api/ai/test'),
+  aiSchemas: () => request<AiTask[]>('GET', '/api/ai/schemas'),
   suggestTags: (id: string) =>
     request<{ source_id: string; suggested: TagSuggestion[] }>('POST', `/api/ai/tags/${idPath(id)}`),
 }

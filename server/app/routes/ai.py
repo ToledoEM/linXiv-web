@@ -22,7 +22,9 @@ TEST_SCHEMA = {
     "type": "object",
     "properties": {"ok": {"type": "boolean"}},
     "required": ["ok"],
+    "additionalProperties": False,
 }
+TEST_EXAMPLE = {"ok": True}
 
 
 # Tag suggestions: at most this many per paper, and this much of the library's
@@ -33,15 +35,41 @@ MAX_TAG_LEN = 64
 MAX_ABSTRACT_CHARS = 6000
 TAGS_SCHEMA = {
     "type": "object",
-    "properties": {"tags": {"type": "array", "items": {"type": "string"}}},
+    "properties": {
+        "tags": {
+            "type": "array",
+            "items": {"type": "string", "minLength": 1, "maxLength": MAX_TAG_LEN},
+            "maxItems": MAX_SUGGESTED,
+        }
+    },
     "required": ["tags"],
+    "additionalProperties": False,
 }
+TAGS_EXAMPLE = {"tags": ["single-cell rna-seq", "drug response", "perturbation atlas"]}
 TAGS_SYSTEM = (
     "You tag research papers in a personal library. Suggest 3 to 6 short topical tags "
     "for the paper: lowercase, one to three words, no '#'. Reuse tags from the existing "
     "vocabulary when they fit; add a new tag only for an important topic it lacks. "
     "Do not repeat the paper's current tags."
 )
+
+
+# What each AI function asks the model to return; shown in Settings → AI.
+TASKS = [
+    {
+        "id": "test",
+        "label": "Test connection",
+        "schema": TEST_SCHEMA,
+        "example": TEST_EXAMPLE,
+    },
+    {
+        "id": "tags",
+        "label": "Tag suggestions",
+        "schema": TAGS_SCHEMA,
+        "example": TAGS_EXAMPLE,
+    },
+]
+JSON_SCHEMA_DIALECT = "https://json-schema.org/draft/2020-12/schema"
 
 
 async def _config(request: Request) -> ai.AIConfig:
@@ -62,13 +90,24 @@ async def models(request: Request):
     return {"provider": cfg.provider, "models": ids}
 
 
+@router.get("/schemas")
+async def schemas():
+    """The JSON Schema and example reply each AI function sends (static; no
+    provider call, works while AI is off)."""
+    return [{**t, "schema": {"$schema": JSON_SCHEMA_DIALECT, **t["schema"]}} for t in TASKS]
+
+
 @router.post("/test")
 async def test(request: Request):
     cfg = await _config(request)
     started = time.monotonic()
     try:
         reply = await ai.complete(
-            cfg, 'Connection test. Reply {"ok": true}.', schema=TEST_SCHEMA, max_tokens=256
+            cfg,
+            'Connection test. Reply {"ok": true}.',
+            schema=TEST_SCHEMA,
+            example=TEST_EXAMPLE,
+            max_tokens=256,
         )
     except ai.AIError as e:
         raise HTTPException(status_code=e.status, detail=e.message) from e
@@ -127,7 +166,14 @@ async def suggest_tags(request: Request, source_id: str):
         ]
     )
     try:
-        raw = await ai.complete(cfg, prompt, system=TAGS_SYSTEM, schema=TAGS_SCHEMA, max_tokens=512)
+        raw = await ai.complete(
+            cfg,
+            prompt,
+            system=TAGS_SYSTEM,
+            schema=TAGS_SCHEMA,
+            example=TAGS_EXAMPLE,
+            max_tokens=512,
+        )
     except ai.AIError as e:
         raise HTTPException(status_code=e.status, detail=e.message) from e
     return {"source_id": sid, "suggested": _clean_tags(raw, current, vocabulary)}

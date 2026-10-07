@@ -153,8 +153,14 @@ async def list_models(cfg: AIConfig) -> list[str]:
     return sorted(set(ids))
 
 
-def _schema_note(schema: dict) -> str:
-    return "Reply with JSON only, matching this JSON Schema:\n" + json.dumps(schema)
+def _schema_note(schema: dict, example: Any = None) -> str:
+    note = (
+        "Reply with JSON only (no prose, no code fences), valid against this "
+        "JSON Schema (draft 2020-12):\n" + json.dumps(schema)
+    )
+    if example is not None:
+        note += "\nExample of a valid reply:\n" + json.dumps(example)
+    return note
 
 
 def _parse_json(text: str, cfg: AIConfig) -> Any:
@@ -178,15 +184,17 @@ async def complete(
     *,
     system: str = "",
     schema: dict | None = None,
+    example: Any = None,
     max_tokens: int = 2048,
 ) -> Any:
-    """Text reply, or the parsed JSON object when `schema` is given."""
+    """Text reply, or the parsed JSON object when `schema` is given. The schema
+    and a valid `example` reply go in the system prompt for every provider."""
     if not cfg.model:
         raise AIError("Choose a model in Settings → AI.", 400)
     if len(prompt) + len(system) > MAX_PROMPT_CHARS:
         raise AIError("Prompt too long", 413)
-    if schema is not None and cfg.provider != "anthropic":
-        system = f"{system}\n\n{_schema_note(schema)}".strip()
+    if schema is not None:
+        system = f"{system}\n\n{_schema_note(schema, example)}".strip()
 
     if cfg.provider == "gemini":
         body: dict = {"contents": [{"role": "user", "parts": [{"text": prompt}]}]}

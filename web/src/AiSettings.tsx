@@ -1,7 +1,7 @@
-import { useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { api } from './api'
 import { ErrorText } from './components'
-import type { AiKeyName, AiProvider, AiTestResult, NcbiKeyStatus, UserSettings } from './types'
+import type { AiKeyName, AiProvider, AiTask, AiTestResult, NcbiKeyStatus, UserSettings } from './types'
 
 const PROVIDERS: { value: AiProvider; label: string; key: AiKeyName; help: string }[] = [
   { value: 'gemini', label: 'Gemini', key: 'GEMINI_API_KEY', help: 'https://aistudio.google.com/apikey' },
@@ -48,6 +48,14 @@ export default function AiSettings({
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [note, setNote] = useState('')
+  const [tasks, setTasks] = useState<AiTask[] | null>(null)
+
+  useEffect(() => {
+    api
+      .aiSchemas()
+      .then(setTasks)
+      .catch(() => setTasks(null))
+  }, [])
 
   const provider = PROVIDERS.find((p) => p.value === draft.genai_provider) ?? PROVIDERS[0]
   const status = keys?.[provider.key]
@@ -214,6 +222,27 @@ export default function AiSettings({
             {note && <span className="muted small">{note}</span>}
           </div>
           <ErrorText error={error} />
+          {tasks && (
+            <details className="ai-schemas">
+              <summary>Output format the model must return</summary>
+              <p className="muted small">
+                Each AI function puts this JSON Schema and a valid example reply in its prompt, so the model answers in
+                that shape.{' '}
+                <a href="https://json-schema.org/learn/miscellaneous-examples" target="_blank" rel="noreferrer">
+                  JSON Schema examples
+                </a>
+              </p>
+              {tasks.map((t) => (
+                <div key={t.id} className="ai-schema">
+                  <strong className="small">{t.label}</strong>
+                  <span className="muted small">JSON Schema</span>
+                  <pre className="mono small">{JSON.stringify(t.schema, null, 2)}</pre>
+                  <span className="muted small">Example reply</span>
+                  <pre className="mono small">{JSON.stringify(t.example, null, 2)}</pre>
+                </div>
+              ))}
+            </details>
+          )}
         </>
       )}
       {footer}

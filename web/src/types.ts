@@ -101,6 +101,14 @@ export interface TagSuggestion {
   known: boolean
 }
 
+/** What one AI function asks the model to return (Settings → AI). */
+export interface AiTask {
+  id: string
+  label: string
+  schema: Record<string, unknown>
+  example: unknown
+}
+
 export interface AiTestResult {
   ok: boolean
   provider: AiProvider

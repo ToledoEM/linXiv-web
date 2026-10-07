@@ -302,7 +302,8 @@ def test_connection_anthropic_uses_forced_tool(client, fake, monkeypatch):
     body = json.loads(seen[0].content)
     assert body["tool_choice"] == {"type": "tool", "name": "result"}
     assert body["tools"][0]["input_schema"]["required"] == ["ok"]
-    assert body["max_tokens"] == 256 and "system" not in body
+    assert body["max_tokens"] == 256
+    assert 'Example of a valid reply:\n{"ok": true}' in body["system"]
 
 
 def test_bad_json_reply(client, fake, monkeypatch):
@@ -412,3 +413,57 @@ def test_suggest_tags_disabled_and_bad_reply(client, fake, monkeypatch):
     fake.on("tag", "list-all", result=[])
     r = client.post("/api/ai/tags/p1")
     assert r.status_code == 502 and "no tags" in r.json()["detail"]
+
+
+# ---- schemas + examples ----
+
+
+def test_schemas_endpoint_works_while_off(client, fake):
+    fake.on("settings", "get", result={"ai_enabled": False})
+    r = client.get("/api/ai/schemas")
+    assert r.status_code == 200
+    tasks = {t["id"]: t for t in r.json()}
+    assert set(tasks) == {"test", "tags"}
+    for t in tasks.values():
+        assert t["schema"]["$schema"] == "https://json-schema.org/draft/2020-12/schema"
+        assert t["label"] and t["example"]
+    assert not any(c[:2] == ["settings", "get"] for c in fake.calls)
+
+
+def test_examples_match_their_schemas():
+    from app.routes import ai as routes
+
+    for t in routes.TASKS:
+        schema, example = t["schema"], t["example"]
+        assert set(example) == set(schema["required"]) == set(schema["properties"])
+        for key, value in example.items():
+            prop = schema["properties"][key]
+            kind = {"boolean": bool, "array": list}[prop["type"]]
+            assert isinstance(value, kind)
+            if kind is list:
+                assert len(value) <= prop["maxItems"]
+                assert all(
+                    isinstance(v, str) and 1 <= len(v) <= prop["items"]["maxLength"] for v in value
+                )
+
+
+@pytest.mark.parametrize("provider", ["gemini", "openai", "anthropic", "generic"])
+def test_tag_prompt_carries_schema_and_example(client, fake, monkeypatch, provider):
+    seen: list = []
+    replies = {
+        "gemini": {"candidates": [{"content": {"parts": [{"text": '{"tags": ["a"]}'}]}}]},
+        "anthropic": {"content": [{"type": "tool_use", "input": {"tags": ["a"]}}]},
+    }
+    default = {"choices": [{"message": {"content": '{"tags": ["a"]}'}}]}
+    _mock(monkeypatch, lambda req: httpx.Response(200, json=replies.get(provider, default)), seen)
+    fake.on("settings", "get", result=_stored(provider))
+    fake.on("paper", "get", result={"title": "T", "tags": []})
+    fake.on("tag", "list-all", result=[])
+    assert client.post("/api/ai/tags/p1").status_code == 200
+    body = json.loads(seen[0].content)
+    system = {
+        "gemini": lambda: body["systemInstruction"]["parts"][0]["text"],
+        "anthropic": lambda: body["system"],
+    }.get(provider, lambda: body["messages"][0]["content"])()
+    assert '"maxItems": 8' in system
+    assert 'Example of a valid reply:\n{"tags": ["single-cell rna-seq"' in system
