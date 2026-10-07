@@ -14,6 +14,7 @@ from .auth import Auth, require_auth
 from .cli import CLIError, LinxivCLI, Runner
 from .fulltext_worker import FullTextWorker
 from .jobs import Jobs
+from .mcp_bridge import McpBridge
 from .routes import (
     add,
     ai,
@@ -24,6 +25,7 @@ from .routes import (
     graph,
     imports,
     library,
+    mcp,
     metadata,
     notes,
     pdfs,
@@ -68,6 +70,7 @@ def create_app(
         finally:
             if task:
                 task.cancel()
+            await app.state.mcp.close_all()
 
     app = FastAPI(
         title="linXiv-web", version=__version__, docs_url=None, redoc_url=None, lifespan=lifespan
@@ -81,6 +84,10 @@ def create_app(
     app.state.fulltext_worker = FullTextWorker(
         app.state.cli, app.state.jobs, settings.timeout_short, settings.timeout_long
     )
+    app.state.mcp = McpBridge(
+        [settings.mcp_bin], {"LINXIV_DATA_DIR": str(settings.data_dir)}, settings.timeout_long * 2
+    )
+    app.state.mcp_conf = None
     app.add_middleware(SecurityHeaders)
 
     @app.exception_handler(CLIError)
@@ -92,6 +99,9 @@ def create_app(
         return {"ok": True, "version": __version__}
 
     app.include_router(auth_routes.router)
+    # /mcp has its own bearer-token auth (MCP clients have no browser session).
+    app.include_router(mcp.endpoint)
+    app.include_router(mcp.router, dependencies=[Depends(require_auth)])
     guarded = [Depends(require_auth)]
     # pdfs first: its /papers/{id:path}/pdf routes must win over library's bare
     # /papers/{id:path}.

@@ -15,6 +15,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from .common import run
 from .feed import clear_feed_cache
+from .mcp import settings_changed as mcp_settings_changed
 
 router = APIRouter(prefix="/api", tags=["settings"])
 
@@ -37,6 +38,9 @@ DEFAULTS: dict[str, object] = {
     "genai_provider": "gemini",
     "genai_model": "",
     "genai_base_url": "",
+    # linXiv MCP over HTTP (web-only keys): off until the user opts in.
+    "mcp_enabled": False,
+    "mcp_profile": "read",
 }
 FEED_KEYS = ("home_feed_url", "rss_cache_retention_days")
 # NCBI E-utilities key for PubMed lookups (10 instead of 3 requests/s). A secret:
@@ -49,7 +53,7 @@ AI_KEYS = ("GEMINI_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GENAI_API_K
 AI_KEY_RE = r"^$|^[\x21-\x7e]{8,256}$"
 SECRET_KEYS = (NCBI_KEY, *AI_KEYS)
 # Free-text values the CLI would otherwise JSON-parse ("123" -> int).
-QUOTED_KEYS = (*SECRET_KEYS, "genai_provider", "genai_model", "genai_base_url")
+QUOTED_KEYS = (*SECRET_KEYS, "genai_provider", "genai_model", "genai_base_url", "mcp_profile")
 MODEL_RE = r"^[A-Za-z0-9._:/@+-]{0,128}$"
 BASE_URL = r"^$|^[Hh][Tt][Tt][Pp][Ss]?://[^\s/?#]+[^\s?#]*$"
 EMAIL = r"^$|^[^@\s]+@[^@\s]+\.[^@\s]+$"
@@ -78,6 +82,8 @@ class SettingsPatch(BaseModel):
     OPENAI_API_KEY: str | None = Field(None, pattern=AI_KEY_RE)
     ANTHROPIC_API_KEY: str | None = Field(None, pattern=AI_KEY_RE)
     GENAI_API_KEY_TAG_GEN: str | None = Field(None, pattern=AI_KEY_RE)
+    mcp_enabled: bool | None = None
+    mcp_profile: Literal["read", "write", "full"] | None = None
 
 
 async def _current(request: Request) -> dict:
@@ -132,6 +138,8 @@ async def update_settings(request: Request, body: SettingsPatch):
         await run(request, ["settings", "update", "--", key, arg])
     if any(k in patch for k in FEED_KEYS):
         clear_feed_cache(request)
+    if any(k.startswith("mcp_") for k in patch):
+        await mcp_settings_changed(request.app, patch)
     if "full_text_worker_enabled" in patch:
         # Start or stop the background indexer now, not at its next poll.
         request.app.state.fulltext_worker.wake()

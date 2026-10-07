@@ -10,6 +10,7 @@ import type {
   FeedRule,
   Job,
   LookupSource,
+  McpStatus,
   MergeCandidates,
   MetadataCandidate,
   MetadataInput,
@@ -318,6 +319,9 @@ export const api = {
   aiModels: () => request<{ provider: AiProvider; models: string[] }>('GET', '/api/ai/models'),
   aiTest: () => request<AiTestResult>('POST', '/api/ai/test'),
   aiSchemas: () => request<AiTask[]>('GET', '/api/ai/schemas'),
+  mcpStatus: () => request<McpStatus>('GET', '/api/mcp'),
+  mcpCreateToken: () => request<{ token: string; hint: string; created: string }>('POST', '/api/mcp/token'),
+  mcpRevokeToken: () => request('DELETE', '/api/mcp/token'),
   summarize: (id: string, pdf: boolean) =>
     request<SummaryResult>('POST', `/api/ai/summary/${idPath(id)}${qs({ pdf: pdf || undefined })}`),
   suggestTags: (id: string) =>

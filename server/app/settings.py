@@ -39,6 +39,8 @@ class Settings:
     max_upload_mb: int
     timeout_long: float
     timeout_short: float
+    # linXiv's stdio MCP server, bridged to /mcp when enabled in Settings.
+    mcp_bin: str = "linxiv-mcp"
 
     @property
     def auth_enabled(self) -> bool:
@@ -62,4 +64,5 @@ def load() -> Settings:
         max_upload_mb=int(os.environ.get("LINXIV_WEB_MAX_UPLOAD_MB", "200")),
         timeout_long=float(os.environ.get("LINXIV_WEB_TIMEOUT_LONG", "120")),
         timeout_short=float(os.environ.get("LINXIV_WEB_TIMEOUT_SHORT", "30")),
+        mcp_bin=os.environ.get("LINXIV_MCP_BIN", "linxiv-mcp"),
     )

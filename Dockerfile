@@ -24,7 +24,7 @@ COPY --from=linxiv-local src-tauri/ /src/src-tauri/
 
 FROM linxiv-src-${LINXIV_SRC} AS linxiv-src
 
-# --- Stage 1: build the linxiv CLI (Tauri-free crate, no webkit/gtk) ---
+# --- Stage 1: build the linxiv CLI and MCP server (Tauri-free crates, no webkit/gtk) ---
 FROM rust:1-bookworm AS cli-build
 WORKDIR /src
 COPY --from=linxiv-src /src/scripts/ scripts/
@@ -36,8 +36,9 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/usr/local/cargo/git \
     --mount=type=cache,target=/src/src-tauri/target,sharing=locked \
     cargo build --release --locked --manifest-path src-tauri/Cargo.toml \
-      -p linxiv-cli --bin linxiv-cli \
+      -p linxiv-cli --bin linxiv-cli -p linxiv-mcp --bin linxiv-mcp \
     && install -D src-tauri/target/release/linxiv-cli /out/linxiv \
+    && install -D src-tauri/target/release/linxiv-mcp /out/linxiv-mcp \
     && install -D src-tauri/vendor/pdfium/lib/libpdfium.so /out/libpdfium.so
 
 # Standalone CLI image, used for discovery and the real-CLI integration test.
@@ -46,6 +47,7 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=cli-build /out/linxiv /usr/local/bin/linxiv
+COPY --from=cli-build /out/linxiv-mcp /usr/local/bin/linxiv-mcp
 COPY --from=cli-build /out/libpdfium.so /usr/local/lib/pdfium/libpdfium.so
 ENV LINXIV_PDFIUM_LIB=/usr/local/lib/pdfium/libpdfium.so \
     LINXIV_DATA_DIR=/data
@@ -56,9 +58,11 @@ ENTRYPOINT ["linxiv"]
 FROM python:3.11-slim-bookworm AS server-test
 COPY --from=ghcr.io/astral-sh/uv:0.8 /uv /usr/local/bin/uv
 COPY --from=cli-build /out/linxiv /usr/local/bin/linxiv
+COPY --from=cli-build /out/linxiv-mcp /usr/local/bin/linxiv-mcp
 COPY --from=cli-build /out/libpdfium.so /usr/local/lib/pdfium/libpdfium.so
 ENV LINXIV_PDFIUM_LIB=/usr/local/lib/pdfium/libpdfium.so \
-    LINXIV_BIN=linxiv
+    LINXIV_BIN=linxiv \
+    LINXIV_MCP_BIN=linxiv-mcp
 WORKDIR /app/server
 COPY server/pyproject.toml server/uv.lock ./
 RUN uv sync --frozen
@@ -81,6 +85,8 @@ RUN apt-get update \
 COPY --from=ghcr.io/astral-sh/uv:0.8 /uv /usr/local/bin/uv
 
 COPY --from=cli-build /out/linxiv /usr/local/bin/linxiv
+# MCP server (stdio); the web server bridges it to /mcp when enabled in Settings.
+COPY --from=cli-build /out/linxiv-mcp /usr/local/bin/linxiv-mcp
 COPY --from=cli-build /out/libpdfium.so /usr/local/lib/pdfium/libpdfium.so
 
 WORKDIR /app/server

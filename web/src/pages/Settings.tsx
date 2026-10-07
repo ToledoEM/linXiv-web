@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import AiSettings from '../AiSettings'
+import McpSettings from '../McpSettings'
 import { setAiEnabled } from '../aiEnabled'
 import { api } from '../api'
 import Backup from '../Backup'
@@ -25,7 +26,7 @@ const CONTACTS: { key: 'ARXIV_MAILTO' | 'CROSSREF_MAILTO' | 'OPENALEX_MAILTO'; l
 ]
 
 // Each card saves on its own: only that card's keys go in its PATCH.
-type SectionId = 'contacts' | 'ai' | 'storage' | 'feed' | 'display' | 'search'
+type SectionId = 'contacts' | 'ai' | 'mcp' | 'storage' | 'feed' | 'display' | 'search'
 const SECTIONS: Record<SectionId, (keyof UserSettings)[]> = {
   contacts: ['ARXIV_MAILTO', 'CROSSREF_MAILTO', 'OPENALEX_MAILTO', 'NCBI_API_KEY'],
   ai: [
@@ -38,6 +39,7 @@ const SECTIONS: Record<SectionId, (keyof UserSettings)[]> = {
     'ANTHROPIC_API_KEY',
     'GENAI_API_KEY_TAG_GEN',
   ],
+  mcp: ['mcp_enabled', 'mcp_profile'],
   storage: ['pdf_save_limit_mb'],
   feed: ['home_feed_url', 'rss_cache_retention_days'],
   display: ['tex_rendering_enabled'],
@@ -222,6 +224,10 @@ export default function Settings() {
           onKeys={setAiKeys}
           footer={saveBar('ai')}
         />
+      </form>
+
+      <form onSubmit={save('mcp')} onKeyDown={formSubmitOnCtrlEnter}>
+        <McpSettings draft={draft} saved={saved} set={set} footer={saveBar('mcp')} />
       </form>
 
       <form onSubmit={save('storage')} onKeyDown={formSubmitOnCtrlEnter}>

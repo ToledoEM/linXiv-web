@@ -28,6 +28,8 @@ def test_get_settings_hides_unlisted_keys(client, fake, monkeypatch):
         "genai_provider": "gemini",
         "genai_model": "",
         "genai_base_url": "",
+        "mcp_enabled": False,
+        "mcp_profile": "read",
         "NCBI_API_KEY": "",
         "GEMINI_API_KEY": "",
         "OPENAI_API_KEY": "",

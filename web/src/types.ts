@@ -90,6 +90,19 @@ export interface UserSettings {
   OPENAI_API_KEY: string
   ANTHROPIC_API_KEY: string
   GENAI_API_KEY_TAG_GEN: string
+  /** linXiv MCP over HTTP at /mcp (off by default). */
+  mcp_enabled: boolean
+  mcp_profile: McpProfile
+}
+
+export type McpProfile = 'read' | 'write' | 'full'
+
+export interface McpStatus {
+  enabled: boolean
+  profile: McpProfile
+  token: { set: boolean; hint: string | null; created: string | null }
+  sessions: number
+  tool_counts: Record<McpProfile, number>
 }
 
 export type AiProvider = 'gemini' | 'openai' | 'anthropic' | 'generic'
