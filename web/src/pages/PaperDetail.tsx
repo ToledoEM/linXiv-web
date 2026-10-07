@@ -4,6 +4,7 @@ import { api, pdfUrl } from '../api'
 import type { Annotation, Paper, PaperVersions, TagSuggestion } from '../types'
 import { Authors, ErrorText } from '../components'
 import { useAiEnabled } from '../aiEnabled'
+import AiSummary from '../AiSummary'
 import Highlights from '../Highlights'
 import MetadataEditor from '../MetadataEditor'
 import Notes from '../Notes'
@@ -33,6 +34,8 @@ export default function PaperDetail() {
   const [editingMeta, setEditingMeta] = useState(false)
   const [sourceNote, setSourceNote] = useState('')
   const [annotations, setAnnotations] = useState<Annotation[]>([])
+  // Bumped after an AI summary is saved so the Notes panel reloads.
+  const [notesTick, setNotesTick] = useState(0)
 
   const loadAnnotations = useCallback(
     () =>
@@ -240,7 +243,16 @@ export default function PaperDetail() {
         </div>
       )}
 
-      <Notes key={sid} sourceId={sid} defaultProjectId={fromProjectId} />
+      {aiOn && (
+        <AiSummary
+          key={sid}
+          sourceId={sid}
+          hasPdf={paper.has_pdf}
+          projectId={fromProjectId}
+          onSaved={() => setNotesTick((n) => n + 1)}
+        />
+      )}
+      <Notes key={`${sid}:${notesTick}`} sourceId={sid} defaultProjectId={fromProjectId} />
 
       <h3>PDF</h3>
       <div className="actions">

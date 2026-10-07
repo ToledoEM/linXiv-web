@@ -24,6 +24,7 @@ import type {
   SavedPdf,
   SearchResult,
   SettingsResponse,
+  SummaryResult,
   TagSuggestion,
   Source,
   Stats,
@@ -315,6 +316,8 @@ export const api = {
   aiModels: () => request<{ provider: AiProvider; models: string[] }>('GET', '/api/ai/models'),
   aiTest: () => request<AiTestResult>('POST', '/api/ai/test'),
   aiSchemas: () => request<AiTask[]>('GET', '/api/ai/schemas'),
+  summarize: (id: string, pdf: boolean) =>
+    request<SummaryResult>('POST', `/api/ai/summary/${idPath(id)}${qs({ pdf: pdf || undefined })}`),
   suggestTags: (id: string) =>
     request<{ source_id: string; suggested: TagSuggestion[] }>('POST', `/api/ai/tags/${idPath(id)}`),
 }

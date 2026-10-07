@@ -1,5 +1,5 @@
 """AI routes: provider checks for Settings → AI (list models, test the
-connection) and tag suggestions.
+connection), tag suggestions and paper summaries.
 
 All use the saved provider settings (never values from the request) and refuse
 while `ai_enabled` is off. Suggestions are only returned; the UI adds the tags
@@ -8,13 +8,16 @@ the user accepts through the normal tag routes.
 
 from __future__ import annotations
 
+import asyncio
 import re
 import time
 
 from fastapi import APIRouter, HTTPException, Request
 
 from .. import ai
+from ..pdf_text import PdfTextError, extract_text
 from .common import ident, run
+from .pdfs import managed_pdf_path
 
 router = APIRouter(prefix="/api/ai", tags=["ai"])
 
@@ -54,6 +57,36 @@ TAGS_SYSTEM = (
 )
 
 
+SUMMARY_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "summary": {"type": "string", "minLength": 1, "maxLength": 2000},
+        "key_points": {
+            "type": "array",
+            "items": {"type": "string", "minLength": 1, "maxLength": 300},
+            "maxItems": 6,
+        },
+    },
+    "required": ["summary", "key_points"],
+    "additionalProperties": False,
+}
+SUMMARY_EXAMPLE = {
+    "summary": (
+        "The authors build a single-cell atlas of drug responses across 50 cancer cell lines "
+        "and use it to map mechanisms of action and resistance programs."
+    ),
+    "key_points": [
+        "100 million transcriptomes from 1,100 drug-dose conditions",
+        "Signatures separate cytotoxic from cytostatic responses",
+    ],
+}
+SUMMARY_SYSTEM = (
+    "You summarize research papers for a researcher's personal library. Write a faithful "
+    "summary of 120 to 200 words covering the question, the approach and the main findings, "
+    "then up to 6 short key points. Use only the text provided; never invent results, "
+    "numbers or citations. If only the abstract is given, stay close to it."
+)
+
 # What each AI function asks the model to return; shown in Settings → AI.
 TASKS = [
     {
@@ -67,6 +100,12 @@ TASKS = [
         "label": "Tag suggestions",
         "schema": TAGS_SCHEMA,
         "example": TAGS_EXAMPLE,
+    },
+    {
+        "id": "summary",
+        "label": "Paper summary",
+        "schema": SUMMARY_SCHEMA,
+        "example": SUMMARY_EXAMPLE,
     },
 ]
 JSON_SCHEMA_DIALECT = "https://json-schema.org/draft/2020-12/schema"
@@ -177,3 +216,62 @@ async def suggest_tags(request: Request, source_id: str):
     except ai.AIError as e:
         raise HTTPException(status_code=e.status, detail=e.message) from e
     return {"source_id": sid, "suggested": _clean_tags(raw, current, vocabulary)}
+
+
+def _text_list(value: object, limit: int, max_len: int) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    out = [v.strip()[:max_len] for v in value if isinstance(v, str) and v.strip()]
+    return out[:limit]
+
+
+@router.post("/summary/{source_id:path}")
+async def summarize(request: Request, source_id: str, pdf: bool = False):
+    """Summary + key points from the title and abstract, plus the saved PDF's
+    text when `pdf` is set. Preview only; the UI saves it as a note."""
+    cfg = await _config(request)
+    sid = ident(source_id)
+    paper = await run(request, ["paper", "get", "--", sid])
+    abstract = (paper.get("summary") or "").strip()
+    body, truncated = "", False
+    if pdf:
+        path = await managed_pdf_path(request, sid)
+        try:
+            body, truncated = await asyncio.to_thread(extract_text, path)
+        except PdfTextError as e:
+            raise HTTPException(status_code=422, detail=str(e)) from e
+        if not body.strip():
+            raise HTTPException(
+                status_code=422, detail="The PDF has no extractable text (scanned images?)"
+            )
+    if not abstract and not body:
+        raise HTTPException(status_code=400, detail="Nothing to summarize: no abstract or PDF text")
+    categories = paper.get("categories") or ([paper["category"]] if paper.get("category") else [])
+    lines = [
+        f"Title: {paper.get('title') or ''}",
+        f"Categories: {', '.join(str(c) for c in categories) or 'none'}",
+        f"Abstract: {abstract[:MAX_ABSTRACT_CHARS] or 'none'}",
+    ]
+    if body:
+        lines.append(f"Full text{' (truncated)' if truncated else ''}:\n{body}")
+    try:
+        raw = await ai.complete(
+            cfg,
+            "\n".join(lines),
+            system=SUMMARY_SYSTEM,
+            schema=SUMMARY_SCHEMA,
+            example=SUMMARY_EXAMPLE,
+            max_tokens=1500,
+        )
+    except ai.AIError as e:
+        raise HTTPException(status_code=e.status, detail=e.message) from e
+    summary = raw.get("summary") if isinstance(raw, dict) else None
+    if not isinstance(summary, str) or not summary.strip():
+        raise HTTPException(status_code=502, detail="The model returned no summary")
+    return {
+        "source_id": sid,
+        "summary": summary.strip()[:2000],
+        "key_points": _text_list(raw.get("key_points"), 6, 300),
+        "used_pdf": bool(body),
+        "truncated": truncated,
+    }

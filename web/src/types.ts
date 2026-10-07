@@ -109,6 +109,15 @@ export interface AiTask {
   example: unknown
 }
 
+/** AI summary preview (`POST /api/ai/summary/{id}`); saved by the UI as a note. */
+export interface SummaryResult {
+  source_id: string
+  summary: string
+  key_points: string[]
+  used_pdf: boolean
+  truncated: boolean
+}
+
 export interface AiTestResult {
   ok: boolean
   provider: AiProvider

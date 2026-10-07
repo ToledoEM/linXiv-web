@@ -423,7 +423,7 @@ def test_schemas_endpoint_works_while_off(client, fake):
     r = client.get("/api/ai/schemas")
     assert r.status_code == 200
     tasks = {t["id"]: t for t in r.json()}
-    assert set(tasks) == {"test", "tags"}
+    assert set(tasks) == {"test", "tags", "summary"}
     for t in tasks.values():
         assert t["schema"]["$schema"] == "https://json-schema.org/draft/2020-12/schema"
         assert t["label"] and t["example"]
@@ -438,8 +438,10 @@ def test_examples_match_their_schemas():
         assert set(example) == set(schema["required"]) == set(schema["properties"])
         for key, value in example.items():
             prop = schema["properties"][key]
-            kind = {"boolean": bool, "array": list}[prop["type"]]
+            kind = {"boolean": bool, "array": list, "string": str}[prop["type"]]
             assert isinstance(value, kind)
+            if kind is str:
+                assert prop["minLength"] <= len(value) <= prop["maxLength"]
             if kind is list:
                 assert len(value) <= prop["maxItems"]
                 assert all(
@@ -467,3 +469,135 @@ def test_tag_prompt_carries_schema_and_example(client, fake, monkeypatch, provid
     }.get(provider, lambda: body["messages"][0]["content"])()
     assert '"maxItems": 8' in system
     assert 'Example of a valid reply:\n{"tags": ["single-cell rna-seq"' in system
+
+
+# ---- paper summary ----
+
+
+def _pdf_bytes(text: str) -> bytes:
+    """Smallest valid one-page PDF showing `text` (Helvetica)."""
+    stream = f"BT /F1 12 Tf 72 720 Td ({text}) Tj ET".encode()
+    objs = [
+        b"<< /Type /Catalog /Pages 2 0 R >>",
+        b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+        (
+            b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] "
+            b"/Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>"
+        ),
+        b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+        b"<< /Length %d >>\nstream\n" % len(stream) + stream + b"\nendstream",
+    ]
+    out = bytearray(b"%PDF-1.4\n")
+    offsets = []
+    for i, body in enumerate(objs, 1):
+        offsets.append(len(out))
+        out += b"%d 0 obj\n" % i + body + b"\nendobj\n"
+    xref = len(out)
+    out += b"xref\n0 %d\n0000000000 65535 f \n" % (len(objs) + 1)
+    out += b"".join(b"%010d 00000 n \n" % o for o in offsets)
+    out += b"trailer\n<< /Size %d /Root 1 0 R >>\nstartxref\n%d\n%%%%EOF\n" % (len(objs) + 1, xref)
+    return bytes(out)
+
+
+def _summary_reply(obj):
+    return lambda req: httpx.Response(
+        200, json={"choices": [{"message": {"content": json.dumps(obj)}}]}
+    )
+
+
+PAPER = {
+    "title": "Tahoe-100M",
+    "summary": "A giga-scale atlas.",
+    "categories": ["q-bio"],
+    "tags": [],
+}
+
+
+def test_summary_abstract_only(client, fake, monkeypatch):
+    seen: list = []
+    points = [f" point {i} " for i in range(9)] + [3, ""]
+    _mock(
+        monkeypatch, _summary_reply({"summary": " A short summary. ", "key_points": points}), seen
+    )
+    fake.on("settings", "get", result=_stored("openai"))
+    fake.on("paper", "get", result=PAPER)
+    r = client.post("/api/ai/summary/doi:10.1016/x")
+    assert r.status_code == 200, r.text
+    assert r.json() == {
+        "source_id": "doi:10.1016/x",
+        "summary": "A short summary.",
+        "key_points": [f"point {i}" for i in range(6)],
+        "used_pdf": False,
+        "truncated": False,
+    }
+    body = json.loads(seen[0].content)
+    prompt = body["messages"][1]["content"]
+    assert "Abstract: A giga-scale atlas." in prompt and "Full text" not in prompt
+    assert '"key_points"' in body["messages"][0]["content"]
+    assert not any(c[:2] == ["pdf", "path"] for c in fake.calls)
+    assert not any(c[:2] == ["note", "create"] for c in fake.calls)
+
+
+def test_summary_with_pdf_text(client, fake, monkeypatch, dirs):
+    _, pdfs = dirs
+    pdf = pdfs / "x.pdf"
+    pdf.write_bytes(_pdf_bytes("Methods section says cells were barcoded"))
+    seen: list = []
+    _mock(monkeypatch, _summary_reply({"summary": "S", "key_points": []}), seen)
+    fake.on("settings", "get", result=_stored("openai"))
+    fake.on("paper", "get", result=PAPER)
+    fake.on("pdf", "path", result={"path": str(pdf)})
+    r = client.post("/api/ai/summary/p1?pdf=true")
+    assert r.status_code == 200, r.text
+    assert r.json()["used_pdf"] is True
+    prompt = json.loads(seen[0].content)["messages"][1]["content"]
+    assert "Full text:\nMethods section says cells were barcoded" in prompt
+
+
+def test_summary_pdf_errors(client, fake, monkeypatch, tmp_path, dirs):
+    _mock(monkeypatch, _summary_reply({"summary": "S", "key_points": []}), [])
+    fake.on("settings", "get", result=_stored("openai"))
+    fake.on("paper", "get", result=PAPER)
+
+    fake.on("pdf", "path", result={})
+    assert client.post("/api/ai/summary/p1?pdf=true").status_code == 404
+
+    outside = tmp_path / "elsewhere.pdf"
+    outside.write_bytes(_pdf_bytes("x"))
+    fake.on("pdf", "path", result={"path": str(outside)})
+    assert client.post("/api/ai/summary/p1?pdf=true").status_code == 403
+
+    junk = dirs[1] / "junk.pdf"
+    junk.write_bytes(b"%PDF-1.4 not really a pdf")
+    fake.on("pdf", "path", result={"path": str(junk)})
+    r = client.post("/api/ai/summary/p1?pdf=true")
+    assert r.status_code == 422 and "could not read the PDF" in r.json()["detail"]
+
+
+def test_summary_nothing_to_send_and_bad_reply(client, fake, monkeypatch):
+    seen: list = []
+    _mock(monkeypatch, _summary_reply({"key_points": ["x"]}), seen)
+    fake.on("settings", "get", result=_stored("openai"))
+    fake.on("paper", "get", result={**PAPER, "summary": ""})
+    r = client.post("/api/ai/summary/p1")
+    assert r.status_code == 400 and not seen
+
+    fake.on("paper", "get", result=PAPER)
+    r = client.post("/api/ai/summary/p1")
+    assert r.status_code == 502 and "no summary" in r.json()["detail"]
+
+
+def test_summary_refused_when_off(client, fake):
+    fake.on("settings", "get", result={**_stored("openai"), "ai_enabled": False})
+    assert client.post("/api/ai/summary/p1").status_code == 409
+
+
+def test_extract_text_caps(tmp_path):
+    from app.pdf_text import extract_text
+
+    pdf = tmp_path / "a.pdf"
+    pdf.write_bytes(_pdf_bytes("abcdefghij " * 20))
+    text, truncated = extract_text(pdf, max_chars=30)
+    assert len(text) == 30 and truncated is True
+    text, truncated = extract_text(pdf)
+    assert text.startswith("abcdefghij") and truncated is False

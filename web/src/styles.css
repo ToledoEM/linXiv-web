@@ -188,6 +188,9 @@ ul.plain { padding-left: 1.1rem; }
 .chip-new { font-size: 0.75em; font-style: italic; opacity: 0.75; }
 .tag-suggest { margin: 0.6rem 0 0.9rem; display: grid; gap: 0.5rem; }
 .ai-schemas summary { cursor: pointer; }
+.ai-summary { display: grid; gap: 0.5rem; margin: 1rem 0 0.5rem; }
+.ai-summary-card { display: grid; gap: 0.5rem; }
+.ai-summary-card p, .ai-summary-card ul { margin: 0; }
 .ai-schemas[open] { display: grid; gap: 0.6rem; }
 .ai-schema { display: grid; gap: 0.25rem; }
 .ai-schema pre { margin: 0; padding: 0.5rem 0.7rem; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); overflow-x: auto; }

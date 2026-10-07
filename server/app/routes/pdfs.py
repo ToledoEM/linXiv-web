@@ -49,8 +49,9 @@ def pdf_url_for(paper: dict) -> str | None:
     return None
 
 
-@router.get("/papers/{source_id:path}/pdf")
-async def view_pdf(request: Request, source_id: str, version: int | None = None):
+async def managed_pdf_path(request: Request, source_id: str, version: int | None = None) -> Path:
+    """The saved PDF of a paper (`pdf path`), checked to be a file inside the
+    data or PDF dir."""
     args = ["pdf", "path"]
     if version:
         args += ["--version", str(version)]
@@ -64,6 +65,12 @@ async def view_pdf(request: Request, source_id: str, version: int | None = None)
         raise HTTPException(status_code=403, detail="PDF is outside managed storage")
     if not path.is_file():
         raise HTTPException(status_code=404, detail="PDF file missing on disk")
+    return path
+
+
+@router.get("/papers/{source_id:path}/pdf")
+async def view_pdf(request: Request, source_id: str, version: int | None = None):
+    path = await managed_pdf_path(request, source_id, version)
     return FileResponse(
         path, media_type="application/pdf", filename=path.name, content_disposition_type="inline"
     )
