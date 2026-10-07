@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent, type KeyboardEvent } from 'react'
 import { api } from './api'
 import { ErrorText } from './components'
-import { failedMessage, hasTag, PRESET_COLORS, READING_LIST_TAG } from './projects'
+import { failedMessage, hasTag, isReadingList, PRESET_COLORS, READING_LIST_TAG } from './projects'
 import type { Project, ProjectInput } from './types'
 import { formSubmitOnCtrlEnter, isSubmitChord } from './submitShortcut'
 
@@ -243,11 +243,23 @@ export function AddToProjectBar({
       <span>{selected.size} selected</span>
       <select aria-label="Project" value={target} onChange={(e) => setTarget(e.target.value)} disabled={busy}>
         <option value="">Choose project…</option>
-        {projects?.map((p) => (
-          <option key={p.id} value={p.id}>
-            {p.name}
-          </option>
-        ))}
+        {(
+          [
+            ['Projects', projects?.filter((p) => !isReadingList(p))],
+            ['Reading lists', projects?.filter(isReadingList)],
+          ] as const
+        ).map(
+          ([label, group]) =>
+            !!group?.length && (
+              <optgroup key={label} label={label}>
+                {group.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </optgroup>
+            ),
+        )}
       </select>
       <button onClick={addExisting} disabled={busy || !target}>
         Add to project

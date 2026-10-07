@@ -4,6 +4,7 @@ import { api } from '../api'
 import { ErrorText } from '../components'
 import ProjectImport from '../ProjectImport'
 import { DeleteButton, ProjectForm, Swatch } from '../projectParts'
+import { isReadingList } from '../projects'
 import { MathText } from '../tex'
 import type { Project, ProjectInput } from '../types'
 
@@ -83,8 +84,9 @@ export default function Projects() {
         api.projects(showArchived ? 'archived' : 'active'),
         showArchived ? null : api.projects('archived'),
       ])
-      setProjects(list)
-      setArchivedCount(archived ? archived.length : list.length)
+      const own = list.filter((p) => !isReadingList(p))
+      setProjects(own)
+      setArchivedCount(archived ? archived.filter((p) => !isReadingList(p)).length : own.length)
     } catch (err) {
       setError((err as Error).message)
     }

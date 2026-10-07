@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { api } from '../api'
 import { ErrorText } from '../components'
 import { DeleteButton, Swatch } from '../projectParts'
-import { hasTag, READING_LIST_TAG } from '../projects'
+import { isReadingList, READING_LIST_TAG } from '../projects'
 import { MathText } from '../tex'
 import type { Project } from '../types'
 import { formSubmitOnCtrlEnter } from '../submitShortcut'
@@ -55,19 +55,26 @@ function NewReadingList({ onCreated, onCancel }: { onCreated: () => Promise<void
 }
 
 export default function ReadingLists() {
+  const [showArchived, setShowArchived] = useState(false)
   const [lists, setLists] = useState<Project[] | null>(null)
+  const [archivedCount, setArchivedCount] = useState(0)
   const [creating, setCreating] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
   const load = useCallback(async () => {
     try {
-      const projects = await api.projects('active')
-      setLists(projects.filter((p) => hasTag(p.project_tags, READING_LIST_TAG)))
+      const [list, archived] = await Promise.all([
+        api.projects(showArchived ? 'archived' : 'active'),
+        showArchived ? null : api.projects('archived'),
+      ])
+      const own = list.filter(isReadingList)
+      setLists(own)
+      setArchivedCount(archived ? archived.filter(isReadingList).length : own.length)
     } catch (err) {
       setError((err as Error).message)
     }
-  }, [])
+  }, [showArchived])
 
   useEffect(() => {
     load()
@@ -86,11 +93,28 @@ export default function ReadingLists() {
     }
   }
 
+  const switchView = (archived: boolean) => {
+    setShowArchived(archived)
+    setLists(null)
+    setCreating(false)
+  }
+
   return (
     <section>
       <div className="page-head">
-        <h2>Reading lists</h2>
-        {!creating && (
+        <h2>{showArchived ? 'Archived reading lists' : 'Reading lists'}</h2>
+        {showArchived ? (
+          <button className="link" onClick={() => switchView(false)}>
+            ← back
+          </button>
+        ) : (
+          archivedCount > 0 && (
+            <button className="link" onClick={() => switchView(true)}>
+              {archivedCount} archived
+            </button>
+          )
+        )}
+        {!showArchived && !creating && (
           <button className="page-head-action" onClick={() => setCreating(true)}>
             New reading list
           </button>
@@ -115,7 +139,9 @@ export default function ReadingLists() {
       {!lists ? (
         !error && <p className="muted">Loading…</p>
       ) : lists.length === 0 ? (
-        <p className="muted">No reading lists. Create one, then add papers to it.</p>
+        <p className="muted">
+          {showArchived ? 'No archived reading lists.' : 'No reading lists. Create one, then add papers to it.'}
+        </p>
       ) : (
         <ul className="project-grid">
           {lists.map((p) => {
@@ -145,9 +171,15 @@ export default function ReadingLists() {
                   ))}
                 </div>
                 <div className="actions">
-                  <button disabled={busy} onClick={() => act(() => api.archiveProject(p.id))}>
-                    Archive
-                  </button>
+                  {showArchived ? (
+                    <button disabled={busy} onClick={() => act(() => api.unarchiveProject(p.id))}>
+                      Restore
+                    </button>
+                  ) : (
+                    <button disabled={busy} onClick={() => act(() => api.archiveProject(p.id))}>
+                      Archive
+                    </button>
+                  )}
                   <DeleteButton busy={busy} onConfirm={() => act(() => api.deleteProject(p.id))} />
                 </div>
               </li>

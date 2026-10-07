@@ -4,7 +4,7 @@ import { api, idPath, projectExportUrl, type ExportFormat } from '../api'
 import { ErrorText, SortHeader } from '../components'
 import { loadSort, nextSort, parsePaperSort, saveSort, sortPapers, type PaperSortKey } from '../paperSort'
 import { DeleteButton, ProjectForm, Swatch } from '../projectParts'
-import { failedMessage, READING_LIST_TAG, toggled } from '../projects'
+import { failedMessage, isReadingList, READING_LIST_TAG, toggled } from '../projects'
 import { MathText } from '../tex'
 import type { Paper, Project, ProjectInput } from '../types'
 
@@ -217,14 +217,15 @@ export default function ProjectDetail() {
   }
   if (!project || !papers || !shown) return <p className="muted">Loading…</p>
 
+  // Reading lists open here too; send them back to the Reading page.
+  const home = isReadingList(project) ? '/reading' : '/projects'
+  const back = <Link to={home}>{home === '/reading' ? '← Reading lists' : '← Projects'}</Link>
   const tags = project.project_tags.filter((t) => t.toLowerCase() !== READING_LIST_TAG)
   const allSelected = papers.length > 0 && papers.every((p) => selected.has(p.source_id))
 
   return (
     <section>
-      <p className="small">
-        <Link to="/projects">← Projects</Link>
-      </p>
+      <p className="small">{back}</p>
       {editing ? (
         <ProjectForm
           initial={{
@@ -264,7 +265,7 @@ export default function ProjectDetail() {
                     onClick={() =>
                       run(
                         () => api.archiveProject(projectId),
-                        () => navigate('/projects'),
+                        () => navigate(home),
                       )
                     }
                   >
@@ -277,7 +278,7 @@ export default function ProjectDetail() {
                 onConfirm={() =>
                   run(
                     () => api.deleteProject(projectId),
-                    () => navigate('/projects'),
+                    () => navigate(home),
                   )
                 }
               />
