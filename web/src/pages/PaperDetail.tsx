@@ -216,8 +216,8 @@ export default function PaperDetail() {
           <button disabled={!!busy || !newTag.trim()}>Add</button>
         </form>
         {aiOn && (
-          <button type="button" className="link" disabled={!!busy} onClick={suggestTags}>
-            {busy === 'suggest' ? 'Suggesting…' : 'Suggest tags'}
+          <button type="button" disabled={!!busy} onClick={suggestTags}>
+            {busy === 'suggest' ? 'Suggesting…' : 'AI Tags'}
           </button>
         )}
       </div>

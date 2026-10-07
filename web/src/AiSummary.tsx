@@ -59,26 +59,17 @@ export default function AiSummary({
   return (
     <div className="ai-summary">
       <div className="actions">
-        <div className="chips" role="group" aria-label="Summary source">
-          <button
-            type="button"
-            className={!usePdf || !hasPdf ? 'chip active' : 'chip'}
-            aria-pressed={!usePdf || !hasPdf}
-            onClick={() => setUsePdf(false)}
-          >
-            Abstract only
-          </button>
-          <button
-            type="button"
-            className={usePdf && hasPdf ? 'chip active' : 'chip'}
-            aria-pressed={usePdf && hasPdf}
-            disabled={!hasPdf}
-            title={hasPdf ? 'Also send the text of the saved PDF' : 'No PDF saved for this paper'}
-            onClick={() => setUsePdf(true)}
-          >
-            Abstract + PDF text
-          </button>
-        </div>
+        <select
+          aria-label="Summary source"
+          value={usePdf && hasPdf ? 'pdf' : 'abstract'}
+          disabled={!!busy}
+          onChange={(e) => setUsePdf(e.target.value === 'pdf')}
+        >
+          <option value="abstract">Abstract only</option>
+          <option value="pdf" disabled={!hasPdf}>
+            Abstract + PDF text{hasPdf ? '' : ' (no PDF saved)'}
+          </option>
+        </select>
         <button type="button" disabled={!!busy} onClick={summarize}>
           {busy === 'summarize' ? 'Summarizing…' : 'AI summary'}
         </button>
