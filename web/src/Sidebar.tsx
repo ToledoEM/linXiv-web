@@ -70,6 +70,9 @@ export default function Sidebar({ items, onLogout }: { items: NavItem[]; onLogou
           <span className="nav-label">Log out</span>
         </button>
       )}
+      <a className="sidebar-credit" href="https://github.com/ToledoEM/linXiv-web" target="_blank" rel="noreferrer">
+        linXiv-web — open source under Apache License 2.0
+      </a>
     </aside>
   )
 }
