@@ -12,6 +12,8 @@ router = APIRouter(prefix="/api", tags=["auth"])
 
 class LoginRequest(BaseModel):
     password: str
+    # Ticked: persistent cookies for remember_days. Unticked: browser-session cookies.
+    remember: bool = False
 
 
 @router.post("/login")
@@ -27,8 +29,11 @@ def login(body: LoginRequest, request: Request, response: Response):
         raise HTTPException(status_code=401, detail="invalid password")
     auth.clear_failures(client)
 
-    cookie = {"max_age": SESSION_MAX_AGE, "samesite": "strict", "secure": auth.cookie_secure}
-    response.set_cookie(SESSION_COOKIE, auth.create_session(), httponly=True, **cookie)
+    max_age = auth.remember_max_age if body.remember else SESSION_MAX_AGE
+    cookie = {"samesite": "strict", "secure": auth.cookie_secure}
+    if body.remember:
+        cookie["max_age"] = max_age
+    response.set_cookie(SESSION_COOKIE, auth.create_session(max_age), httponly=True, **cookie)
     # Readable by JS so the client can echo it in the X-CSRF-Token header.
     response.set_cookie(CSRF_COOKIE, secrets.token_urlsafe(24), httponly=False, **cookie)
     return {"ok": True}

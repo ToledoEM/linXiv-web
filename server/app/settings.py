@@ -41,6 +41,8 @@ class Settings:
     timeout_short: float
     # linXiv's stdio MCP server, bridged to /mcp when enabled in Settings.
     mcp_bin: str = "linxiv-mcp"
+    # Session lifetime when "Remember me" is ticked at login.
+    remember_days: int = 90
 
     @property
     def auth_enabled(self) -> bool:
@@ -65,4 +67,5 @@ def load() -> Settings:
         timeout_long=float(os.environ.get("LINXIV_WEB_TIMEOUT_LONG", "120")),
         timeout_short=float(os.environ.get("LINXIV_WEB_TIMEOUT_SHORT", "30")),
         mcp_bin=os.environ.get("LINXIV_MCP_BIN", "linxiv-mcp"),
+        remember_days=max(1, int(os.environ.get("LINXIV_WEB_REMEMBER_DAYS", "90"))),
     )

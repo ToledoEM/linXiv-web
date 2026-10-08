@@ -3,6 +3,7 @@ import { api } from '../api'
 
 export default function Login({ onLogin }: { onLogin: () => void }) {
   const [password, setPassword] = useState('')
+  const [remember, setRemember] = useState(false)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
 
@@ -11,7 +12,7 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
     setBusy(true)
     setError('')
     try {
-      await api.login(password)
+      await api.login(password, remember)
       onLogin()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'login failed')
@@ -29,6 +30,10 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
         <label>
           Password
           <input type="password" autoFocus value={password} onChange={(e) => setPassword(e.target.value)} />
+        </label>
+        <label className="check">
+          <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
+          Remember me on this browser
         </label>
         <button disabled={busy || !password}>Log in</button>
         {error && <p className="error">{error}</p>}

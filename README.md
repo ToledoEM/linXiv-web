@@ -157,6 +157,7 @@ Open http://127.0.0.1:8086 (or `http://<machine-ip>:8086` with `LINXIV_WEB_BIND=
 | `LINXIV_WEB_PASSWORD` | none | Plain password, hashed in memory at startup (dev only) |
 | `LINXIV_WEB_SECRET_KEY` | random per start | Session signing key. If unset, a restart logs everyone out |
 | `LINXIV_WEB_COOKIE_SECURE` | `false` | Set to `true` behind HTTPS |
+| `LINXIV_WEB_REMEMBER_DAYS` | `90` | Login lifetime when "Remember me" is ticked (otherwise the login lasts until the browser closes, at most 14 days) |
 | `LINXIV_WEB_DATA_DIR` | `/data` | linXiv data dir (`papers.db`). Passed to the CLI and MCP server as `LINXIV_DATA_DIR` |
 | `LINXIV_WEB_PDF_DIR` | `/pdfs` | PDF directory, symlinked from `<data dir>/pdfs` |
 | `LINXIV_WEB_HOST` / `LINXIV_WEB_PORT` | `0.0.0.0` / `8000` in the image | Listen address |

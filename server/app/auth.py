@@ -31,6 +31,7 @@ class Auth:
     def __init__(self, settings: Settings) -> None:
         self.enabled = settings.auth_enabled
         self.cookie_secure = settings.cookie_secure
+        self.remember_max_age = settings.remember_days * 60 * 60 * 24
         self._hasher = PasswordHasher()
         self._hash = settings.password_hash
         if not self._hash and settings.password:
@@ -64,16 +65,19 @@ class Auth:
 
     # --- sessions ---
 
-    def create_session(self) -> str:
+    def create_session(self, max_age: int = SESSION_MAX_AGE) -> str:
         sid = secrets.token_urlsafe(24)
-        self._sessions[sid] = time.time() + SESSION_MAX_AGE
+        self._sessions[sid] = time.time() + max_age
         return self._serializer.dumps({"sid": sid})
 
     def _sid(self, token: str | None) -> str | None:
         if not token:
             return None
         try:
-            data = self._serializer.loads(token, max_age=SESSION_MAX_AGE)
+            # Per-session expiry is enforced in is_valid; this bound only caps old tokens.
+            data = self._serializer.loads(
+                token, max_age=max(SESSION_MAX_AGE, self.remember_max_age)
+            )
         except BadSignature:
             return None
         return data.get("sid") if isinstance(data, dict) else None

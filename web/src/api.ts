@@ -130,7 +130,7 @@ const qs = (params: Record<string, string | number | boolean | undefined>) => {
 export const api = {
   me: () => request<{ auth_enabled: boolean; authenticated: boolean }>('GET', '/api/me'),
   health: () => request<{ ok: boolean; version: string }>('GET', '/api/health'),
-  login: (password: string) => request('POST', '/api/login', { password }),
+  login: (password: string, remember = false) => request('POST', '/api/login', { password, remember }),
   logout: () => request('POST', '/api/logout'),
 
   search: (q: string, source: Source, max: number) =>
