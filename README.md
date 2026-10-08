@@ -153,7 +153,7 @@ Open http://127.0.0.1:8086 (or `http://<machine-ip>:8086` with `LINXIV_WEB_BIND=
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `LINXIV_WEB_PASSWORD_HASH` | none | argon2 hash of the login password (`python -m app hash-password`) |
+| `LINXIV_WEB_PASSWORD_HASH` | none | argon2 hash of the login password (`python -m app hash-password`). Without it (or `LINXIV_WEB_PASSWORD`), first-run setup in the browser creates the password, stored in `<data dir>/linxiv-web-auth.json` |
 | `LINXIV_WEB_PASSWORD` | none | Plain password, hashed in memory at startup (dev only) |
 | `LINXIV_WEB_SECRET_KEY` | random per start | Session signing key. If unset, a restart logs everyone out |
 | `LINXIV_WEB_COOKIE_SECURE` | `false` | Set to `true` behind HTTPS |

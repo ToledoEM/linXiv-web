@@ -12,10 +12,26 @@ def test_ok_on_loopback(settings):
     check(settings)
 
 
-def test_refuses_public_bind_without_password(settings, capsys):
+def test_public_bind_without_password_opens_setup(settings, capsys):
+    check(replace(settings, host="0.0.0.0"))
+    assert "first-run setup is open" in capsys.readouterr().err
+
+
+def test_public_bind_with_stored_password(settings, capsys):
+    from app.auth import write_stored_hash
+
+    write_stored_hash(settings.data_dir, "$argon2id$v=19$stored")
+    check(replace(settings, host="0.0.0.0"))
+    assert "setup" not in capsys.readouterr().err
+
+
+def test_corrupt_auth_file_fails_closed(settings, capsys):
+    from app.auth import auth_file
+
+    auth_file(settings.data_dir).write_text("not json")
     with pytest.raises(SystemExit):
         check(replace(settings, host="0.0.0.0"))
-    assert "refusing to bind" in capsys.readouterr().err
+    assert "delete it to run first-run setup again" in capsys.readouterr().err
 
 
 def test_public_bind_with_password(settings):

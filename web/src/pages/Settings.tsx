@@ -13,18 +13,13 @@ import OrcidBackfill from '../OrcidBackfill'
 import PdfLayout from '../PdfLayout'
 import ThemePicker from '../ThemePicker'
 import VersionMonitor from '../VersionMonitor'
+import { CONTACTS } from '../contacts'
 import { clearHistory, historySize } from '../searchHistory'
 import { SHORTCUTS } from '../shortcuts'
 import { PAGE_OPTIONS, setSidebarPage, useSidebarPages } from '../sidebarPages'
 import type { AiKeyName, NcbiKeyStatus, SettingsResponse, UserSettings } from '../types'
 import { setTexEnabled } from '../texStore'
 import { formSubmitOnCtrlEnter } from '../submitShortcut'
-
-const CONTACTS: { key: 'ARXIV_MAILTO' | 'CROSSREF_MAILTO' | 'OPENALEX_MAILTO'; label: string; hint: string }[] = [
-  { key: 'ARXIV_MAILTO', label: 'arXiv', hint: 'Sent in the User-Agent of arXiv requests.' },
-  { key: 'CROSSREF_MAILTO', label: 'Crossref', hint: 'Crossref polite pool.' },
-  { key: 'OPENALEX_MAILTO', label: 'OpenAlex', hint: 'OpenAlex polite pool.' },
-]
 
 // Each card saves on its own: only that card's keys go in its PATCH.
 type SectionId = 'contacts' | 'ai' | 'mcp' | 'storage' | 'feed' | 'display' | 'search'

@@ -1,6 +1,12 @@
 from __future__ import annotations
 
+from dataclasses import replace
+
+import pytest
+from fastapi.testclient import TestClient
+
 from app.auth import CSRF_COOKIE, LOGIN_MAX_ATTEMPTS
+from app.main import create_app
 
 
 def login(c, password="hunter2"):
@@ -9,7 +15,11 @@ def login(c, password="hunter2"):
 
 def test_open_when_no_password(client, fake):
     fake.on("stats", result={})
-    assert client.get("/api/me").json() == {"auth_enabled": False, "authenticated": True}
+    assert client.get("/api/me").json() == {
+        "auth_enabled": False,
+        "setup_required": False,
+        "authenticated": True,
+    }
     assert client.get("/api/stats").status_code == 200
 
 
@@ -122,3 +132,65 @@ def test_remember_days_env(monkeypatch):
     assert settings_mod.load().remember_days == 30
     monkeypatch.setenv("LINXIV_WEB_REMEMBER_DAYS", "0")
     assert settings_mod.load().remember_days == 1
+
+
+@pytest.fixture
+def setup_client(settings, fake):
+    return TestClient(create_app(replace(settings, host="0.0.0.0"), fake))
+
+
+def test_setup_mode_blocks_api_until_password_set(setup_client, fake, settings):
+    import os
+    import stat
+
+    from app.auth import auth_file
+
+    fake.on("stats", result={})
+    me = setup_client.get("/api/me").json()
+    assert me == {"auth_enabled": True, "setup_required": True, "authenticated": False}
+    r = setup_client.get("/api/stats")
+    assert r.status_code == 403
+    assert r.json()["detail"] == "first-run setup required"
+    assert login(setup_client, "anything").status_code == 401
+
+    assert setup_client.post("/api/setup", json={"password": "short"}).status_code == 422
+    assert setup_client.post("/api/setup", json={"password": "correct horse"}).status_code == 200
+    # Logged in straight away, with the usual CSRF cookie.
+    assert setup_client.get("/api/stats").status_code == 200
+    assert setup_client.get("/api/me").json()["setup_required"] is False
+    path = auth_file(settings.data_dir)
+    assert stat.S_IMODE(os.stat(path).st_mode) == 0o600
+    assert "correct horse" not in path.read_text()
+
+    # First come, first served: the second attempt is refused.
+    r = setup_client.post("/api/setup", json={"password": "another password"})
+    assert r.status_code == 409
+
+
+def test_stored_password_survives_restart(setup_client, fake, settings):
+    fake.on("stats", result={})
+    setup_client.post("/api/setup", json={"password": "correct horse"})
+    again = TestClient(create_app(replace(settings, host="0.0.0.0"), fake))
+    assert again.get("/api/me").json()["setup_required"] is False
+    assert again.get("/api/stats").status_code == 401
+    assert login(again, "wrong password").status_code == 401
+    assert login(again, "correct horse").status_code == 200
+    assert again.get("/api/stats").status_code == 200
+
+
+def test_env_password_skips_setup(settings, fake):
+    c = TestClient(create_app(replace(settings, host="0.0.0.0", password="hunter2"), fake))
+    assert c.get("/api/me").json()["setup_required"] is False
+    assert c.post("/api/setup", json={"password": "correct horse"}).status_code == 409
+
+
+def test_loopback_without_password_has_no_setup(client):
+    assert client.post("/api/setup", json={"password": "correct horse"}).status_code == 409
+
+
+def test_setup_rejects_cross_origin(setup_client):
+    r = setup_client.post(
+        "/api/setup", json={"password": "correct horse"}, headers={"Origin": "http://evil.example"}
+    )
+    assert r.status_code == 403
+    assert setup_client.get("/api/me").json()["setup_required"] is True

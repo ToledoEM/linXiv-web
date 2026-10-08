@@ -3,6 +3,7 @@ import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-
 import { api, setUnauthorizedHandler } from './api'
 import Sidebar, { type NavItem } from './Sidebar'
 import Login from './pages/Login'
+import Setup from './pages/Setup'
 import Search from './pages/Search'
 import Library from './pages/Library'
 import PaperDetail from './pages/PaperDetail'
@@ -35,10 +36,10 @@ const NAV: NavItem[] = [
   { to: '/settings', label: 'Settings', icon: '⚙' },
 ]
 
-type AuthState = { checked: boolean; enabled: boolean; authenticated: boolean }
+type AuthState = { checked: boolean; enabled: boolean; setup: boolean; authenticated: boolean }
 
 export default function App() {
-  const [auth, setAuth] = useState<AuthState>({ checked: false, enabled: false, authenticated: false })
+  const [auth, setAuth] = useState<AuthState>({ checked: false, enabled: false, setup: false, authenticated: false })
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const pages = useSidebarPages()
@@ -53,8 +54,10 @@ export default function App() {
     setUnauthorizedHandler(() => setAuth((a) => ({ ...a, authenticated: false })))
     api
       .me()
-      .then((me) => setAuth({ checked: true, enabled: me.auth_enabled, authenticated: me.authenticated }))
-      .catch(() => setAuth({ checked: true, enabled: true, authenticated: false }))
+      .then((me) =>
+        setAuth({ checked: true, enabled: me.auth_enabled, setup: me.setup_required, authenticated: me.authenticated }),
+      )
+      .catch(() => setAuth({ checked: true, enabled: true, setup: false, authenticated: false }))
   }, [])
 
   useEffect(() => {
@@ -66,6 +69,9 @@ export default function App() {
   }, [auth.authenticated])
 
   if (!auth.checked) return null
+  if (auth.setup) {
+    return <Setup onDone={() => setAuth((a) => ({ ...a, setup: false, authenticated: true }))} />
+  }
   if (!auth.authenticated) {
     return <Login onLogin={() => setAuth((a) => ({ ...a, authenticated: true }))} />
   }
