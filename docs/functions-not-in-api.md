@@ -13,7 +13,8 @@ Compares the `linxiv` CLI that the web server wraps with the web server code in 
 - **Background full-text worker:** `app/fulltext_worker.py` runs as an asyncio task in the FastAPI lifespan. `routes/sources.py` exposes the job queue (`/jobs`, `/jobs/{id}/cancel`, `/sources/worker`, `/sources/pending`). The "Index now" button also goes through this.
 - **PDF layout and folder moves:** `app/pdf_layout.py` and `app/pdf_text.py`. Files are moved and `PAPER_META.PDF_PATH` is written straight into SQLite, because the CLI has no command to set a PDF location.
 - **Direct external calls:** PubMed via NCBI E-utilities (`routes/metadata.py`), and bioRxiv/medRxiv as a source (DOI-only, 2 MB cap).
-- **`POST /api/add`:** `routes/add.py` classifies the input (arXiv ID, DOI, URL) on the server and then picks the CLI command.
+- **`POST /api/add`:** `routes/add.py` classifies the input (arXiv ID, DOI, publisher article link, PDF URL) on the server and then picks the CLI command. Publisher links (Nature, Springer, Wiley, ACS, APS, IOP, Science, PNAS and others) map to their DOI with the table from linXiv v0.7.0's `recognize.rs`, which only the linXiv app and `linxiv-headless` use. The publisher PDF is fetched on a best-effort basis: the server checks that the link returns a real PDF before `linxiv pdf download` stores it, because that command keeps whatever the link returns.
+- **PDF full text:** `routes/sources.py` extracts a saved PDF's text with pypdf and stores it with `linxiv paper set-text` (linXiv v0.7.0). This works for one paper or as a job over every non-arXiv paper with a PDF. The CLI only fetches arXiv TeX source by itself.
 
 ## Server-side logic layered on CLI results
 
@@ -37,5 +38,14 @@ Compares the `linxiv` CLI that the web server wraps with the web server code in 
 
 ## Blocked on the CLI
 
-- Per-paper reading status, needs an upstream `reading status` command.
-- There is no per-paper author unlink or reassign, because the CLI has no link or unlink command.
+These exist in linXiv, but only in the `linxiv-headless` HTTP API ([linXiv `docs/api.md`](https://github.com/linxiv-dev/linXiv/blob/main/docs/api.md)), not in the CLI or `linxiv-mcp` (checked against v0.7.0). linXiv-web would need either new upstream CLI commands or `linxiv-headless` as its backend. The headless server cannot share the library with the CLI, because linXiv allows one process per library.
+
+| Feature | linxiv-headless route | linXiv-web today |
+|---|---|---|
+| Per-paper reading status | `GET /api/reading-status`, `PUT /api/reading-status/{sid}` | Not available |
+| Link or unlink one paper and one author | `POST` / `DELETE /api/authors/{id}/papers/{pid}` | Merge whole authors only |
+| Change a highlight's anchor or color in place | `PATCH /api/annotations/{id}` | A color change deletes the highlight and creates a new one |
+| Clear a project's color | `PATCH /api/projects/{id}` with `color_hex: null` | Color can be set but not cleared |
+| Saved search state and history shared with the app | `GET` / `POST /api/search/state`, `GET /api/search/history` | History is kept per browser |
+| TeX diff between two versions of a paper | `GET /api/papers/{id}/full-text-diff` | Not available |
+| Backups taken before schema upgrades | `GET /api/storage/pre-migration-backups` | Not listed |
