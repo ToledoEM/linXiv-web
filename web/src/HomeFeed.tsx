@@ -155,7 +155,7 @@ export default function HomeFeed() {
         <div className="card">
           <ErrorText error={error} />
           <p className="muted small">
-            The feed URL is set in <Link to="/settings">Settings</Link>.
+            The feed URL is set in <Link to="/settings#library">Settings</Link>.
           </p>
         </div>
       ) : !feed ? (
