@@ -11,6 +11,7 @@ import FeedRules from '../FeedRules'
 import FullTextIndex from '../FullTextIndex'
 import OrcidBackfill from '../OrcidBackfill'
 import PdfLayout from '../PdfLayout'
+import PdfTextIndex from '../PdfTextIndex'
 import ThemePicker from '../ThemePicker'
 import VersionMonitor from '../VersionMonitor'
 import { CONTACTS } from '../contacts'
@@ -320,6 +321,7 @@ export default function Settings() {
           </div>
         </form>
         <FullTextIndex />
+        <PdfTextIndex />
         <VersionMonitor />
         <PdfLayout />
       </>

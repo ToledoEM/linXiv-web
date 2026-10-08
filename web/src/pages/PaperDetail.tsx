@@ -299,26 +299,48 @@ export default function PaperDetail() {
         <Highlights annotations={annotations} sourceId={sid} version={paper.version} onChanged={loadAnnotations} />
       )}
 
-      {sid.startsWith('arxiv:') && (
+      {(sid.startsWith('arxiv:') || paper.has_pdf) && (
         <>
           <h3>Full text</h3>
           <div className="actions">
             <span className="muted small">
               {paper.downloaded_source
-                ? 'TeX source indexed: Full text search in the Library covers this paper.'
-                : 'TeX source not fetched: Full text search can’t find words inside this paper yet.'}
+                ? 'Full text indexed: Full text search in the Library covers this paper.'
+                : 'Not indexed: Full text search can’t find words inside this paper yet.'}
             </span>
-            <button
-              disabled={!!busy}
-              onClick={() =>
-                act('source', async () => {
-                  const r = await api.fetchSource(id, !!paper.downloaded_source)
-                  setSourceNote(r.indexed ? `Indexed ${r.chars ?? 0} characters.` : (r.reason ?? 'Nothing to index.'))
-                })
-              }
-            >
-              {busy === 'source' ? 'Fetching…' : paper.downloaded_source ? 'Re-fetch TeX source' : 'Fetch TeX source'}
-            </button>
+            {sid.startsWith('arxiv:') && (
+              <button
+                disabled={!!busy}
+                onClick={() =>
+                  act('source', async () => {
+                    const r = await api.fetchSource(id, !!paper.downloaded_source)
+                    setSourceNote(r.indexed ? `Indexed ${r.chars ?? 0} characters.` : (r.reason ?? 'Nothing to index.'))
+                  })
+                }
+              >
+                {busy === 'source' ? 'Fetching…' : paper.downloaded_source ? 'Re-fetch TeX source' : 'Fetch TeX source'}
+              </button>
+            )}
+            {paper.has_pdf && (
+              <button
+                disabled={!!busy}
+                title={
+                  sid.startsWith('arxiv:')
+                    ? 'For submissions without TeX source; replaces any indexed TeX text.'
+                    : undefined
+                }
+                onClick={() =>
+                  act('pdf-text', async () => {
+                    const r = await api.indexPdfText(id)
+                    setSourceNote(
+                      `Indexed ${r.chars ?? 0} characters from the PDF${r.truncated ? ' (long PDF: first part only)' : ''}.`,
+                    )
+                  })
+                }
+              >
+                {busy === 'pdf-text' ? 'Reading PDF…' : 'Index PDF text'}
+              </button>
+            )}
             {sourceNote && <span className="small">{sourceNote}</span>}
           </div>
         </>

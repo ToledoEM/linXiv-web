@@ -306,7 +306,14 @@ export const api = {
   pdfLayoutPreview: (layout: PdfLayout) =>
     request<PdfLayoutPreview>('GET', `/api/pdfs/layout/preview${qs({ layout })}`),
   startPdfLayout: (layout: PdfLayout) => request<Job>('POST', '/api/jobs/pdf-layout', { layout }),
-  sourcesPending: () => request<{ pending: number; arxiv_papers: number }>('GET', '/api/sources/pending'),
+  sourcesPending: () =>
+    request<{ pending: number; arxiv_papers: number; pdf_pending: number }>('GET', '/api/sources/pending'),
+  indexPdfText: (id: string) =>
+    request<{ source_id: string; indexed: boolean; chars?: number; truncated: boolean }>(
+      'POST',
+      `/api/papers/${idPath(id)}/pdf-text`,
+    ),
+  startIndexPdfText: () => request<Job>('POST', '/api/jobs/index-pdf-text'),
   startIndexSources: (limit: number) => request<Job>('POST', '/api/jobs/index-sources', { limit }),
   jobs: (kind: string) => request<Job[]>('GET', `/api/jobs${qs({ kind })}`),
   job: (id: number) => request<Job>('GET', `/api/jobs/${id}`),

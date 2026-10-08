@@ -1,27 +1,42 @@
-"""arXiv TeX source for full-text search (`linxiv paper fetch-source`).
+"""Full-text search sources.
 
-One paper is fetched in the request. The backlog runs as a background job that
-calls `fetch-source` once per paper, pausing between arXiv requests, so the CLI
-lock is free between papers. (`paper index-sources` would hold the lock for the
-whole batch and prints progress lines before its JSON.)
+arXiv TeX source (`linxiv paper fetch-source`): one paper is fetched in the
+request. The backlog runs as a background job that calls `fetch-source` once per
+paper, pausing between arXiv requests, so the CLI lock is free between papers.
+(`paper index-sources` would hold the lock for the whole batch and prints
+progress lines before its JSON.)
+
+PDF text (`linxiv paper set-text`, linXiv v0.7.0+): for papers arXiv has no TeX
+for, the server extracts the saved PDF's text and stores it, per paper or as a
+job over every non-arXiv paper with a PDF and no indexed text.
 """
 
 from __future__ import annotations
 
 import asyncio
+import os
+import tempfile
+from pathlib import Path
 
 from fastapi import APIRouter, FastAPI, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..cli import CLIError
 from ..jobs import Job, JobBusy, Jobs
+from ..pdf_text import PdfTextError, extract_text
 from .common import ident, run
+from .pdfs import _inside
 
 router = APIRouter(prefix="/api", tags=["sources"])
 
 KIND = "index-sources"
 # linxiv's own index-sources paces arXiv fetches about 7 s apart.
 PACE_SECONDS = 7.0
+
+PDF_KIND = "index-pdf-text"
+# Indexing wants the whole paper, unlike the AI summary's prompt-sized excerpt.
+PDF_MAX_PAGES = 500
+PDF_MAX_CHARS = 2_000_000
 
 
 def jobs(request: Request) -> Jobs:
@@ -57,6 +72,62 @@ async def fetch_source(request: Request, source_id: str, body: FetchBody | None 
         raise
 
 
+class PdfTextFailed(Exception):
+    """A paper whose PDF can't be indexed (no PDF, unreadable, no text layer)."""
+
+
+async def index_pdf_text(app: FastAPI, source_id: str) -> dict:
+    """Extract the saved PDF's text and store it with `paper set-text`.
+    Returns the CLI receipt plus `truncated`."""
+    s = app.state.settings
+    cli = app.state.cli
+    loc = await cli(["pdf", "path", "--", source_id], s.timeout_short)
+    raw = loc.get("path") if isinstance(loc, dict) else None
+    if not raw:
+        raise PdfTextFailed("no PDF saved for this paper")
+    path = Path(raw)
+    if not _inside(path, [s.data_dir, s.pdf_dir]) or not path.is_file():
+        raise PdfTextFailed("PDF file missing on disk")
+    try:
+        text, truncated = await asyncio.to_thread(extract_text, path, PDF_MAX_PAGES, PDF_MAX_CHARS)
+    except PdfTextError as e:
+        raise PdfTextFailed(str(e)) from e
+    if not text.strip():
+        raise PdfTextFailed("the PDF has no text layer (scanned?)")
+    # The text goes through a temp file: argv is capped at 128 KiB per string.
+    fd, name = tempfile.mkstemp(prefix="lxw-text-", suffix=".txt")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(text)
+        receipt = await cli(["paper", "set-text", "--", source_id, name], s.timeout_long)
+    finally:
+        Path(name).unlink(missing_ok=True)
+    out = receipt if isinstance(receipt, dict) else {}
+    return {**out, "truncated": truncated}
+
+
+@router.post("/papers/{source_id:path}/pdf-text")
+async def pdf_text(request: Request, source_id: str):
+    """Index one paper's PDF text for full-text search (replaces stored text)."""
+    try:
+        return await index_pdf_text(request.app, ident(source_id, "paper id"))
+    except PdfTextFailed as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
+
+
+def _pdf_pending(papers: object) -> list[str]:
+    """Non-arXiv papers with a saved PDF and no indexed text."""
+    if not isinstance(papers, list):
+        return []
+    return [
+        p["source_id"]
+        for p in papers
+        if not str(p.get("source_id", "")).startswith("arxiv:")
+        and p.get("has_pdf")
+        and not p.get("downloaded_source")
+    ]
+
+
 def _pending(papers: object) -> list[str]:
     """Saved arXiv papers whose TeX source isn't indexed yet."""
     if not isinstance(papers, list):
@@ -78,7 +149,11 @@ async def worker_status(request: Request):
 async def pending(request: Request):
     papers = await run(request, ["list"])
     arxiv = [p for p in papers or [] if str(p.get("source_id", "")).startswith("arxiv:")]
-    return {"pending": len(_pending(papers)), "arxiv_papers": len(arxiv)}
+    return {
+        "pending": len(_pending(papers)),
+        "arxiv_papers": len(arxiv),
+        "pdf_pending": len(_pdf_pending(papers)),
+    }
 
 
 async def _index(app: FastAPI, job: Job, limit: int) -> None:
@@ -119,6 +194,33 @@ async def start_index(request: Request, body: IndexBody | None = None):
     app = request.app
     try:
         job = jobs(request).start(KIND, lambda j: _index(app, j, limit))
+    except JobBusy as e:
+        raise HTTPException(status_code=409, detail=str(e)) from e
+    return job.public()
+
+
+async def _index_pdfs(app: FastAPI, job: Job) -> None:
+    todo = _pdf_pending(await app.state.cli(["list"], app.state.settings.timeout_long))
+    job.total = len(todo)
+    job.result = {"indexed": 0, "failed": 0}
+    for i, sid in enumerate(todo):
+        if job.cancel_requested:
+            return
+        job.current = sid
+        try:
+            await index_pdf_text(app, sid)
+            job.result["indexed"] += 1
+        except (PdfTextFailed, CLIError) as e:
+            job.result["failed"] += 1
+            job.errors.append({"source_id": sid, "error": getattr(e, "message", str(e))})
+        job.done = i + 1
+
+
+@router.post("/jobs/index-pdf-text")
+async def start_pdf_index(request: Request):
+    app = request.app
+    try:
+        job = jobs(request).start(PDF_KIND, lambda j: _index_pdfs(app, j))
     except JobBusy as e:
         raise HTTPException(status_code=409, detail=str(e)) from e
     return job.public()

@@ -244,7 +244,11 @@ def test_real_cli_sources_offline(settings):
     c = TestClient(create_app(replace(settings, linxiv_bin=BIN)))
     bib = b"@misc{src1, title={S}, author={Doe, Jane}, year={2021}}\n"
     assert c.post("/api/import/bibtex", files={"file": ("a.bib", bib)}).status_code == 200
-    assert c.get("/api/sources/pending").json() == {"pending": 0, "arxiv_papers": 0}
+    assert c.get("/api/sources/pending").json() == {
+        "pending": 0,
+        "arxiv_papers": 0,
+        "pdf_pending": 0,
+    }
     r = c.post("/api/papers/local:src1/source")
     assert r.status_code == 400, r.text
     assert "arXiv" in r.json()["detail"]
@@ -424,6 +428,26 @@ def _tiny_pdf(title: str) -> bytes:
     out += b"".join(b"%010d 00000 n \n" % o for o in offs)
     out += b"trailer\n<< /Size %d /Root 1 0 R /Info 4 0 R >>\n" % (len(objs) + 1)
     return out + b"startxref\n%d\n%%%%EOF\n" % xref
+
+
+def test_real_cli_pdf_text_index(settings):
+    # linxiv v0.7.0 `paper set-text`: PDF text becomes searchable full text.
+    from .test_ai import _pdf_bytes
+
+    with TestClient(create_app(replace(settings, linxiv_bin=BIN))) as c:
+        pdf = _pdf_bytes("zebrafish quokkatron heartbeat")
+        r = c.post("/api/pdfs/import", files={"file": ("a.pdf", pdf)})
+        assert r.status_code == 200, r.text
+        sid = r.json()["source_id"]
+        assert c.get("/api/sources/pending").json()["pdf_pending"] == 1
+        r = c.post(f"/api/papers/{sid}/pdf-text")
+        assert r.status_code == 200, r.text
+        assert r.json()["indexed"] is True
+        assert c.get(f"/api/papers/{sid}").json()["downloaded_source"] is True
+        assert c.get("/api/sources/pending").json()["pdf_pending"] == 0
+        hits = c.get("/api/papers", params={"q": "quokkatron"}).json()
+        rows = hits["papers"] if isinstance(hits, dict) else hits
+        assert sid in [p["source_id"] for p in rows]
 
 
 def test_real_cli_pdf_folder_layout(settings):
