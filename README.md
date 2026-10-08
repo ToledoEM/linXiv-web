@@ -49,6 +49,8 @@ The image builds `linxiv` and `linxiv-mcp` from upstream source at the `LINXIV_R
 
 ## Run (Docker)
 
+To self-host from the prebuilt image (first-run setup, reverse proxy, backups, updates), see [docs/SELF-HOSTING.md](docs/SELF-HOSTING.md). The steps below build from this checkout.
+
 ```sh
 cp .env.example .env
 mkdir -p .dev/data .dev/pdfs
