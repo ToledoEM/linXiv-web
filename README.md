@@ -285,6 +285,11 @@ The FastAPI server lives in `server/`: the CLI subprocess wrapper is `app/cli.py
 
 Branch and commit conventions match linXiv's; see [CONTRIBUTING.md](CONTRIBUTING.md).
 
+## Roadmap
+
+- Bring the Peer-to-peer project sharing into the web-app
+
+
 ## License
 
 [Apache-2.0](LICENSE). See [NOTICE](NOTICE).
