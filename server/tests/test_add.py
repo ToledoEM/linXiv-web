@@ -129,3 +129,176 @@ def test_add_pdf_link_not_pdf_or_too_big(client, fake, monkeypatch):
     _serve(monkeypatch, lambda req: httpx.Response(404))
     assert client.post("/api/add", json={"input": "https://e.org/a"}).status_code == 502
     assert not fake.calls
+
+
+# ---- publisher article links (linXiv v0.7.0 recognize.rs vectors) ----
+
+
+@pytest.mark.parametrize(
+    ("url", "doi", "pdf_url"),
+    [
+        (
+            "https://journals.aps.org/prl/pdf/10.1103/PhysRevLett.128.073601",
+            "10.1103/PhysRevLett.128.073601",
+            "https://journals.aps.org/prl/pdf/10.1103/PhysRevLett.128.073601",
+        ),
+        (
+            "https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.128.073601",
+            "10.1103/PhysRevLett.128.073601",
+            "https://journals.aps.org/prl/pdf/10.1103/PhysRevLett.128.073601",
+        ),
+        (
+            "journals.aps.org/prl/pdf/10.1103/PhysRevLett.128.073601",
+            "10.1103/PhysRevLett.128.073601",
+            "https://journals.aps.org/prl/pdf/10.1103/PhysRevLett.128.073601",
+        ),
+        (
+            "https://onlinelibrary.wiley.com/doi/epdf/10.1002/anie.202100001",
+            "10.1002/anie.202100001",
+            "https://onlinelibrary.wiley.com/doi/pdf/10.1002/anie.202100001",
+        ),
+        (
+            "https://pubs.acs.org/doi/pdf/10.1021/jacs.1c00001",
+            "10.1021/jacs.1c00001",
+            "https://pubs.acs.org/doi/pdf/10.1021/jacs.1c00001",
+        ),
+        (
+            "https://www.tandfonline.com/doi/full/10.1080/00268976.2021.1900001",
+            "10.1080/00268976.2021.1900001",
+            "https://www.tandfonline.com/doi/pdf/10.1080/00268976.2021.1900001",
+        ),
+        (
+            "https://dl.acm.org/doi/10.1145/3290605.3300234",
+            "10.1145/3290605.3300234",
+            "https://dl.acm.org/doi/pdf/10.1145/3290605.3300234",
+        ),
+        (
+            "https://epubs.siam.org/doi/abs/10.1137/20M1234567",
+            "10.1137/20M1234567",
+            "https://epubs.siam.org/doi/pdf/10.1137/20M1234567",
+        ),
+        (
+            "https://journals.sagepub.com/doi/pdf/10.1177/0956797620000001",
+            "10.1177/0956797620000001",
+            "https://journals.sagepub.com/doi/pdf/10.1177/0956797620000001",
+        ),
+        (
+            "https://www.science.org/doi/10.1126/science.abc1234",
+            "10.1126/science.abc1234",
+            "https://www.science.org/doi/pdf/10.1126/science.abc1234",
+        ),
+        (
+            "https://www.pnas.org/doi/full/10.1073/pnas.2000001117?af=R#sec-1",
+            "10.1073/pnas.2000001117",
+            "https://www.pnas.org/doi/pdf/10.1073/pnas.2000001117",
+        ),
+        (
+            "https://iopscience.iop.org/article/10.1088/1742-6596/1234/1/012345/pdf",
+            "10.1088/1742-6596/1234/1/012345",
+            "https://iopscience.iop.org/article/10.1088/1742-6596/1234/1/012345/pdf",
+        ),
+        (
+            "https://iopscience.iop.org/article/10.1088/1742-6596/1234/1/012345/meta",
+            "10.1088/1742-6596/1234/1/012345",
+            "https://iopscience.iop.org/article/10.1088/1742-6596/1234/1/012345/pdf",
+        ),
+        (
+            "https://iopscience.iop.org/article/10.1088/1742-6596/1234/1/012345",
+            "10.1088/1742-6596/1234/1/012345",
+            "https://iopscience.iop.org/article/10.1088/1742-6596/1234/1/012345/pdf",
+        ),
+        (
+            "https://link.springer.com/content/pdf/10.1007/s00220-020-03456-7.pdf?pdf=button",
+            "10.1007/s00220-020-03456-7",
+            "https://link.springer.com/content/pdf/10.1007/s00220-020-03456-7.pdf?pdf=button",
+        ),
+        (
+            "https://link.springer.com/article/10.1007/s00220-020-03456-7",
+            "10.1007/s00220-020-03456-7",
+            "https://link.springer.com/content/pdf/10.1007/s00220-020-03456-7.pdf",
+        ),
+        (
+            "https://link.springer.com/chapter/10.1007/978-3-030-12345-6_7",
+            "10.1007/978-3-030-12345-6_7",
+            "https://link.springer.com/content/pdf/10.1007/978-3-030-12345-6_7.pdf",
+        ),
+        (
+            "https://www.nature.com/articles/s41586-020-2649-2",
+            "10.1038/s41586-020-2649-2",
+            "https://www.nature.com/articles/s41586-020-2649-2.pdf",
+        ),
+        (
+            "https://www.nature.com/articles/s41586-020-2649-2.pdf",
+            "10.1038/s41586-020-2649-2",
+            "https://www.nature.com/articles/s41586-020-2649-2.pdf",
+        ),
+    ],
+)
+def test_publisher_doi(url, doi, pdf_url):
+    assert add.publisher_doi(url) == (doi, pdf_url)
+    assert classify(url) == ("doi", doi)
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://journals.aps.org/prl/issues/128/7",
+        "https://journals.aps.org/prl/pdf/not-a-doi",
+        "https://pubs.acs.org/doi/pdf/",
+        "https://www.nature.com/articles/s41586-020-2649-2/figures/1",
+        "https://www.nature.com/nature/volumes",
+        "https://www.sciencedirect.com/science/article/pii/S0370269320300001",
+        "10.1038/nature14539",
+    ],
+)
+def test_publisher_doi_unrecognized(url):
+    assert add.publisher_doi(url) is None
+
+
+NATURE = "https://www.nature.com/articles/s41586-020-2649-2"
+NATURE_SID = "doi:10.1038/s41586-020-2649-2"
+
+
+def _publisher_fake(fake, has_pdf=False):
+    fake.on("doi", "save", result={"saved": True, "metadata": {"source_id": NATURE_SID}})
+    fake.on("paper", "get", result={"source_id": NATURE_SID, "has_pdf": has_pdf})
+    fake.on("pdf", "download", result={"path": "/pdfs/x.pdf"})
+
+
+def test_add_publisher_link_saves_doi_and_pdf(client, fake, monkeypatch):
+    seen = []
+
+    async def ok(url, dest, limit, timeout):
+        seen.append(url)
+
+    monkeypatch.setattr(add, "download_pdf_to", ok)
+    _publisher_fake(fake)
+    r = client.post("/api/add", json={"input": NATURE})
+    assert r.status_code == 200, r.text
+    assert r.json()["kind"] == "doi" and r.json()["pdf_saved"] is True
+    assert fake.calls[0] == ["doi", "save", "--", "10.1038/s41586-020-2649-2"]
+    pdf = NATURE + ".pdf"
+    assert seen == [pdf]
+    assert ["pdf", "download", "--", NATURE_SID, pdf] in fake.calls
+
+
+def test_add_publisher_paywall_keeps_metadata_only(client, fake, monkeypatch):
+    async def paywall(url, dest, limit, timeout):
+        raise HTTPException(status_code=502, detail="PDF link returned HTTP 403")
+
+    monkeypatch.setattr(add, "download_pdf_to", paywall)
+    _publisher_fake(fake)
+    r = client.post("/api/add", json={"input": NATURE})
+    assert r.status_code == 200, r.text
+    assert r.json()["pdf_saved"] is False
+    assert not any(c[:2] == ["pdf", "download"] for c in fake.calls)
+
+
+def test_add_publisher_skips_pdf_when_already_saved(client, fake, monkeypatch):
+    async def boom(*a):
+        raise AssertionError("no download expected")
+
+    monkeypatch.setattr(add, "download_pdf_to", boom)
+    _publisher_fake(fake, has_pdf=True)
+    r = client.post("/api/add", json={"input": NATURE})
+    assert "pdf_saved" not in r.json()

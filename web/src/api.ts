@@ -182,7 +182,12 @@ export const api = {
   },
 
   add: (input: string) =>
-    request<{ kind: 'arxiv' | 'doi' | 'pdf'; paper: Partial<Paper> & { source_id: string } }>(
+    request<{
+      kind: 'arxiv' | 'doi' | 'pdf'
+      paper: Partial<Paper> & { source_id: string }
+      /** Publisher links only: whether the publisher's PDF was attached. */
+      pdf_saved?: boolean
+    }>(
       'POST',
       '/api/add',
       { input },

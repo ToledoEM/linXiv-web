@@ -9,7 +9,14 @@ type Imported = { name: string; kind: ImportKind; saved?: number; ids?: string[]
 
 const kindFor = (name: string): ImportKind => (name.toLowerCase().endsWith('.json') ? 'zotero' : 'bibtex')
 
-type Added = { input: string; kind?: string; source_id?: string; title?: string; error?: string }
+type Added = {
+  input: string
+  kind?: string
+  source_id?: string
+  title?: string
+  pdfSaved?: boolean
+  error?: string
+}
 
 const KIND_LABEL: Record<string, string> = { arxiv: 'arXiv', doi: 'DOI', pdf: 'PDF link' }
 
@@ -47,7 +54,10 @@ export default function AddPaper() {
     setBusy(true)
     try {
       const r = await api.add(text)
-      setAdded((prev) => [{ input: text, kind: r.kind, source_id: r.paper.source_id, title: r.paper.title }, ...prev])
+      setAdded((prev) => [
+        { input: text, kind: r.kind, source_id: r.paper.source_id, title: r.paper.title, pdfSaved: r.pdf_saved },
+        ...prev,
+      ])
       setInput('')
     } catch (err) {
       setAdded((prev) => [{ input: text, error: (err as Error).message }, ...prev])
@@ -60,7 +70,8 @@ export default function AddPaper() {
     <section>
       <h2>Add paper</h2>
       <p className="muted">
-        Paste an arXiv link or id, a DOI or doi.org link, or a direct link to a PDF.
+        Paste an arXiv link or id, a DOI or doi.org link, a publisher article link (Nature, Springer, Wiley, ACS, APS,
+        IOP, Science, PNAS and others), or a direct link to a PDF.
       </p>
       <form className="toolbar" onSubmit={submit}>
         <input
@@ -83,6 +94,13 @@ export default function AddPaper() {
               <Link to={`/paper/${idPath(a.source_id)}`}>
                 <MathText forceInline>{a.title || a.source_id}</MathText>
               </Link>
+            )}
+            {a.pdfSaved !== undefined && (
+              <p className="muted small">
+                {a.pdfSaved
+                  ? 'PDF downloaded from the publisher.'
+                  : 'No PDF: the publisher link didn’t return one (paywall or login). Saved as metadata only.'}
+              </p>
             )}
             <ErrorText error={a.error} />
           </li>
