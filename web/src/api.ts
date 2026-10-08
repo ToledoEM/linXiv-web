@@ -247,7 +247,7 @@ export const api = {
     const form = new FormData()
     form.append('file', file)
     form.append('on_conflict', onConflict)
-    return request<{ project_id: number }>('POST', '/api/projects/import', form)
+    return request<{ project_id: number; skipped_pdfs?: string[] }>('POST', '/api/projects/import', form)
   },
   orcidBackfill: () =>
     request<{ checked: number; updated: { author_id: number; full_name: string; doi: string }[]; errored: number }>(

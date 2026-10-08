@@ -23,6 +23,8 @@ export default function ProjectImport({ onCancel }: { onCancel: () => void }) {
   const [onConflict, setOnConflict] = useState<'merge' | 'overwrite'>('merge')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  // Set when the import succeeded but some bundled PDFs could not be attached.
+  const [done, setDone] = useState<{ projectId: number; skipped: string[] } | null>(null)
 
   const pick = async (f: File | null) => {
     setFile(f)
@@ -44,12 +46,35 @@ export default function ProjectImport({ onCancel }: { onCancel: () => void }) {
     setBusy(true)
     setError('')
     try {
-      const { project_id } = await api.importProject(file, onConflict)
-      navigate(`/projects/${project_id}`)
+      const { project_id, skipped_pdfs = [] } = await api.importProject(file, onConflict)
+      if (!skipped_pdfs.length) return navigate(`/projects/${project_id}`)
+      setDone({ projectId: project_id, skipped: skipped_pdfs })
+      setBusy(false)
     } catch (err) {
       setError((err as Error).message)
       setBusy(false)
     }
+  }
+
+  if (done) {
+    return (
+      <div className="card project-import">
+        <p>
+          Project imported. {plural(done.skipped.length, 'bundled PDF')} could not be attached; the papers are there
+          without them:
+        </p>
+        <ul className="small mono">
+          {done.skipped.map((name) => (
+            <li key={name}>{name}</li>
+          ))}
+        </ul>
+        <div className="actions">
+          <button type="button" onClick={() => navigate(`/projects/${done.projectId}`)}>
+            Open project
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (

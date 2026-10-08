@@ -35,6 +35,7 @@ ALWAYS_BLOCKED = frozenset(
         "export_project_bibtex",
         "export_project_obsidian",
         "export_project_zotero",
+        "set_full_text",
     }
 )
 READ_TOOLS = frozenset(

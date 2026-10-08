@@ -9,7 +9,7 @@ on:
       linxiv_ref:
         description: "linXiv tag/branch to bundle (Dockerfile LINXIV_REF)"
         required: false
-        default: v0.6.0
+        default: v0.7.0
         type: string
 
 concurrency:
@@ -53,7 +53,7 @@ jobs:
         with:
           context: .
           platforms: ${{ matrix.platform }}
-          build-args: LINXIV_REF=${{ inputs.linxiv_ref || 'v0.6.0' }}
+          build-args: LINXIV_REF=${{ inputs.linxiv_ref || 'v0.7.0' }}
           provenance: false
           outputs: type=image,name=${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
           cache-from: type=gha,scope=docker-${{ matrix.arch }}

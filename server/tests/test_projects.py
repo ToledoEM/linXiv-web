@@ -251,14 +251,15 @@ def test_import_preview(client, fake):
 
 
 def test_import_commit(client, fake):
-    fake.on("project", "import", result={"project_id": 7})
+    # linxiv v0.7.0 reports bundled PDFs it could not attach.
+    fake.on("project", "import", result={"project_id": 7, "skipped_pdfs": ["x_v1.pdf"]})
     data = _lxproj(GOOD)
     r = client.post(
         "/api/projects/import",
         files={"file": ("p.lxproj", data)},
         data={"on_conflict": "overwrite"},
     )
-    assert r.json() == {"project_id": 7}
+    assert r.json() == {"project_id": 7, "skipped_pdfs": ["x_v1.pdf"]}
     assert fake.calls[-1][:4] == ["project", "import", "--on-conflict=overwrite", "--"]
     client.post("/api/projects/import", files={"file": ("p.lxproj", data)})
     assert fake.calls[-1][2] == "--on-conflict=merge"

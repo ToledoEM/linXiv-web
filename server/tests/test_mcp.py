@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 import shutil
+import subprocess
 import sys
 from dataclasses import replace
 from pathlib import Path
@@ -67,7 +68,7 @@ def test_profiles_never_include_blocked_tools():
 
 
 def test_policy_covers_every_real_tool():
-    # Captured from the real linxiv-mcp (v0.6.0) in discovery: every tool is
+    # Captured from the real linxiv-mcp (v0.7.0) in discovery: every tool is
     # classified, so a new upstream tool shows up here instead of silently hidden.
     names = {
         "ack_version",
@@ -151,6 +152,7 @@ def test_policy_covers_every_real_tool():
         "save_doi",
         "search_full_text",
         "search_papers",
+        "set_full_text",
         "trash_hard_delete_paper",
         "update_annotation",
         "update_author",
@@ -158,7 +160,7 @@ def test_policy_covers_every_real_tool():
         "update_project",
         "update_setting",
     }
-    assert len(names) == 87
+    assert len(names) == 88
     assert names == PROFILES["full"] | ALWAYS_BLOCKED
 
 
@@ -348,3 +350,36 @@ def test_real_linxiv_mcp(settings, fake):
         stats = json.loads(r.json()["result"]["content"][0]["text"])
         assert stats["paper_count"] == 0
         assert (settings.data_dir / "papers.db").is_file()
+
+
+@pytest.mark.integration
+@pytest.mark.skipif(not MCP_BIN or not shutil.which(MCP_BIN), reason="LINXIV_MCP_BIN not set")
+def test_real_linxiv_mcp_tools_all_classified(tmp_path):
+    # The bridge filters tools/list, so ask the binary directly: an unclassified
+    # upstream tool fails here instead of staying silently hidden.
+    lines = [
+        {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "initialize",
+            "params": {
+                "protocolVersion": "2025-06-18",
+                "capabilities": {},
+                "clientInfo": {"name": "t", "version": "0"},
+            },
+        },
+        {"jsonrpc": "2.0", "method": "notifications/initialized"},
+        {"jsonrpc": "2.0", "id": 2, "method": "tools/list"},
+    ]
+    out = subprocess.run(
+        [MCP_BIN],
+        input="".join(json.dumps(m) + "\n" for m in lines),
+        capture_output=True,
+        text=True,
+        env={**os.environ, "LINXIV_DATA_DIR": str(tmp_path)},
+        timeout=30,
+        check=False,
+    ).stdout
+    listing = next(m for m in map(json.loads, out.splitlines()) if m.get("id") == 2)
+    real = {t["name"] for t in listing["result"]["tools"]}
+    assert real - (PROFILES["full"] | ALWAYS_BLOCKED) == set()

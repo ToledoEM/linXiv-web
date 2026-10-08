@@ -266,7 +266,8 @@ async def import_project(
     on_conflict: Annotated[Literal["merge", "overwrite"], Form()] = "merge",
 ):
     """Always creates a NEW project. `merge` keeps stored metadata of papers already
-    in the library; `overwrite` rewrites it from the archive. Returns `project_id`."""
+    in the library; `overwrite` rewrites it from the archive. Returns `project_id` and
+    `skipped_pdfs` (bundled PDF names that could not be attached)."""
     tmp = await _lxproj_upload(request, file)
     try:
         return await run(

@@ -8,7 +8,7 @@ This guide runs linXiv-web on your own machine or home server from the prebuilt 
 - An `amd64` or `arm64` machine. The image is published for both.
 - Two directories on the host: one for the library database, one for PDFs.
 
-The image bundles the `linxiv` CLI and `linxiv-mcp`, built from linXiv v0.6.0. Do not point linXiv-web at a data directory that the linXiv desktop app or `linxiv-headless` also uses: linXiv expects one process per library.
+The image bundles the `linxiv` CLI and `linxiv-mcp`, built from linXiv v0.7.0. Do not point linXiv-web at a data directory that the linXiv desktop app or `linxiv-headless` also uses: linXiv expects one process per library.
 
 ## Quick start
 
@@ -227,7 +227,7 @@ Instead of pulling from GHCR, compose can build from the git repository. Replace
     build:
       context: https://github.com/ToledoEM/linXiv-web.git#main
       args:
-        LINXIV_REF: v0.6.0
+        LINXIV_REF: v0.7.0
     image: linxiv-web:local
 ```
 

@@ -7,7 +7,7 @@ services:
     build:
       context: .
       args:
-        LINXIV_REF: ${LINXIV_REF:-v0.6.0}
+        LINXIV_REF: ${LINXIV_REF:-v0.7.0}
     image: linxiv-web:dev
     container_name: linxiv-web
     restart: unless-stopped
