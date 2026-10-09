@@ -9,8 +9,14 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import os
+import time
 from typing import Any, Protocol
+
+from .logs import redact
+
+log = logging.getLogger(__name__)
 
 
 class CLIError(Exception):
@@ -60,7 +66,19 @@ class LinxivCLI:
         """Run one command. `raw=True` returns stdout text (e.g. `fetch` prints
         Markdown for arXiv papers); otherwise stdout is parsed as JSON."""
         async with self._lock:
-            return await self._run(args, timeout, raw)
+            start = time.monotonic()
+            try:
+                out = await self._run(args, timeout, raw)
+            except CLIError as e:
+                ms = (time.monotonic() - start) * 1000
+                # Not found / invalid input are normal answers; the rest is a failure.
+                level = logging.INFO if e.status in (400, 404) else logging.WARNING
+                log.log(
+                    level, "linxiv %s -> %d in %.0f ms: %s", redact(args), e.status, ms, e.message
+                )
+                raise
+            log.debug("linxiv %s ok in %.0f ms", redact(args), (time.monotonic() - start) * 1000)
+            return out
 
     async def _run(self, args: list[str], timeout: float, raw: bool) -> Any:
         try:

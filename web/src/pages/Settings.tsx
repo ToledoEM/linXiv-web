@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import AiSettings from '../AiSettings'
+import AppLogs from '../AppLogs'
 import McpSettings from '../McpSettings'
 import { setAiEnabled } from '../aiEnabled'
 import { api } from '../api'
@@ -15,15 +16,17 @@ import PdfTextIndex from '../PdfTextIndex'
 import ThemePicker from '../ThemePicker'
 import VersionMonitor from '../VersionMonitor'
 import { CONTACTS } from '../contacts'
+import { setLookupSource } from '../lookupSource'
+import { SOURCES } from '../metadataFields'
 import { clearHistory, historySize } from '../searchHistory'
 import { SHORTCUTS } from '../shortcuts'
 import { PAGE_OPTIONS, setSidebarPage, useSidebarPages } from '../sidebarPages'
-import type { AiKeyName, NcbiKeyStatus, SettingsResponse, UserSettings } from '../types'
+import type { AiKeyName, DefaultLookupSource, NcbiKeyStatus, SettingsResponse, UserSettings } from '../types'
 import { setTexEnabled } from '../texStore'
 import { formSubmitOnCtrlEnter } from '../submitShortcut'
 
 // Each card saves on its own: only that card's keys go in its PATCH.
-type SectionId = 'contacts' | 'ai' | 'mcp' | 'storage' | 'feed' | 'display' | 'search'
+type SectionId = 'contacts' | 'ai' | 'mcp' | 'storage' | 'feed' | 'display' | 'search' | 'lookup' | 'logs'
 const SECTIONS: Record<SectionId, (keyof UserSettings)[]> = {
   contacts: ['ARXIV_MAILTO', 'CROSSREF_MAILTO', 'OPENALEX_MAILTO', 'NCBI_API_KEY'],
   ai: [
@@ -41,6 +44,8 @@ const SECTIONS: Record<SectionId, (keyof UserSettings)[]> = {
   feed: ['home_feed_url', 'rss_cache_retention_days'],
   display: ['tex_rendering_enabled'],
   search: ['search_history_enabled', 'search_history_max'],
+  lookup: ['web_lookup_source'],
+  logs: ['web_log_level'],
 }
 
 // Groups mirror the desktop SettingsPage: left nav, one panel at a time, #id deep links.
@@ -142,6 +147,7 @@ export default function Settings() {
     setAiKeys(r.ai_keys)
     setAiEnabled(r.settings.ai_enabled)
     setTexEnabled(r.settings.tex_rendering_enabled)
+    setLookupSource(r.settings.web_lookup_source)
   }
 
   const run = async (id: SectionId, fn: () => Promise<SettingsResponse>, done: string) => {
@@ -320,6 +326,29 @@ export default function Settings() {
             {saveBar('search')}
           </div>
         </form>
+        <form onSubmit={save('lookup')} onKeyDown={formSubmitOnCtrlEnter}>
+          <div className="card settings-section">
+            <h3>Metadata lookup</h3>
+            <label className="field">
+              <span>Default source</span>
+              <select
+                value={draft.web_lookup_source}
+                onChange={(e) => set('web_lookup_source', e.target.value as DefaultLookupSource)}
+              >
+                <option value="auto">Auto (arXiv papers → arXiv, bioRxiv/medRxiv DOIs → bioRxiv, else Crossref)</option>
+                {SOURCES.filter((o) => o.value !== 'ai').map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+              <span className="muted small">
+                Preselected and listed first in Retrieve metadata (paper page and Library batch edit).
+              </span>
+            </label>
+            {saveBar('lookup')}
+          </div>
+        </form>
         <FullTextIndex />
         <PdfTextIndex />
         <VersionMonitor />
@@ -351,6 +380,9 @@ export default function Settings() {
         </form>
 
         <Backup />
+        <form onSubmit={save('logs')} onKeyDown={formSubmitOnCtrlEnter}>
+          <AppLogs level={draft.web_log_level} onLevel={(v) => set('web_log_level', v)} footer={saveBar('logs')} />
+        </form>
       </>
     ),
     ai: (

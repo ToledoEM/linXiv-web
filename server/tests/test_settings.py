@@ -24,6 +24,8 @@ def test_get_settings_hides_unlisted_keys(client, fake, monkeypatch):
         "search_history_max": 200,
         "full_text_worker_enabled": False,
         "web_pdf_folder_layout": "none",
+        "web_lookup_source": "auto",
+        "web_log_level": "info",
         "ai_enabled": False,
         "genai_provider": "gemini",
         "genai_model": "",
@@ -121,6 +123,38 @@ def test_patch_search_history_settings(client, fake):
     assert client.patch("/api/settings", json=body).status_code == 200
     updates = [c[-2:] for c in fake.calls if c[:2] == ["settings", "update"]]
     assert updates == [["search_history_enabled", "false"], ["search_history_max", "50"]]
+
+
+def test_patch_lookup_source_and_log_level(client, fake):
+    import logging
+
+    stored: dict = {}
+    fake.on("settings", "get", result=lambda _: stored)
+    fake.on(
+        "settings", "update", result=lambda argv: stored.update({argv[-2]: json.loads(argv[-1])})
+    )
+    r = client.patch(
+        "/api/settings", json={"web_lookup_source": "pubmed", "web_log_level": "debug"}
+    )
+    assert r.status_code == 200, r.text
+    updates = [c[-2:] for c in fake.calls if c[:2] == ["settings", "update"]]
+    assert updates == [["web_lookup_source", '"pubmed"'], ["web_log_level", '"debug"']]
+    assert r.json()["settings"]["web_lookup_source"] == "pubmed"
+    assert r.json()["settings"]["web_log_level"] == "debug"
+    assert logging.getLogger().level == logging.DEBUG
+    for body in (
+        {"web_lookup_source": "ai"},
+        {"web_lookup_source": "scholar"},
+        {"web_log_level": "trace"},
+    ):
+        assert client.patch("/api/settings", json=body).status_code == 422, body
+
+
+def test_unknown_stored_lookup_source_reads_auto(client, fake):
+    fake.on("settings", "get", result={"web_lookup_source": "nope", "web_log_level": 3})
+    body = client.get("/api/settings").json()["settings"]
+    assert body["web_lookup_source"] == "auto"
+    assert body["web_log_level"] == "info"
 
 
 def test_ncbi_api_key_is_write_only(client, fake, monkeypatch):

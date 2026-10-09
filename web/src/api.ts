@@ -9,6 +9,8 @@ import type {
   FeedResponse,
   FeedRule,
   Job,
+  LogsResponse,
+  LogWindow,
   LookupSource,
   McpStatus,
   MergeCandidates,
@@ -65,6 +67,9 @@ export type ExportFormat = 'lxproj' | 'bibtex' | 'obsidian' | 'zotero'
 export function projectExportUrl(id: number, format: ExportFormat, pdfs = false): string {
   return `/api/projects/${id}/export?format=${format}${pdfs && format === 'lxproj' ? '&pdfs=true' : ''}`
 }
+
+/** App log export for a time window (GET; streamed with the session cookie). */
+export const logsExportUrl = (window: LogWindow) => `/api/logs/export?window=${window}`
 
 let onUnauthorized: () => void = () => {}
 /** Database snapshot download (GET; the browser streams it with the session cookie). */
@@ -329,6 +334,8 @@ export const api = {
   storage: () => request<{ storage_mb: number; pdf_dir: string }>('GET', '/api/pdfs/storage'),
 
   settings: () => request<SettingsResponse>('GET', '/api/settings'),
+  logs: (window: LogWindow, limit = 1000) => request<LogsResponse>('GET', `/api/logs${qs({ window, limit })}`),
+  clearLogs: () => request<{ ok: boolean }>('DELETE', '/api/logs'),
   updateSettings: (patch: Partial<UserSettings>) =>
     request<SettingsResponse>('PATCH', '/api/settings', patch),
   aiModels: () => request<{ provider: AiProvider; models: string[] }>('GET', '/api/ai/models'),

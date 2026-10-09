@@ -43,6 +43,8 @@ class Settings:
     mcp_bin: str = "linxiv-mcp"
     # Session lifetime when "Remember me" is ticked at login.
     remember_days: int = 90
+    # Start-up app log level; Settings → Logs overrides it once saved.
+    log_level: str = "info"
 
     @property
     def auth_enabled(self) -> bool:
@@ -68,4 +70,5 @@ def load() -> Settings:
         timeout_short=float(os.environ.get("LINXIV_WEB_TIMEOUT_SHORT", "30")),
         mcp_bin=os.environ.get("LINXIV_MCP_BIN", "linxiv-mcp"),
         remember_days=max(1, int(os.environ.get("LINXIV_WEB_REMEMBER_DAYS", "90"))),
+        log_level=os.environ.get("LINXIV_WEB_LOG_LEVEL", "info").strip().lower() or "info",
     )

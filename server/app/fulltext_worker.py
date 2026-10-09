@@ -19,12 +19,14 @@ job runs. State is in memory: a restart forgets parked papers.
 from __future__ import annotations
 
 import asyncio
+import logging
 import time
 from dataclasses import asdict, dataclass
 
 from .cli import CLIError, Runner
 from .jobs import Jobs
 
+log = logging.getLogger(__name__)
 SETTING = "full_text_worker_enabled"
 MANUAL_JOB_KIND = "index-sources"
 OFF_POLL = 60.0
@@ -137,6 +139,7 @@ class FullTextWorker:
             queue = await self._queue()
         except CLIError as e:
             self.status.last_error = e.message
+            log.warning("full-text worker: paper list failed: %s", e.message)
             return OFF_POLL
         if not queue:
             return IDLE
@@ -146,6 +149,7 @@ class FullTextWorker:
             out = await self.cli(["paper", "fetch-source", "--", sid], self.timeout_long)
             if isinstance(out, dict) and out.get("indexed"):
                 self.status.indexed += 1
+                log.info("full-text worker: indexed %s", sid)
             else:
                 # Fetched but nothing to index (PDF-only submission): not again this run.
                 self.status.skipped += 1
@@ -159,6 +163,7 @@ class FullTextWorker:
             self._park(sid, permanent="only published by arXiv" in e.message)
             self.consecutive_failures += 1
             wait = min(GAP * 2**self.consecutive_failures, MAX_BACKOFF)
+            log.warning("full-text worker: %s failed, next try in %.0f s: %s", sid, wait, e.message)
         finally:
             self.status.current = None
             self.status.last_fetch_at = time.time()
@@ -168,8 +173,9 @@ class FullTextWorker:
         while True:
             try:
                 wait = await self.step()
-            except Exception as e:  # noqa: BLE001 - keep the loop alive, report it
+            except Exception as e:
                 self.status.last_error = str(e) or type(e).__name__
+                log.exception("full-text worker step failed")
                 wait = OFF_POLL
             if self.status.enabled:
                 await self._nap(wait)

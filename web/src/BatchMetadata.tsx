@@ -3,12 +3,14 @@ import { useAiEnabled } from './aiEnabled'
 import { api } from './api'
 import { ErrorText } from './components'
 import { paperLabel } from './format'
+import { useLookupSource } from './lookupSource'
 import {
   defaultPicked,
   diffFields,
   fromCandidate,
   fromPaper,
   byFileNameOk,
+  initialSource,
   MATCH_LABEL,
   sourcesFor,
   toMetadataInput,
@@ -47,7 +49,10 @@ export default function BatchMetadata({
   onSaved: () => void
   onSkip: (sourceId: string) => void
 }) {
-  const [source, setSource] = useState<LookupSource>('crossref')
+  // Settings default ("auto" = Crossref for a batch) until the user picks another source.
+  const defaultSource = useLookupSource()
+  const [picked, setSource] = useState<LookupSource | null>(null)
+  const source = picked ?? initialSource(null, defaultSource ?? 'auto')
   // Search by the title in each PDF's file name instead of the stored DOI/title.
   const [byFile, setByFile] = useState(false)
   const fileOk = byFileNameOk(source)
@@ -160,7 +165,7 @@ export default function BatchMetadata({
             disabled={running}
             onChange={(e) => setSource(e.target.value as LookupSource)}
           >
-            {sourcesFor(aiOn).map((s) => (
+            {sourcesFor(aiOn, defaultSource).map((s) => (
               <option key={s.value} value={s.value}>
                 {s.label}
               </option>

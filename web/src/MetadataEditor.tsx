@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { useAiEnabled } from './aiEnabled'
 import { api } from './api'
 import { ErrorText } from './components'
+import { useLookupSource } from './lookupSource'
 import { MathText } from './tex'
 import {
   defaultPicked,
@@ -9,6 +10,7 @@ import {
   fromCandidate,
   fromPaper,
   byFileNameOk,
+  initialSource,
   MATCH_LABEL,
   sourcesFor,
   toMetadataInput,
@@ -112,14 +114,10 @@ export default function MetadataEditor({
   const [form, setForm] = useState<Form>(() => fromPaper(paper))
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  // bioRxiv/medRxiv DOIs (10.1101/…, bioRxiv's newer 10.64898/…) default to their own API.
-  const [source, setSource] = useState<LookupSource>(
-    paper.source_id.startsWith('arxiv:')
-      ? 'arxiv'
-      : /^10\.(1101|64898)\//.test(paper.doi ?? '')
-        ? 'biorxiv'
-        : 'crossref',
-  )
+  // Settings default (or "auto" by id/DOI) until the user picks another source.
+  const defaultSource = useLookupSource()
+  const [picked, setSource] = useState<LookupSource | null>(null)
+  const source = picked ?? initialSource(paper, defaultSource ?? 'auto')
   // Junk or mismatched titles read from the PDF: start with the file name's title.
   const [byFile, setByFile] = useState(Boolean(paper.title_suspect && paper.pdf_file))
   const fileOk = Boolean(paper.pdf_file) && byFileNameOk(source)
@@ -167,7 +165,7 @@ export default function MetadataEditor({
         <div className="toolbar">
           <strong>Retrieve metadata</strong>
           <select aria-label="Lookup source" value={source} onChange={(e) => setSource(e.target.value as LookupSource)}>
-            {sourcesFor(aiOn).map((s) => (
+            {sourcesFor(aiOn, defaultSource).map((s) => (
               <option key={s.value} value={s.value}>
                 {s.label}
               </option>

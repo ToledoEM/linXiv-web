@@ -13,6 +13,7 @@ from typing import Literal
 from fastapi import APIRouter, Request
 from pydantic import BaseModel, ConfigDict, Field
 
+from .. import logs
 from .common import run
 from .feed import clear_feed_cache
 from .mcp import settings_changed as mcp_settings_changed
@@ -33,6 +34,10 @@ DEFAULTS: dict[str, object] = {
     "full_text_worker_enabled": False,
     # Last layout applied in Settings → PDF folders (web-only key; linXiv ignores it).
     "web_pdf_folder_layout": "none",
+    # Source preselected in Retrieve metadata (web-only key): "auto" picks by paper id/DOI.
+    "web_lookup_source": "auto",
+    # App log level (web-only key); LINXIV_WEB_LOG_LEVEL applies until it is saved.
+    "web_log_level": "",
     # AI features (web-only keys): off until the user opts in.
     "ai_enabled": False,
     "genai_provider": "gemini",
@@ -42,6 +47,8 @@ DEFAULTS: dict[str, object] = {
     "mcp_enabled": False,
     "mcp_profile": "read",
 }
+# Same values as SettingsPatch.web_lookup_source.
+LOOKUP_SOURCES = ("auto", "crossref", "arxiv", "openalex", "pubmed", "biorxiv")
 FEED_KEYS = ("home_feed_url", "rss_cache_retention_days")
 # NCBI E-utilities key for PubMed lookups (10 instead of 3 requests/s). A secret:
 # stored like any setting but never sent back; the env var of the same name wins.
@@ -53,7 +60,15 @@ AI_KEYS = ("GEMINI_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GENAI_API_K
 AI_KEY_RE = r"^$|^[\x21-\x7e]{8,256}$"
 SECRET_KEYS = (NCBI_KEY, *AI_KEYS)
 # Free-text values the CLI would otherwise JSON-parse ("123" -> int).
-QUOTED_KEYS = (*SECRET_KEYS, "genai_provider", "genai_model", "genai_base_url", "mcp_profile")
+QUOTED_KEYS = (
+    *SECRET_KEYS,
+    "genai_provider",
+    "genai_model",
+    "genai_base_url",
+    "mcp_profile",
+    "web_lookup_source",
+    "web_log_level",
+)
 MODEL_RE = r"^[A-Za-z0-9._:/@+-]{0,128}$"
 BASE_URL = r"^$|^[Hh][Tt][Tt][Pp][Ss]?://[^\s/?#]+[^\s?#]*$"
 EMAIL = r"^$|^[^@\s]+@[^@\s]+\.[^@\s]+$"
@@ -84,6 +99,10 @@ class SettingsPatch(BaseModel):
     GENAI_API_KEY_TAG_GEN: str | None = Field(None, pattern=AI_KEY_RE)
     mcp_enabled: bool | None = None
     mcp_profile: Literal["read", "write", "full"] | None = None
+    web_lookup_source: (
+        Literal["auto", "crossref", "arxiv", "openalex", "pubmed", "biorxiv"] | None
+    ) = None
+    web_log_level: Literal["debug", "info", "warning", "error"] | None = None
 
 
 async def _current(request: Request) -> dict:
@@ -92,6 +111,11 @@ async def _current(request: Request) -> dict:
     values = {k: raw.get(k, d) for k, d in DEFAULTS.items()}
     for k in (*MAILTO_KEYS, "home_feed_url", "genai_model", "genai_base_url"):
         values[k] = values[k] or ""
+    # Not saved yet: show the level in use (LINXIV_WEB_LOG_LEVEL or "info").
+    if values["web_log_level"] not in logs.LEVELS:
+        values["web_log_level"] = logs.level_name()
+    if values["web_lookup_source"] not in LOOKUP_SOURCES:
+        values["web_lookup_source"] = "auto"
     env_overrides = [k for k in (*MAILTO_KEYS, *SECRET_KEYS) if os.environ.get(k)]
     return {
         # write-only: stored keys never leave the server
@@ -140,6 +164,8 @@ async def update_settings(request: Request, body: SettingsPatch):
         clear_feed_cache(request)
     if any(k.startswith("mcp_") for k in patch):
         await mcp_settings_changed(request.app, patch)
+    if "web_log_level" in patch:
+        logs.set_level(patch["web_log_level"])
     if "full_text_worker_enabled" in patch:
         # Start or stop the background indexer now, not at its next poll.
         request.app.state.fulltext_worker.wake()

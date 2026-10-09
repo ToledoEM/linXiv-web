@@ -1,7 +1,7 @@
 // Metadata form model shared by the single-paper editor (MetadataEditor) and
 // the Library batch edit panel (BatchMetadata).
 
-import type { LookupSource, MetadataCandidate, MetadataInput, Paper } from './types'
+import type { DefaultLookupSource, LookupSource, MetadataCandidate, MetadataInput, Paper } from './types'
 
 export type Form = {
   title: string
@@ -36,8 +36,24 @@ export const SOURCES: { value: LookupSource; label: string }[] = [
 /** Sources that can search by the title in the PDF's file name (bioRxiv has no title search). */
 export const byFileNameOk = (s: LookupSource) => s !== 'biorxiv' && s !== 'ai'
 
-/** Lookup sources to offer: AI cleanup only while AI features are on. */
-export const sourcesFor = (aiOn: boolean) => SOURCES.filter((s) => aiOn || s.value !== 'ai')
+/** Lookup sources to offer: AI cleanup only while AI features are on; a fixed default
+ * from Settings at the top ("auto" keeps the usual order). */
+export function sourcesFor(aiOn: boolean, first?: DefaultLookupSource | null) {
+  const list = SOURCES.filter((s) => aiOn || s.value !== 'ai')
+  return [...list.filter((s) => s.value === first), ...list.filter((s) => s.value !== first)]
+}
+
+/** "Auto": arXiv papers use arXiv, bioRxiv/medRxiv DOIs (10.1101/…, bioRxiv's newer
+ * 10.64898/…) their own API, everything else (and a batch) Crossref. */
+export function autoSource(paper: Paper | null): Exclude<LookupSource, 'ai'> {
+  if (paper?.source_id.startsWith('arxiv:')) return 'arxiv'
+  if (/^10\.(1101|64898)\//.test(paper?.doi ?? '')) return 'biorxiv'
+  return 'crossref'
+}
+
+/** Source preselected for `paper` (null = batch): the Settings default, or `autoSource`. */
+export const initialSource = (paper: Paper | null, def: DefaultLookupSource): LookupSource =>
+  def === 'auto' ? autoSource(paper) : def
 
 export const MATCH_LABEL = {
   doi: 'by DOI',

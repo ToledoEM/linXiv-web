@@ -54,7 +54,16 @@ def main() -> None:
     check(s)
     import uvicorn
 
-    uvicorn.run("app.main:create_app", factory=True, host=s.host, port=s.port, proxy_headers=False)
+    # Our own handlers (app/logs.py) format every line, access lines included.
+    uvicorn.run(
+        "app.main:create_app",
+        factory=True,
+        host=s.host,
+        port=s.port,
+        proxy_headers=False,
+        access_log=False,
+        log_config=None,
+    )
 
 
 if __name__ == "__main__":

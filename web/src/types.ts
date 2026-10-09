@@ -81,6 +81,10 @@ export interface UserSettings {
   full_text_worker_enabled: boolean
   /** Last layout applied in Settings → PDF folders (read-only here; set by the layout job). */
   web_pdf_folder_layout: PdfLayout
+  /** Source preselected in Retrieve metadata; "auto" picks by paper id/DOI. */
+  web_lookup_source: DefaultLookupSource
+  /** App log level (Settings → Server & data → Logs). */
+  web_log_level: LogLevel
   /** Write-only: always "" from the server; send a new key to set it, "" to remove. */
   NCBI_API_KEY: string
   /** AI features master switch (off by default). */
@@ -298,6 +302,18 @@ export interface MetadataInput {
 
 /** 'ai' = AI metadata cleanup (POST /api/ai/cleanup), same candidate shape. */
 export type LookupSource = 'crossref' | 'arxiv' | 'openalex' | 'pubmed' | 'biorxiv' | 'ai'
+export type DefaultLookupSource = 'auto' | Exclude<LookupSource, 'ai'>
+export type LogLevel = 'debug' | 'info' | 'warning' | 'error'
+export type LogWindow = '1h' | '24h' | '7d' | '30d' | 'all'
+
+export interface LogsResponse {
+  /** Newest last. */
+  lines: string[]
+  /** Older lines in the window were left out (limit). */
+  truncated: boolean
+  level: LogLevel
+  files: { name: string; size: number }[]
+}
 
 /** One metadata match from GET /api/papers/{id}/lookup. */
 export interface MetadataCandidate {

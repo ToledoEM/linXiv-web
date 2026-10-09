@@ -10,11 +10,13 @@ from __future__ import annotations
 
 import asyncio
 import itertools
+import logging
 import time
 from collections.abc import Awaitable, Callable
 from dataclasses import asdict, dataclass, field
 from typing import Any, Literal
 
+log = logging.getLogger(__name__)
 State = Literal["running", "done", "failed", "cancelled"]
 KEEP_FINISHED = 20
 
@@ -68,6 +70,7 @@ class Jobs:
         self._jobs[job.id] = job
         self._tasks[job.id] = asyncio.get_running_loop().create_task(self._run(job, work))
         self._prune()
+        log.info("job %d %s started", job.id, job.kind)
         return job
 
     def cancel(self, job_id: int) -> Job | None:
@@ -84,13 +87,26 @@ class Jobs:
         except asyncio.CancelledError:
             job.state = "cancelled"
             raise
-        except Exception as e:  # noqa: BLE001 - reported on the job, not raised
+        except Exception as e:
             job.state = "failed"
             job.error = str(e) or type(e).__name__
+            log.exception("job %d %s failed", job.id, job.kind)
         finally:
             job.current = None
             job.finished_at = time.time()
             self._tasks.pop(job.id, None)
+            log.info(
+                "job %d %s %s in %.1f s (%d/%d done, %d errors)",
+                job.id,
+                job.kind,
+                job.state,
+                job.finished_at - job.started_at,
+                job.done,
+                job.total,
+                len(job.errors),
+            )
+            for err in job.errors[:20]:
+                log.warning("job %d %s: %s", job.id, job.kind, err)
 
     def _prune(self) -> None:
         finished = [j for j in self.list() if j.state != "running"]

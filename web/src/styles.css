@@ -501,3 +501,4 @@ kbd { display: inline-block; margin-right: 0.25rem; padding: 0.05rem 0.4rem; fon
 .diff-new { white-space: pre-line; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
 .batch-foot { display: flex; align-items: center; gap: 0.75rem; position: sticky; bottom: -0.9rem; background: var(--surface); padding: 0.5rem 0; border-top: 1px solid var(--border); }
 @media (max-width: 1000px) { .library-batch { grid-template-columns: 1fr; } .batch-panel { position: static; max-height: none; } }
+.log-view { max-height: 28rem; overflow: auto; margin: 0.5rem 0 0; padding: 0.6rem; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); white-space: pre; font-size: 0.78rem; }
