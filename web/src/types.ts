@@ -32,6 +32,10 @@ export interface Paper {
   tags: string[]
   has_pdf: boolean
   pdf_path?: string | null
+  /** The PDF's path inside the PDF folder (server-added; null when elsewhere or none). */
+  pdf_file?: string | null
+  /** Server-added: the title looks like junk read from the PDF, or unlike the file name. */
+  title_suspect?: boolean
   /** Library search: found only via indexed full text or a note. */
   deep_match?: boolean
   source?: string
@@ -297,7 +301,8 @@ export type LookupSource = 'crossref' | 'arxiv' | 'openalex' | 'pubmed' | 'biorx
 
 /** One metadata match from GET /api/papers/{id}/lookup. */
 export interface MetadataCandidate {
-  source: LookupSource
+  /** 'filename' = title and year folder taken from the PDF's file name. */
+  source: LookupSource | 'filename'
   ref: string | null
   title: string | null
   authors: string[]

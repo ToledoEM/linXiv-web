@@ -3,6 +3,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { api, pdfUrl } from '../api'
 import type { Annotation, Paper, PaperVersions, TagSuggestion } from '../types'
 import { Authors, ErrorText } from '../components'
+import { paperLabel } from '../format'
 import { useAiEnabled } from '../aiEnabled'
 import AiSummary from '../AiSummary'
 import Highlights from '../Highlights'
@@ -111,7 +112,11 @@ export default function PaperDetail() {
     <section className="detail">
       <div className="page-head">
         <h2>
-          <MathText forceInline>{paper.title}</MathText>
+          {paper.title?.trim() ? (
+            <MathText forceInline>{paper.title}</MathText>
+          ) : (
+            <span className="muted">{paperLabel(paper)}</span>
+          )}
         </h2>
         {!editingMeta && (
           <button className="page-head-action" onClick={() => setEditingMeta(true)}>
@@ -255,6 +260,11 @@ export default function PaperDetail() {
       <Notes key={`${sid}:${notesTick}`} sourceId={sid} defaultProjectId={fromProjectId} />
 
       <h3>PDF</h3>
+      {paper.pdf_file && (
+        <p className="muted small">
+          File: <span className="mono">{paper.pdf_file}</span>
+        </p>
+      )}
       <div className="actions">
         {paper.has_pdf ? (
           <>

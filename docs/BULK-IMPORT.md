@@ -141,7 +141,9 @@ Running `in-situ` again on the same folder is safe: papers that already point at
 
 Running the script twice on the same files doesn't create duplicate papers. linXiv derives each paper's id from the arXiv id or DOI it finds in the PDF, or from a hash of the file (`local:<hash>`) when it finds neither, so a second import lands on the same paper and keeps any titles, authors or tags you edited since. Every file is still uploaded again, which is why `--move-done` speeds up repeated runs.
 
-Metadata comes from the PDF alone. Scans and PDFs without embedded metadata get thin records; the batch metadata edit in the Library can look them up in Crossref, arXiv, OpenAlex or PubMed afterwards.
+Metadata comes from the PDF alone. Scans and PDFs without embedded metadata get thin records: an empty title, a stray word such as "Abstract", or a DOI copied from a reference or a page footer, which gives the paper another article's metadata. The Library shows such papers with their file name instead of an empty title, and marks titles that look wrong, or unlike the file name, with `title?` and the file name underneath.
+
+When your file names are the papers' titles (a Mendeley export, for example), fix them in batches: tick the flagged papers, open batch edit, pick Crossref or PubMed, tick "By PDF file name" and look them up. That search uses the title in each file name and ignores the stored DOI. The last candidate in each list is the file name itself, with the year folder as the date, for papers no source can find. A paper whose DOI was wrong keeps it as its id (for example `doi:10.63485/...`); the fix replaces its title, authors, date and DOI field.
 
 In `api` mode, files over `LINXIV_WEB_MAX_UPLOAD_MB` (default 200) fail with `413 file too large`. Raise the variable in `.env` and run `docker compose up -d`, or import those files in `offline` mode. A single import that runs longer than `LINXIV_WEB_TIMEOUT_LONG` seconds (default 120) fails with a 504.
 

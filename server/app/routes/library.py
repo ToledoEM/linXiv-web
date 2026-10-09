@@ -9,7 +9,8 @@ from fastapi import APIRouter, Query, Request, Response
 from pydantic import BaseModel, Field
 
 from ..cli import CLIError
-from .common import ident, run
+from ..pdf_name import pdf_file, title_from_file, title_suspect
+from .common import ident, run, settings
 
 router = APIRouter(prefix="/api", tags=["library"])
 
@@ -33,6 +34,19 @@ async def search(
 # Full-text/notes search kicks in from this many characters (desktop LibraryPage).
 DEEP_SEARCH_MIN = 3
 DEEP_SEARCH_LIMIT = 200
+
+
+def _annotate(request: Request, papers):
+    """Add `pdf_file` (the PDF's path inside the PDF folder) and `title_suspect`
+    (the title looks like junk read from the PDF, or unlike the file name)."""
+    s = settings(request)
+    bases = [str(s.data_dir / "pdfs"), str(s.pdf_dir)]
+    for p in papers if isinstance(papers, list) else [papers]:
+        if isinstance(p, dict):
+            rel = pdf_file(p.get("pdf_path"), bases)
+            p["pdf_file"] = rel
+            p["title_suspect"] = title_suspect(p.get("title"), title_from_file(rel))
+    return papers
 
 
 def _matches(paper: dict, needle: str) -> bool:
@@ -75,7 +89,7 @@ async def list_papers(
         args += ["--category", ident(category, "category")]
     if dir:
         args += ["--dir", dir]
-    papers = await run(request, args)
+    papers = _annotate(request, await run(request, args))
     if not filtering or not isinstance(papers, list):
         return papers
     needle = ident(q, "query").lower() if q else None
@@ -169,7 +183,7 @@ async def remove_tags(
 
 @router.get("/papers/{source_id:path}")
 async def get_paper(request: Request, source_id: str):
-    return await run(request, ["paper", "get", "--", ident(source_id)])
+    return _annotate(request, await run(request, ["paper", "get", "--", ident(source_id)]))
 
 
 @router.delete("/papers/{source_id:path}")

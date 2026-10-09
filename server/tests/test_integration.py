@@ -482,6 +482,14 @@ def test_real_cli_pdf_folder_layout(settings):
         assert c.get(f"/api/papers/{sid}/pdf").content == pdf
 
         assert run_layout("year")["result"]["moved"] == 1
+        # the paper reports its file inside the PDF folder (year folder, managed name)
+        got = c.get(f"/api/papers/{sid}").json()
+        moved = next(settings.pdf_dir.rglob("*.pdf"))
+        assert got["pdf_file"] == str(moved.relative_to(settings.pdf_dir))
+        assert len(got["pdf_file"].split("/")) == 2
+        assert [p["pdf_file"] for p in c.get("/api/papers").json()] == [got["pdf_file"]]
+        r = c.get(f"/api/papers/{sid}/lookup", params={"by": "filename"})
+        assert r.status_code == 400  # linXiv's own file name carries no title
         assert c.delete(f"/api/papers/{sid}/pdf").status_code == 200
         assert not any(settings.pdf_dir.rglob("*.pdf"))
 

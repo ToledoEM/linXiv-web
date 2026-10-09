@@ -6,6 +6,7 @@ import { useAiEnabled } from '../aiEnabled'
 import BatchMetadata from '../BatchMetadata'
 import BatchTags from '../BatchTags'
 import { ErrorText, SortHeader } from '../components'
+import { paperLabel } from '../format'
 import {
   loadSort,
   nextSort,
@@ -137,7 +138,7 @@ export default function Library() {
     const inTable = (shown ?? []).map((p) => p.source_id).filter((sid) => selected.has(sid))
     return [...inTable, ...[...selected].filter((sid) => !inTable.includes(sid))]
   }, [shown, selected])
-  const titles = useMemo(() => Object.fromEntries((papers ?? []).map((p) => [p.source_id, p.title])), [papers])
+  const titles = useMemo(() => Object.fromEntries((papers ?? []).map((p) => [p.source_id, paperLabel(p)])), [papers])
 
   return (
     <section>
@@ -269,8 +270,23 @@ export default function Library() {
                       </td>
                       <td>
                         <Link to={`/paper/${idPath(p.source_id)}`}>
-                          <MathText forceInline>{p.title}</MathText>
+                          {p.title?.trim() ? (
+                            <MathText forceInline>{p.title}</MathText>
+                          ) : (
+                            <span className="muted">{paperLabel(p)}</span>
+                          )}
                         </Link>
+                        {p.title_suspect && p.title?.trim() && (
+                          <span
+                            className="pill title-pill"
+                            title="This title was read from the PDF and looks wrong, or unlike the file name. Batch edit can search by the file name."
+                          >
+                            title?
+                          </span>
+                        )}
+                        {p.title_suspect && p.title?.trim() && p.pdf_file && (
+                          <span className="muted small block mono file-line">{p.pdf_file}</span>
+                        )}
                         {p.deep_match && (
                           <span className="pill deep-pill" title="Matched in the indexed full text or a note">
                             full text / notes

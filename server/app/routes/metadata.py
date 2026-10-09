@@ -7,6 +7,9 @@ current tags over. Journal ref, comment and categories are left untouched.
 
 Lookups use the CLI for Crossref, arXiv and OpenAlex. PubMed isn't in the CLI,
 so it is queried directly through NCBI E-utilities (a fixed public host).
+`by=filename` searches with the title in the PDF's file name instead of the
+paper's own DOI or title, for imports whose PDF metadata is junk or points at
+another paper.
 """
 
 from __future__ import annotations
@@ -22,7 +25,8 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from ..cli import CLIError
-from .common import ident, run
+from ..pdf_name import pdf_file, title_from_file, year_from_file
+from .common import ident, run, settings
 from .user_settings import ncbi_api_key
 
 router = APIRouter(prefix="/api", tags=["metadata"])
@@ -340,16 +344,67 @@ async def _biorxiv(doi: str) -> list[dict]:
     return []
 
 
+async def _ncbi_key(request: Request) -> str:
+    try:
+        stored = await run(request, ["settings", "get"])
+    except CLIError:
+        stored = {}  # no key is not a reason to fail the lookup
+    key, _ = ncbi_api_key(stored)
+    return key or ""
+
+
+async def _by_filename(request: Request, source: str, paper: dict) -> dict:
+    """Search by the title in the PDF's file name, ignoring the stored DOI (it may
+    belong to another paper). The last candidate is the file name itself: its
+    title, and its year folder as the date, for papers no source can find."""
+    s = settings(request)
+    rel = pdf_file(paper.get("pdf_path"), [str(s.data_dir / "pdfs"), str(s.pdf_dir)])
+    title = title_from_file(rel)
+    if not title:
+        raise HTTPException(status_code=400, detail="the PDF file name has no title to search by")
+    if source == "biorxiv":
+        raise HTTPException(
+            status_code=400,
+            detail="bioRxiv/medRxiv lookup needs a DOI (the API has no title search)",
+        )
+    if source == "pubmed":
+        found = await _pubmed(f"{title}[title]", await _ncbi_key(request))
+    else:
+        found = await _search(request, source, title)
+    year = year_from_file(rel)
+    published = paper.get("published")
+    if year and not str(published or "").startswith(str(year)):
+        published = f"{year}-01-01"
+    found.append(
+        _candidate(
+            source="filename",
+            ref=rel,
+            title=title,
+            authors=paper.get("authors") or [],
+            published=published,
+            summary=paper.get("summary"),
+            category=paper.get("category"),
+            doi=paper.get("doi"),
+            url=paper.get("url"),
+        )
+    )
+    return {"match": "filename", "candidates": found}
+
+
 @router.get("/papers/{source_id:path}/lookup")
 async def lookup(
     request: Request,
     source_id: str,
     source: Literal["crossref", "arxiv", "openalex", "pubmed", "biorxiv"] = "crossref",
+    by: Literal["auto", "filename"] = "auto",
 ):
     """Candidate metadata for a library paper. Matches by identifier when the
-    paper has one the source understands (DOI, arXiv id), otherwise by title."""
+    paper has one the source understands (DOI, arXiv id), otherwise by title.
+    `by=filename` searches by the title in the PDF's file name instead."""
     sid = ident(source_id, "paper id")
     paper = await run(request, ["paper", "get", "--", sid])
+    if by == "filename":
+        return await _by_filename(request, source, paper)
     doi = (paper.get("doi") or "").strip()
     title = (paper.get("title") or "").strip()
     arxiv_id = sid.removeprefix("arxiv:") if sid.startswith("arxiv:") else None
@@ -366,11 +421,7 @@ async def lookup(
             )
         return {"match": "doi", "candidates": await _biorxiv(doi)}
     if source == "pubmed":
-        try:
-            stored = await run(request, ["settings", "get"])
-        except CLIError:
-            stored = {}  # no key is not a reason to fail the lookup
-        key, _ = ncbi_api_key(stored)
+        key = await _ncbi_key(request)
         # Not every DOI is indexed in PubMed; fall back to the title.
         if doi and (found := await _pubmed(f"{doi}[doi]", key)):
             return {"match": "doi", "candidates": found}

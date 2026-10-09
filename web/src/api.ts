@@ -157,12 +157,13 @@ export const api = {
   deletePaper: (id: string) => request('DELETE', `/api/papers/${idPath(id)}`),
   saveMetadata: (id: string, body: MetadataInput) =>
     request<Paper>('PUT', `/api/papers/${idPath(id)}/metadata`, body),
-  lookupMetadata: (id: string, source: LookupSource) =>
+  /** `byFileName`: search by the title in the PDF's file name, not the stored DOI/title. */
+  lookupMetadata: (id: string, source: LookupSource, byFileName = false) =>
     source === 'ai'
       ? request<{ match: 'ai'; candidates: MetadataCandidate[] }>('POST', `/api/ai/cleanup/${idPath(id)}`)
-      : request<{ match: 'doi' | 'arxiv' | 'title'; candidates: MetadataCandidate[] }>(
+      : request<{ match: 'doi' | 'arxiv' | 'title' | 'filename'; candidates: MetadataCandidate[] }>(
           'GET',
-          `/api/papers/${idPath(id)}/lookup${qs({ source })}`,
+          `/api/papers/${idPath(id)}/lookup${qs({ source, by: byFileName ? 'filename' : undefined })}`,
         ),
 
   addTags: (id: string, tags: string[]) =>

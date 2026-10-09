@@ -443,6 +443,8 @@ button.danger-link { color: var(--danger); }
 .gp-tip-summary { margin-top: 0.25rem; font-size: 0.75rem; color: var(--muted); }
 @media (max-width: 700px) { .gp-column { position: static; width: auto; max-height: none; } .graph-stage { height: auto; } .graph-stage > div:first-child { position: relative !important; height: 60vh; } }
 .deep-pill { margin-left: 0.4rem; font-size: 0.72rem; vertical-align: middle; }
+.title-pill { margin-left: 0.4rem; font-size: 0.72rem; vertical-align: middle; background: var(--surface-2); border: 1px solid var(--border); color: var(--muted); cursor: help; }
+.file-line { max-width: 36rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .suggest { position: relative; display: flex; }
 .suggest > input { flex: 1; min-width: 0; }

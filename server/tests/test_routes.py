@@ -273,3 +273,37 @@ def test_deep_search_failure_keeps_plain_hits(client, fake):
     assert r.status_code == 200
     assert [p["source_id"] for p in r.json()] == ["arxiv:1"]
     assert r.headers["X-Deep-Search-Error"] == "fts index unavailable"
+
+
+def _insitu(settings) -> list[dict]:
+    """The in-situ fixture with its /data/pdfs paths moved under the test data dir."""
+    papers = fixture("list-insitu.json")
+    for p in papers:
+        p["pdf_path"] = p["pdf_path"].replace("/data/pdfs", f"{settings.data_dir}/pdfs", 1)
+    return papers
+
+
+def test_list_and_get_add_pdf_file_and_title_flag(client, fake, settings):
+    papers = _insitu(settings)
+    papers[0]["title"] = "Abstract"
+    papers.append({"source_id": "local:nopdf", "title": "A paper without a PDF", "pdf_path": None})
+    fake.on("list", result=papers)
+    rows = {p["source_id"]: p for p in client.get("/api/papers").json()}
+    genetics = rows["doi:10.1016/j.ajhg.2026.03.011"]
+    assert genetics["pdf_file"] == "Mendelay_database/1995/Some_Real_Title_of_a_genetics_paper.pdf"
+    assert genetics["title_suspect"] is True  # "Abstract"
+    attention = rows["arxiv:1706.03762"]
+    assert attention["pdf_file"] == "Mendelay_database/2017/Attention_is_all_you_need.pdf"
+    assert attention["title_suspect"] is False
+    assert rows["arxiv:2201.01470"]["pdf_file"] == "phd/review1.pdf"
+    assert rows["arxiv:2201.01470"]["title_suspect"] is False  # no title in "review1"
+    assert (rows["local:nopdf"]["pdf_file"], rows["local:nopdf"]["title_suspect"]) == (None, False)
+    # the filtered (paged in Python) branch is annotated too
+    hit = client.get("/api/papers", params={"q": "vaswani"}).json()
+    assert [p["pdf_file"] for p in hit] == [attention["pdf_file"]]
+
+    paper = fixture("paper-get-insitu.json")
+    paper["pdf_path"] = paper["pdf_path"].replace("/data/pdfs", f"{settings.data_dir}/pdfs", 1)
+    fake.on("paper", "get", result=paper)
+    got = client.get("/api/papers/arxiv:1706.03762").json()
+    assert (got["pdf_file"], got["title_suspect"]) == (attention["pdf_file"], False)

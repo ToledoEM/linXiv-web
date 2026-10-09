@@ -217,14 +217,14 @@ All routes except `/api/health`, `/api/login`, `/api/me` and `/mcp` need a sessi
 |---|---|
 | `GET /api/search?q&source=arxiv\|openalex\|crossref&max` | `search` |
 | `POST /api/papers/{id}/fetch?source=` | `fetch`, then `paper get` |
-| `GET /api/papers?q&tag&pdf=has\|none&fulltext&limit&offset&category&sort&dir` | `list` filtered server-side; a `q` of 3+ characters also runs `paper search` (TeX full text and notes), hits flagged `deep_match`; `fulltext=true` returns only the `paper search` hits |
-| `GET /api/papers/{id}`, `GET /api/papers/{id}/versions` | `paper get`, `paper versions` |
+| `GET /api/papers?q&tag&pdf=has\|none&fulltext&limit&offset&category&sort&dir` | `list` filtered server-side; a `q` of 3+ characters also runs `paper search` (TeX full text and notes), hits flagged `deep_match`; `fulltext=true` returns only the `paper search` hits. Each paper also gets `pdf_file` (its PDF's path inside the PDF folder) and `title_suspect` (the title looks like junk read from the PDF, or unlike the file name) |
+| `GET /api/papers/{id}`, `GET /api/papers/{id}/versions` | `paper get` (plus `pdf_file` and `title_suspect`), `paper versions` |
 | `DELETE /api/papers/{id}` | `paper delete` (soft delete, goes to trash) |
 | `GET /api/papers/{id}/pdf` | `pdf path`, then serves the file (only from inside the data or PDF dir) |
 | `POST /api/papers/{id}/pdf` `{url?, version?}` | `pdf download` (for arXiv papers the URL is derived) |
 | `DELETE /api/papers/{id}/pdf` | `pdf delete` |
 | `PUT /api/papers/{id}/metadata` `{title, authors[], published, summary, category?, doi?, url?}` | `paper get`, then `paper repair` with the full record and the paper's current tags (repair clears any field it isn't given) |
-| `GET /api/papers/{id}/lookup?source=crossref\|arxiv\|openalex\|pubmed\|biorxiv` | Candidate metadata: `doi resolve` (by DOI), `search` (by arXiv id or title), NCBI E-utilities for PubMed (by DOI, then title), api.biorxiv.org (by DOI) |
+| `GET /api/papers/{id}/lookup?source=crossref\|arxiv\|openalex\|pubmed\|biorxiv&by=auto\|filename` | Candidate metadata: `doi resolve` (by DOI), `search` (by arXiv id or title), NCBI E-utilities for PubMed (by DOI, then title), api.biorxiv.org (by DOI). `by=filename` searches by the title in the PDF's file name, ignoring the stored DOI, and adds a last candidate built from the file name and its year folder |
 | `GET/POST/DELETE /api/papers/{id}/tags` | `tag list` / `tag add` / `tag remove` |
 | `GET /api/pdfs`, `GET /api/pdfs/storage` | `pdf list`, `pdf storage` (recounted including subfolders) |
 | `POST /api/pdfs/import` (multipart `file`) | `pdf import` |

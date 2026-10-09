@@ -279,3 +279,78 @@ def test_pubmed_error_does_not_leak_key(client, fake, monkeypatch):
     r = client.get(f"/api/papers/{SID}/lookup", params={"source": "pubmed"})
     assert r.status_code == 502
     assert "SECRET" not in r.text
+
+
+def _filed(settings, rel: str, **paper) -> dict:
+    return {
+        "source_id": "doi:10.63485/wrong",
+        "pdf_path": f"{settings.data_dir}/pdfs/{rel}",
+        **paper,
+    }
+
+
+def test_lookup_by_filename_ignores_stored_doi(client, fake, settings):
+    rel = "Mendelay_database/1960/Cerebellar_and_Midbrain_Lesions_in_Scrapie.pdf"
+    paper = _filed(
+        settings,
+        rel,
+        doi="10.63485/wrong",
+        title="Nature Publishing Group supports PubChem",
+        authors=["Someone"],
+        published="2005-06-03",
+    )
+    fake.on("paper", "get", result=paper)
+    fake.on("search", result=fixture("search-crossref.json"))
+    r = client.get(
+        "/api/papers/doi:10.63485/wrong/lookup", params={"source": "crossref", "by": "filename"}
+    ).json()
+    assert r["match"] == "filename"
+    query = ["search", "--source", "crossref", "--max", "5", "--"]
+    assert fake.calls[-1] == [*query, "Cerebellar and Midbrain Lesions in Scrapie"]
+    assert not any(c[:2] == ["doi", "resolve"] for c in fake.calls)
+    last = r["candidates"][-1]
+    assert (last["source"], last["ref"], last["title"], last["published"]) == (
+        "filename",
+        rel,
+        "Cerebellar and Midbrain Lesions in Scrapie",
+        "1960-01-01",
+    )
+    assert (last["authors"], last["doi"]) == (["Someone"], "10.63485/wrong")
+    assert len(r["candidates"]) > 1  # search hits come first
+
+
+def test_lookup_by_filename_keeps_date_in_same_year(client, fake, settings):
+    paper = _filed(settings, "1995/A_real_paper_title.pdf", title="x", published="1995-03-02")
+    fake.on("paper", "get", result=paper)
+    fake.on("search", result=[])
+    r = client.get("/api/papers/x:y/lookup", params={"by": "filename"}).json()
+    assert [c["source"] for c in r["candidates"]] == ["filename"]
+    assert r["candidates"][0]["published"] == "1995-03-02"
+
+
+def test_lookup_by_filename_pubmed(client, fake, settings, monkeypatch):
+    seen: list = []
+    _ncbi(monkeypatch, {"A real paper title[title]": ["111"]}, seen)
+    fake.on("paper", "get", result=_filed(settings, "A_real_paper_title.pdf", title="x"))
+    fake.on("settings", "get", result={})
+    r = client.get("/api/papers/x:y/lookup", params={"source": "pubmed", "by": "filename"})
+    assert r.status_code == 200, r.text
+    assert seen[0].params["term"] == "A real paper title[title]"
+    assert r.json()["candidates"][-1]["source"] == "filename"
+
+
+def test_lookup_by_filename_needs_a_title_in_the_name(client, fake, settings):
+    for paper in (
+        _filed(settings, "doi_10.1_xv1.pdf", title="x"),  # linXiv's own copy
+        {"source_id": "x:y", "title": "x", "pdf_path": "/elsewhere/A_real_title.pdf"},
+        {"source_id": "x:y", "title": "x", "pdf_path": None},
+    ):
+        fake.on("paper", "get", result=paper)
+        r = client.get("/api/papers/x:y/lookup", params={"by": "filename"})
+        assert r.status_code == 400
+        assert "file name" in r.json()["detail"]
+    fake.on("paper", "get", result=_filed(settings, "A_real_paper_title.pdf", title="x"))
+    r = client.get("/api/papers/x:y/lookup", params={"source": "biorxiv", "by": "filename"})
+    assert r.status_code == 400
+    assert client.get("/api/papers/x:y/lookup", params={"by": "nope"}).status_code == 422
+    assert not any(c[0] == "search" for c in fake.calls)

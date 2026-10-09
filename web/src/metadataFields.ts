@@ -33,10 +33,19 @@ export const SOURCES: { value: LookupSource; label: string }[] = [
   { value: 'ai', label: 'AI cleanup (title, authors, journal)' },
 ]
 
+/** Sources that can search by the title in the PDF's file name (bioRxiv has no title search). */
+export const byFileNameOk = (s: LookupSource) => s !== 'biorxiv' && s !== 'ai'
+
 /** Lookup sources to offer: AI cleanup only while AI features are on. */
 export const sourcesFor = (aiOn: boolean) => SOURCES.filter((s) => aiOn || s.value !== 'ai')
 
-export const MATCH_LABEL = { doi: 'by DOI', arxiv: 'by arXiv id', title: 'by title', ai: 'from AI cleanup' }
+export const MATCH_LABEL = {
+  doi: 'by DOI',
+  arxiv: 'by arXiv id',
+  title: 'by title',
+  filename: 'by PDF file name',
+  ai: 'from AI cleanup',
+}
 export type MatchKind = keyof typeof MATCH_LABEL
 
 export function fromPaper(p: Paper): Form {

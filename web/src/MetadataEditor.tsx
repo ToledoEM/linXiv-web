@@ -8,6 +8,7 @@ import {
   diffFields,
   fromCandidate,
   fromPaper,
+  byFileNameOk,
   MATCH_LABEL,
   sourcesFor,
   toMetadataInput,
@@ -119,6 +120,9 @@ export default function MetadataEditor({
         ? 'biorxiv'
         : 'crossref',
   )
+  // Junk or mismatched titles read from the PDF: start with the file name's title.
+  const [byFile, setByFile] = useState(Boolean(paper.title_suspect && paper.pdf_file))
+  const fileOk = Boolean(paper.pdf_file) && byFileNameOk(source)
   const [looking, setLooking] = useState(false)
   const aiOn = useAiEnabled()
   const [lookupError, setLookupError] = useState('')
@@ -132,7 +136,7 @@ export default function MetadataEditor({
     setFound(null)
     setComparing(null)
     try {
-      const r = await api.lookupMetadata(paper.source_id, source)
+      const r = await api.lookupMetadata(paper.source_id, source, byFile && fileOk)
       setFound(r)
       if (r.candidates.length === 1) setComparing(r.candidates[0])
     } catch (err) {
@@ -169,6 +173,17 @@ export default function MetadataEditor({
               </option>
             ))}
           </select>
+          {paper.pdf_file && (
+            <label className="check" title={`Search with the title in ${paper.pdf_file}, ignoring the stored DOI`}>
+              <input
+                type="checkbox"
+                checked={byFile && fileOk}
+                disabled={!fileOk}
+                onChange={(e) => setByFile(e.target.checked)}
+              />
+              Search by PDF file name
+            </label>
+          )}
           <button type="button" onClick={lookup} disabled={looking}>
             {looking ? 'Looking up…' : 'Look up'}
           </button>

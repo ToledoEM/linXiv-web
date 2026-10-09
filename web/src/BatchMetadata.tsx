@@ -2,11 +2,13 @@ import { useRef, useState } from 'react'
 import { useAiEnabled } from './aiEnabled'
 import { api } from './api'
 import { ErrorText } from './components'
+import { paperLabel } from './format'
 import {
   defaultPicked,
   diffFields,
   fromCandidate,
   fromPaper,
+  byFileNameOk,
   MATCH_LABEL,
   sourcesFor,
   toMetadataInput,
@@ -46,6 +48,9 @@ export default function BatchMetadata({
   onSkip: (sourceId: string) => void
 }) {
   const [source, setSource] = useState<LookupSource>('crossref')
+  // Search by the title in each PDF's file name instead of the stored DOI/title.
+  const [byFile, setByFile] = useState(false)
+  const fileOk = byFileNameOk(source)
   const aiOn = useAiEnabled()
   const [items, setItems] = useState<Record<string, Item>>({})
   const [running, setRunning] = useState(false)
@@ -73,7 +78,7 @@ export default function BatchMetadata({
       try {
         // Fresh current values: the diff must compare against what is stored now.
         const paper = await api.paper(sid)
-        const r = await api.lookupMetadata(sid, source)
+        const r = await api.lookupMetadata(sid, source, byFile && fileOk && Boolean(paper.pdf_file))
         const found = r.candidates[0]
         patch(sid, {
           status: found ? 'match' : 'nomatch',
@@ -161,6 +166,15 @@ export default function BatchMetadata({
               </option>
             ))}
           </select>
+          <label className="check" title="Search with the title in each PDF's file name, ignoring the stored DOI">
+            <input
+              type="checkbox"
+              checked={byFile && fileOk}
+              disabled={running || !fileOk}
+              onChange={(e) => setByFile(e.target.checked)}
+            />
+            By PDF file name
+          </label>
           {running ? (
             <button type="button" className="danger" onClick={() => (stopRef.current = true)}>
               Stop
@@ -190,11 +204,16 @@ export default function BatchMetadata({
             <li key={sid} className={`batch-card st-${it.status}`}>
               <div className="batch-card-head">
                 <span className="batch-title">
-                  <MathText forceInline>{it.paper?.title ?? titles[sid] ?? sid}</MathText>
+                  {it.paper?.title?.trim() ? (
+                    <MathText forceInline>{it.paper.title}</MathText>
+                  ) : (
+                    <span className="muted">{it.paper ? paperLabel(it.paper) : (titles[sid] ?? sid)}</span>
+                  )}
                 </span>
                 <span className={`pill batch-status st-${it.status}`}>{statusLabel(it, source)}</span>
               </div>
               <span className="muted small mono">{sid}</span>
+              {it.paper?.pdf_file && <span className="muted small mono block file-line">{it.paper.pdf_file}</span>}
               {it.candidates.length > 1 && (
                 <select
                   aria-label={`Match for ${sid}`}
