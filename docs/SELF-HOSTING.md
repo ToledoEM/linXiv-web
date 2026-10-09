@@ -197,6 +197,10 @@ Settings changed in the web UI are stored in `data/`. Environment variables go i
 
 The full list is in the README's [Configuration](../README.md#configuration) section.
 
+## Importing many PDFs
+
+To import a folder of PDFs that is already on the server, without the web UI, use `scripts/bulk-import.sh`. See [BULK-IMPORT.md](BULK-IMPORT.md).
+
 ## Backups
 
 - **Database:** Settings → Server & data → Backup downloads a copy of `papers.db` and can import or restore one. It does not include PDFs.
