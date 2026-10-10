@@ -27,6 +27,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Docker base images (`rust`, `debian`, `python`, `node`, `uv`) pinned by multi-arch digest.
 - Ruff runs bandit (`S`), bugbear (`B`), pyupgrade (`UP`), import order (`I`) and simplify (`SIM`) rules.
 - ESLint is type-aware and rejects un-handled promises (`no-floating-promises`, `no-misused-promises`).
+- Settings → Server & data → Login: change the admin password (logs out every other browser) and "Log out other sessions". `python -m app reset-password` sets a new password from the server without a restart. Passwords set by `LINXIV_WEB_PASSWORD(_HASH)` stay read-only here.
+- Logins survive restarts: sessions (stored as SHA-256 of their id) and the session signing key live in `<data dir>/linxiv-web-state.db` (mode 0600). `LINXIV_WEB_SECRET_KEY`, when set, replaces the stored key.
+- Activity log (Settings → Server & data → Activity): every POST/PUT/PATCH/DELETE under `/api/` with time, client address, route, path parameters and status; Settings saves record key names only, never values. CSV export; clearing needs a typed phrase and is itself recorded. `<data dir>/logs/activity.jsonl`, 5 MiB plus one rotated file.
+- Diagnostics report (Settings → About): versions, configuration, library counts, disk, health, running jobs and reachability of outside services, as Markdown to copy or download. Secrets and addresses that could locate the server appear only as set / not set.
+- Activity tray: running background jobs (TeX source index, PDF text index, PDF folders) with progress and Cancel on every page; finished jobs stay until dismissed.
+- Upload page: drag and drop PDFs; drops add to the selection, other file types are skipped with a note.
+- Notes render as Markdown (headings, lists, emphasis, links, quotes, code) with TeX math, ported from the desktop app; raw HTML is not rendered.
+- Typed confirmation dialog for restoring a backup ("replace library"), clearing the server log ("clear logs") and deleting the activity log.
+- `LINXIV_WEB_HSTS=true` sends `Strict-Transport-Security` (for HTTPS deployments). Every response carries a `Permissions-Policy` turning off camera, microphone, geolocation, payment and USB.
+- `LINXIV_WEB_AI_ALLOWED_HOSTS` restricts which hosts the OpenAI-compatible AI base URL may use.
 
 ### Security
 - PubMed lookup parses NCBI XML with `defusedxml`; replies with entity declarations are refused (502) instead of expanded.
+- Requests from public IP addresses are refused (403) unless `LINXIV_WEB_ALLOW_EXTERNAL=true`; loopback, private LAN and link-local clients are served. `X-Forwarded-For` is read only from proxies listed in `LINXIV_WEB_TRUSTED_PROXIES` (IPs or CIDRs), right to left, so a client can't forge its address. Refused requests are logged once per address per minute.
+- Login throttle (5 failures per 5 minutes) keyed on the real client address behind trusted proxies and kept across restarts; old entries pruned.
+- The OpenAI-compatible AI base URL may not resolve to cloud metadata addresses (`169.254.0.0/16`, `fd00:ec2::254`, `100.100.100.200`); checked before every request, so the API key is never sent there.
+- Unexpected server errors return `{"detail": "internal server error"}` without internals.
+- At most two PDF text extractions (AI summary, PDF full-text index) run at once.
