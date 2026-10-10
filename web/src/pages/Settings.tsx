@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import AboutSettings from '../AboutSettings'
+import ActivityLog from '../ActivityLog'
 import AiSettings from '../AiSettings'
 import AppLogs from '../AppLogs'
 import McpSettings from '../McpSettings'
@@ -378,6 +379,7 @@ export default function Settings() {
         <form onSubmit={save('logs')} onKeyDown={formSubmitOnCtrlEnter}>
           <AppLogs level={draft.web_log_level} onLevel={(v) => set('web_log_level', v)} footer={saveBar('logs')} />
         </form>
+        <ActivityLog />
       </>
     ),
     ai: (

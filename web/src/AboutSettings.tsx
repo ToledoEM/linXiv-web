@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
-import { api } from './api'
+import { DIAGNOSTICS_URL, api, fetchDiagnostics } from './api'
 import { ErrorText } from './components'
 import type { SystemStatus, UpdateMode, UpdateStatus, UserSettings } from './types'
 
@@ -201,6 +201,65 @@ export default function AboutSettings({
           </div>
         )}
       </div>
+
+      <Diagnostics />
     </>
+  )
+}
+
+/** Redacted Markdown report for bug reports: view, copy, download. */
+function Diagnostics() {
+  const [text, setText] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const [copied, setCopied] = useState(false)
+
+  const create = async () => {
+    setBusy(true)
+    setError('')
+    setCopied(false)
+    try {
+      setText(await fetchDiagnostics())
+    } catch (err) {
+      setError((err as Error).message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopied(true)
+    } catch {
+      setError('Copy failed: select the text and copy it by hand.')
+    }
+  }
+
+  return (
+    <div className="card settings-section">
+      <h3>Diagnostics</h3>
+      <p className="muted small">
+        A report to attach to a bug report: versions, configuration, library counts, disk, health and whether outside
+        services are reachable. API keys, passwords and private addresses show only as set or not set.
+      </p>
+      <div className="actions">
+        <button type="button" disabled={busy} onClick={() => void create()}>
+          {busy ? 'Checking…' : text ? 'Create again' : 'Create report'}
+        </button>
+        {text && (
+          <>
+            <button type="button" onClick={() => void copy()}>
+              {copied ? 'Copied' : 'Copy'}
+            </button>
+            <a className="button" href={DIAGNOSTICS_URL} download="linxiv-web-diagnostics.md">
+              Download .md
+            </a>
+          </>
+        )}
+      </div>
+      <ErrorText error={error} />
+      {text && <pre className="log-view diagnostics-view">{text}</pre>}
+    </div>
   )
 }

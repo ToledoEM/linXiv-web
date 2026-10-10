@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { BACKUP_URL, api } from './api'
+import ConfirmDialog from './ConfirmDialog'
 
 type Msg = { ok: boolean; text: string } | null
 const ACCEPT = '.db,.sqlite,.sqlite3,application/vnd.sqlite3,application/x-sqlite3'
@@ -42,7 +43,6 @@ export default function Backup() {
 
   const runRestore = async () => {
     if (!restoreFile) return
-    if (!armed) return setArmed(true)
     setArmed(false)
     setBusy('restore')
     setRestoreMsg(null)
@@ -117,14 +117,26 @@ export default function Backup() {
           />
           <button
             type="button"
-            className={armed ? 'danger armed' : 'danger'}
+            className="danger"
             disabled={!restoreFile || busy !== ''}
-            onClick={runRestore}
-            onBlur={() => setArmed(false)}
+            onClick={() => setArmed(true)}
           >
-            {busy === 'restore' ? 'Restoring…' : armed ? 'Replace library?' : 'Restore'}
+            {busy === 'restore' ? 'Restoring…' : 'Restore'}
           </button>
         </div>
+        <ConfirmDialog
+          open={armed}
+          title="Replace the whole library?"
+          phrase="replace library"
+          confirmLabel="Replace library"
+          onConfirm={() => void runRestore()}
+          onCancel={() => setArmed(false)}
+        >
+          <p>
+            Every paper, note and project is replaced by <span className="mono">{restoreFile?.name}</span>. The current
+            database is kept on the server as papers.pre-restore.
+          </p>
+        </ConfirmDialog>
         <span className="muted small">
           Replaces the whole library with the backup. The current database is kept on the server as papers.pre-restore.
         </span>

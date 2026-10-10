@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { api, saveBlob } from './api'
 import { ErrorText } from './components'
+import { NoteMarkdown } from './NoteMarkdown'
 import { MathText } from './tex'
 import { noteFileName, notesMarkdown } from './notesMarkdown'
 import type { Note, Paper, Project } from './types'
@@ -87,14 +88,14 @@ function NoteEditor({
       {tab === 'write' ? (
         <textarea
           rows={8}
-          placeholder="Note content… ($TeX$ math supported)"
+          placeholder="Note content… (Markdown and $TeX$ math)"
           value={content}
           onChange={(e) => setContent(e.target.value)}
           disabled={saving}
         />
       ) : (
         <div className="note-body note-preview">
-          {content.trim() ? <MathText>{content}</MathText> : <span className="muted">Nothing to preview.</span>}
+          {content.trim() ? <NoteMarkdown content={content} /> : <span className="muted">Nothing to preview.</span>}
         </div>
       )}
       <div className="note-foot muted small">
@@ -149,7 +150,7 @@ function NoteCard({
           onClick={() => !window.getSelection()?.toString() && setOpen((o) => !o)}
           onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), setOpen((o) => !o))}
         >
-          <MathText forceInline={!open}>{note.content}</MathText>
+          <NoteMarkdown content={note.content} forceInline={!open} />
         </div>
       )}
       <div className="actions">

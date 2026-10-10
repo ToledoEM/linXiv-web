@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { api, logsExportUrl } from './api'
 import { ErrorText } from './components'
+import ConfirmDialog from './ConfirmDialog'
 import type { LogLevel, LogsResponse, LogWindow } from './types'
 
 const LEVELS: { value: LogLevel; label: string }[] = [
@@ -61,7 +62,6 @@ export default function AppLogs({
   }, [data])
 
   const clear = async () => {
-    if (!armed) return setArmed(true)
     setArmed(false)
     try {
       await api.clearLogs()
@@ -106,15 +106,20 @@ export default function AppLogs({
         <a className="button" href={logsExportUrl(span)} download>
           Download
         </a>
-        <button type="button" className={armed ? 'danger armed' : 'danger'} onClick={clear}>
-          {armed ? 'Confirm clear' : 'Clear logs'}
+        <button type="button" className="danger" onClick={() => setArmed(true)}>
+          Clear logs
         </button>
-        {armed && (
-          <button type="button" className="link" onClick={() => setArmed(false)}>
-            Cancel
-          </button>
-        )}
       </div>
+      <ConfirmDialog
+        open={armed}
+        title="Clear the server log?"
+        phrase="clear logs"
+        confirmLabel="Clear logs"
+        onConfirm={() => void clear()}
+        onCancel={() => setArmed(false)}
+      >
+        <p>Every log file in the data directory is emptied. Download it first if you may need it.</p>
+      </ConfirmDialog>
       <ErrorText error={error} />
       {data && (
         <>

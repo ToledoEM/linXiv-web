@@ -402,3 +402,14 @@ export interface Annotation {
   created_at: string
   updated_at: string
 }
+
+/** One line of the activity log (`server/app/activity.py`): no bodies, no values. */
+export interface ActivityEvent {
+  at: string
+  client: string
+  method: string
+  route: string
+  target: Record<string, string>
+  status: number
+  fields?: string[]
+}

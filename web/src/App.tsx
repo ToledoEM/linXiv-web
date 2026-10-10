@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { api, setUnauthorizedHandler } from './api'
+import ActivityTray from './ActivityTray'
 import Sidebar, { type NavItem } from './Sidebar'
 import Login from './pages/Login'
 import Setup from './pages/Setup'
@@ -105,6 +106,7 @@ export default function App() {
           <Route path="*" element={<p className="muted">Page not found.</p>} />
         </Routes>
       </main>
+      <ActivityTray />
     </div>
   )
 }

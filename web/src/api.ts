@@ -1,4 +1,5 @@
 import type {
+  ActivityEvent,
   AiProvider,
   AiTask,
   AiTestResult,
@@ -73,6 +74,24 @@ export function projectExportUrl(id: number, format: ExportFormat, pdfs = false)
 
 /** App log export for a time window (GET; streamed with the session cookie). */
 export const logsExportUrl = (window: LogWindow) => `/api/logs/export?window=${window}`
+export const ACTIVITY_EXPORT_URL = '/api/activity/export'
+export const DIAGNOSTICS_URL = '/api/system/diagnostics'
+
+/** Tell the activity tray a background job just started (it polls slowly when idle). */
+function started<T>(p: Promise<T>): Promise<T> {
+  return p.then((job) => {
+    window.dispatchEvent(new Event('lxw-job-started'))
+    return job
+  })
+}
+
+/** The diagnostics report (Markdown text, not JSON). */
+export async function fetchDiagnostics(): Promise<string> {
+  const res = await fetch(DIAGNOSTICS_URL, { credentials: 'same-origin' })
+  if (res.status === 401) onUnauthorized()
+  if (!res.ok) throw new ApiError(res.status, res.statusText || `HTTP ${res.status}`)
+  return res.text()
+}
 
 let onUnauthorized: () => void = () => {}
 /** Database snapshot download (GET; the browser streams it with the session cookie). */
@@ -365,7 +384,7 @@ export const api = {
     }>('GET', '/api/sources/worker'),
   pdfLayoutPreview: (layout: PdfLayout) =>
     request<PdfLayoutPreview>('GET', `/api/pdfs/layout/preview${qs({ layout })}`),
-  startPdfLayout: (layout: PdfLayout) => request<Job>('POST', '/api/jobs/pdf-layout', { layout }),
+  startPdfLayout: (layout: PdfLayout) => started(request<Job>('POST', '/api/jobs/pdf-layout', { layout })),
   sourcesPending: () =>
     request<{ pending: number; arxiv_papers: number; pdf_pending: number }>('GET', '/api/sources/pending'),
   indexPdfText: (id: string) =>
@@ -373,9 +392,10 @@ export const api = {
       'POST',
       `/api/papers/${idPath(id)}/pdf-text`,
     ),
-  startIndexPdfText: () => request<Job>('POST', '/api/jobs/index-pdf-text'),
-  startIndexSources: (limit: number) => request<Job>('POST', '/api/jobs/index-sources', { limit }),
-  jobs: (kind: string) => request<Job[]>('GET', `/api/jobs${qs({ kind })}`),
+  startIndexPdfText: () => started(request<Job>('POST', '/api/jobs/index-pdf-text')),
+  startIndexSources: (limit: number) =>
+    started(request<Job>('POST', '/api/jobs/index-sources', { limit })),
+  jobs: (kind?: string) => request<Job[]>('GET', `/api/jobs${qs({ kind })}`),
   job: (id: number) => request<Job>('GET', `/api/jobs/${id}`),
   cancelJob: (id: number) => request<Job>('POST', `/api/jobs/${id}/cancel`),
 
@@ -385,6 +405,8 @@ export const api = {
   settings: () => request<SettingsResponse>('GET', '/api/settings'),
   logs: (window: LogWindow, limit = 1000) => request<LogsResponse>('GET', `/api/logs${qs({ window, limit })}`),
   clearLogs: () => request<{ ok: boolean }>('DELETE', '/api/logs'),
+  activity: (limit = 200) => request<{ events: ActivityEvent[] }>('GET', `/api/activity${qs({ limit })}`),
+  clearActivity: (confirm: string) => request<{ ok: boolean }>('DELETE', '/api/activity', { confirm }),
   updateSettings: (patch: Partial<UserSettings>) =>
     request<SettingsResponse>('PATCH', '/api/settings', patch),
   aiModels: () => request<{ provider: AiProvider; models: string[] }>('GET', '/api/ai/models'),
