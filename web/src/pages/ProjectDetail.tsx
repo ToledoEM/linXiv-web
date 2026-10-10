@@ -107,6 +107,7 @@ function AddPapers({
 const EXPORTS: { format: ExportFormat; label: string }[] = [
   { format: 'bibtex', label: 'BibTeX' },
   { format: 'obsidian', label: 'Obsidian' },
+  { format: 'notes-md', label: 'Notes (Markdown .zip)' },
   { format: 'zotero', label: 'Zotero' },
   { format: 'lxproj', label: '.lxproj' },
 ]
@@ -120,7 +121,10 @@ function ExportPanel({ projectId, onClose }: { projectId: number; onClose: () =>
         <input type="checkbox" checked={pdfs} onChange={(e) => setPdfs(e.target.checked)} />
         Include PDFs in .lxproj archive
       </label>
-      <p className="muted small">BibTeX, Obsidian and Zotero exports include paper metadata only.</p>
+      <p className="muted small">
+        BibTeX, Obsidian and Zotero exports include paper metadata only. Notes (Markdown) zips one Obsidian file per
+        paper that has notes.
+      </p>
       <div className="actions">
         {EXPORTS.map((e) => (
           <a key={e.format} className="button" href={projectExportUrl(projectId, e.format, pdfs)} download>

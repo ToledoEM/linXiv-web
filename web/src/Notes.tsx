@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
-import { api } from './api'
+import { api, saveBlob } from './api'
 import { ErrorText } from './components'
 import { MathText } from './tex'
-import type { Note, Project } from './types'
+import { noteFileName, notesMarkdown } from './notesMarkdown'
+import type { Note, Paper, Project } from './types'
 import { submitOnCtrlEnter } from './submitShortcut'
 
 const when = (ts: string) => ts.replace('T', ' ').slice(0, 16)
@@ -175,7 +176,16 @@ function NoteCard({
 }
 
 /** Notes on one paper (desktop PaperDetailPage notes panel). */
-export default function Notes({ sourceId, defaultProjectId }: { sourceId: string; defaultProjectId: number | null }) {
+export default function Notes({
+  sourceId,
+  defaultProjectId,
+  paper,
+}: {
+  sourceId: string
+  defaultProjectId: number | null
+  /** For the Markdown export's frontmatter. */
+  paper?: Paper
+}) {
   const [notes, setNotes] = useState<Note[] | null>(null)
   const [projects, setProjects] = useState<Project[]>([])
   const [editing, setEditing] = useState<'new' | number | null>(null)
@@ -222,7 +232,26 @@ export default function Notes({ sourceId, defaultProjectId }: { sourceId: string
     <>
       <div className="section-head">
         <h3>Notes{notes?.length ? ` (${notes.length})` : ''}</h3>
-        {editing === null && <button onClick={() => setEditing('new')}>New note</button>}
+        {editing === null && (
+          <div className="actions-inline">
+            {paper && notes && notes.length > 0 && (
+              <button
+                title="Download these notes as one Markdown file (Obsidian frontmatter)"
+                onClick={() =>
+                  saveBlob(
+                    new Blob([notesMarkdown(paper, notes, (id) => scopeLabel(id, projects))], {
+                      type: 'text/markdown;charset=utf-8',
+                    }),
+                    `${noteFileName(paper)}.md`,
+                  )
+                }
+              >
+                Export .md
+              </button>
+            )}
+            <button onClick={() => setEditing('new')}>New note</button>
+          </div>
+        )}
       </div>
       <ErrorText error={error} />
       {editing === 'new' && (

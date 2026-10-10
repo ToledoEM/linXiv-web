@@ -18,6 +18,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from starlette.background import BackgroundTask
 
+from .. import notes_md
 from ..cli import CLIError
 from .common import ident, run, save_upload, settings
 
@@ -151,14 +152,17 @@ def _slug(name: str, project_id: int) -> str:
 async def export_project(
     request: Request,
     project_id: int,
-    format: Literal["lxproj", "bibtex", "obsidian", "zotero"] = "lxproj",
+    format: Literal["lxproj", "bibtex", "obsidian", "zotero", "notes-md"] = "lxproj",
     pdfs: bool = False,
 ):
     """The CLI writes the export into a private temp dir; the file is sent as a
     download and the dir removed once the response is done. `pdfs` bundles
-    saved PDFs into the .lxproj archive."""
-    sub, ext, media = EXPORTS[format]
+    saved PDFs into the .lxproj archive. `notes-md` is built here (no CLI
+    export): a zip of one Obsidian Markdown file per paper that has notes."""
     project = await run(request, ["project", "get", "--", str(project_id)])
+    if format == "notes-md":
+        return await _export_notes_md(request, project, project_id)
+    sub, ext, media = EXPORTS[format]
     tmp = Path(tempfile.mkdtemp(prefix="lxw-export-"))
     try:
         args = ["project", sub]
@@ -177,6 +181,54 @@ async def export_project(
         path,
         media_type=media,
         filename=_slug(str(project.get("name", "")), project_id) + ext,
+        background=BackgroundTask(shutil.rmtree, tmp, ignore_errors=True),
+    )
+
+
+async def _export_notes_md(request: Request, project: dict, project_id: int) -> FileResponse:
+    ids = [str(i) for i in project.get("source_ids") or []]
+    papers = await run(request, ["list", "--sort", "added"])
+    by_id = {p.get("source_id"): p for p in papers or [] if isinstance(p, dict)}
+    names: dict[int, str] = {}
+    for status in ("active", "archived"):
+        for p in await run(request, ["project", "list", f"--status={status}"]) or []:
+            if isinstance(p, dict) and isinstance(p.get("id"), int):
+                names[p["id"]] = str(p.get("name") or "")
+
+    def scope(pid: int | None) -> str:
+        if pid is None:
+            return "Global"
+        return names.get(pid) or "Project-scoped"
+
+    files: list[tuple[str, str]] = []
+    used: set[str] = set()
+    for sid in ids:
+        notes = await run(request, ["note", "list", f"--paper-id={ident(sid, 'paper id')}"])
+        notes = [n for n in notes or [] if isinstance(n, dict)]
+        if not notes:
+            continue
+        paper = by_id.get(sid) or {"source_id": sid}
+        base = notes_md.file_name(paper)
+        name, n = f"{base}.md", 2
+        while name.lower() in used:
+            name, n = f"{base} ({n}).md", n + 1
+        used.add(name.lower())
+        files.append((name, notes_md.render(paper, notes, scope)))
+    if not files:
+        raise HTTPException(404, "no paper in this project has notes")
+    tmp = Path(tempfile.mkdtemp(prefix="lxw-export-"))
+    try:
+        path = tmp / "notes.zip"
+        with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as z:
+            for name, text in files:
+                z.writestr(name, text)
+    except BaseException:
+        shutil.rmtree(tmp, ignore_errors=True)
+        raise
+    return FileResponse(
+        path,
+        media_type="application/zip",
+        filename=_slug(str(project.get("name", "")), project_id) + "-notes.zip",
         background=BackgroundTask(shutil.rmtree, tmp, ignore_errors=True),
     )
 

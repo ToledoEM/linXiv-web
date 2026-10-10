@@ -4,6 +4,7 @@ import io
 import zipfile
 from pathlib import Path
 
+from app import notes_md
 from app.cli import CLIError
 
 from .conftest import fixture
@@ -295,3 +296,66 @@ def test_import_cli_rejects_manifest(client, fake):
     r = client.post("/api/projects/import/preview", files={"file": ("p.lxproj", _lxproj(GOOD))})
     assert r.status_code == 400
     assert "not a valid .lxproj" in r.json()["detail"]
+
+
+NOTES_PAPER = {
+    "source_id": "arxiv:2204.12985",
+    "title": 'Deep: Learning "Fast"',
+    "authors": ["Ada Lovelace", "Alan Turing"],
+    "doi": "10.1/xyz",
+    "published": "2022-04-27",
+    "url": "https://arxiv.org/pdf/2204.12985v1",
+    "tags": ["machine learning", "nlp"],
+}
+NOTES = [
+    {
+        "id": 1,
+        "project_id": None,
+        "title": "Key idea",
+        "content": "Uses $x^2$ and **bold**.\n\n",
+        "created_at": "2026-10-01T09:30:00Z",
+        "updated_at": "2026-10-02T10:00:00Z",
+    },
+    {
+        "id": 2,
+        "project_id": 1,
+        "title": " ",
+        "content": "Second.",
+        "created_at": "2026-10-03T08:00:00Z",
+        "updated_at": "2026-10-03T08:00:00Z",
+    },
+]
+
+
+def test_notes_md_matches_golden():
+    text = notes_md.render(NOTES_PAPER, NOTES, lambda pid: "Global" if pid is None else "Disc Proj")
+    golden = (Path(__file__).parent / "fixtures" / "notes-md-golden.md").read_text()
+    assert text == golden
+    assert notes_md.file_name(NOTES_PAPER) == "Deep Learning Fast"
+    assert notes_md.file_name({"source_id": "doi:10.1/a", "title": ""}) == "doi_10.1_a"
+
+
+def test_export_notes_md_zip(client, fake):
+    fake.on("project", "get", result=fixture("project-get.json"))
+    fake.on("list", result=[NOTES_PAPER])
+    fake.on("project", "list", result=[{"id": 1, "name": "Disc Proj"}])
+    fake.on(
+        "note",
+        "list",
+        result=lambda argv: NOTES if argv[-1] == "--paper-id=arxiv:2204.12985" else [],
+    )
+    r = client.get("/api/projects/1/export", params={"format": "notes-md"})
+    assert r.status_code == 200, r.text
+    assert 'filename="disc_proj-notes.zip"' in r.headers["content-disposition"]
+    z = zipfile.ZipFile(io.BytesIO(r.content))
+    assert z.namelist() == ["Deep Learning Fast.md"]
+    assert "*Disc Proj · created" in z.read("Deep Learning Fast.md").decode()
+
+
+def test_export_notes_md_none(client, fake):
+    fake.on("project", "get", result=fixture("project-get.json"))
+    fake.on("list", result=[])
+    fake.on("project", "list", result=[])
+    fake.on("note", "list", result=[])
+    r = client.get("/api/projects/1/export", params={"format": "notes-md"})
+    assert r.status_code == 404

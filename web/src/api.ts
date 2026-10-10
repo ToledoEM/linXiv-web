@@ -62,7 +62,7 @@ export function pdfUrl(sourceId: string): string {
   return `/api/papers/${idPath(sourceId)}/pdf`
 }
 
-export type ExportFormat = 'lxproj' | 'bibtex' | 'obsidian' | 'zotero'
+export type ExportFormat = 'lxproj' | 'bibtex' | 'obsidian' | 'zotero' | 'notes-md'
 
 /** Plain GET download link: the browser streams the file with the session cookie. */
 export function projectExportUrl(id: number, format: ExportFormat, pdfs = false): string {

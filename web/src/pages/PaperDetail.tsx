@@ -257,7 +257,7 @@ export default function PaperDetail() {
           onSaved={() => setNotesTick((n) => n + 1)}
         />
       )}
-      <Notes key={`${sid}:${notesTick}`} sourceId={sid} defaultProjectId={fromProjectId} />
+      <Notes key={`${sid}:${notesTick}`} sourceId={sid} defaultProjectId={fromProjectId} paper={paper} />
 
       <h3>PDF</h3>
       {paper.pdf_file && (
