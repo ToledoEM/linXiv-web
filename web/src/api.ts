@@ -25,6 +25,7 @@ import type {
   Project,
   ProjectInput,
   SavedPdf,
+  SavedPdfView,
   SearchResult,
   SettingsResponse,
   SummaryResult,
@@ -180,7 +181,8 @@ export const api = {
   downloadPdf: (id: string, url?: string) =>
     request('POST', `/api/papers/${idPath(id)}/pdf`, url ? { url } : {}),
   deletePdf: (id: string) => request('DELETE', `/api/papers/${idPath(id)}/pdf`),
-  pdfs: () => request<{ pdfs: SavedPdf[] }>('GET', '/api/pdfs'),
+  pdfs: (view?: SavedPdfView, limit?: number) =>
+    request<{ pdfs: SavedPdf[]; total?: number }>('GET', `/api/pdfs${qs({ view, limit })}`),
   importPdf: (file: File) => {
     const form = new FormData()
     form.append('file', file)

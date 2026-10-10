@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import asyncio
 import os
+import random
 import re
 import tempfile
 from pathlib import Path
+from typing import Literal
 
-from fastapi import APIRouter, HTTPException, Request, UploadFile
+from fastapi import APIRouter, HTTPException, Query, Request, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -105,8 +107,28 @@ async def delete_pdf(request: Request, source_id: str):
 
 
 @router.get("/pdfs")
-async def list_pdfs(request: Request):
-    return await run(request, ["pdf", "list"])
+async def list_pdfs(
+    request: Request,
+    view: Literal["all", "random", "size", "untagged"] = "all",
+    limit: int | None = Query(None, ge=10, le=100),
+):
+    """Saved PDFs (`pdf list`). `view` picks a slice for Home: a random sample,
+    the largest files, or papers with no tags; `limit` caps it (default 10).
+    `all` without a limit returns everything, as before."""
+    out = await run(request, ["pdf", "list"])
+    if view == "all" and limit is None:
+        return out
+    pdfs = [p for p in (out or {}).get("pdfs") or [] if isinstance(p, dict)]
+    n = limit or 10
+    if view == "random":
+        pdfs = random.sample(pdfs, min(n, len(pdfs)))
+    elif view == "size":
+        pdfs.sort(key=lambda p: p.get("size_bytes") or 0, reverse=True)
+    elif view == "untagged":
+        papers = await run(request, ["list", "--sort", "added"])
+        tagged = {p.get("source_id") for p in papers or [] if isinstance(p, dict) and p.get("tags")}
+        pdfs = [p for p in pdfs if p.get("source_id") not in tagged]
+    return {**out, "pdfs": pdfs[:n], "total": len(out.get("pdfs") or [])}
 
 
 @router.get("/pdfs/storage")

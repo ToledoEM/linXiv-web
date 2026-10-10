@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api, idPath } from '../api'
-import type { Paper, SavedPdf, Stats } from '../types'
+import type { Paper, SavedPdf, SavedPdfView, Stats } from '../types'
 import { Authors, ErrorText } from '../components'
 import { formatBytes } from '../format'
 import HomeFeed from '../HomeFeed'
@@ -17,21 +17,65 @@ function tagCounts(papers: Paper[]): { tag: string; count: number }[] {
     .slice(0, 8)
 }
 
+// Home's Saved PDFs slice: which papers and how many, kept per browser.
+const PDF_VIEWS: { value: SavedPdfView; label: string }[] = [
+  { value: 'random', label: 'Random papers' },
+  { value: 'size', label: 'Top by size' },
+  { value: 'untagged', label: 'Untagged' },
+]
+const PDF_COUNTS = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
+const PDF_PREF = 'lxw.homePdfs'
+
+function loadPdfPref(): { view: SavedPdfView; limit: number } {
+  try {
+    const raw = JSON.parse(localStorage.getItem(PDF_PREF) ?? '{}') as { view?: unknown; limit?: unknown }
+    return {
+      view: PDF_VIEWS.some((v) => v.value === raw.view) ? (raw.view as SavedPdfView) : 'random',
+      limit: PDF_COUNTS.includes(raw.limit as number) ? (raw.limit as number) : 10,
+    }
+  } catch {
+    return { view: 'random', limit: 10 }
+  }
+}
+
+function savePdfPref(pref: { view: SavedPdfView; limit: number }) {
+  try {
+    localStorage.setItem(PDF_PREF, JSON.stringify(pref))
+  } catch {
+    // storage unavailable: the choice lasts for this page load only
+  }
+}
+
 type Tile = { label: string; value: string | number; hint: string; to?: string }
 
 export default function Home() {
   const [stats, setStats] = useState<Stats | null>(null)
-  const [pdfs, setPdfs] = useState<SavedPdf[]>([])
+  const [pdfs, setPdfs] = useState<SavedPdf[] | null>(null)
+  const [pdfPref, setPdfPref] = useState(loadPdfPref)
+  const [pdfError, setPdfError] = useState('')
   const [error, setError] = useState('')
 
   useEffect(() => {
-    Promise.all([api.stats(), api.pdfs()])
-      .then(([s, p]) => {
-        setStats(s)
-        setPdfs(p.pdfs)
-      })
+    api
+      .stats()
+      .then(setStats)
       .catch((err) => setError((err as Error).message))
   }, [])
+
+  useEffect(() => {
+    api
+      .pdfs(pdfPref.view, pdfPref.limit)
+      .then((p) => {
+        setPdfs(p.pdfs)
+        setPdfError('')
+      })
+      .catch((err) => setPdfError((err as Error).message))
+  }, [pdfPref])
+
+  const changePdfPref = (next: { view: SavedPdfView; limit: number }) => {
+    savePdfPref(next)
+    setPdfPref(next)
+  }
 
   if (error) return <ErrorText error={error} />
   if (!stats) return <p className="muted">Loading…</p>
@@ -122,9 +166,38 @@ export default function Home() {
         </div>
       </div>
 
-      <h3>Saved PDFs</h3>
-      {pdfs.length === 0 ? (
-        <p className="muted">None yet.</p>
+      <div className="section-head">
+        <h3>Saved PDFs</h3>
+        <div className="toolbar">
+          <select
+            aria-label="Which saved PDFs"
+            value={pdfPref.view}
+            onChange={(e) => changePdfPref({ ...pdfPref, view: e.target.value as SavedPdfView })}
+          >
+            {PDF_VIEWS.map((v) => (
+              <option key={v.value} value={v.value}>
+                {v.label}
+              </option>
+            ))}
+          </select>
+          <select
+            aria-label="How many"
+            value={pdfPref.limit}
+            onChange={(e) => changePdfPref({ ...pdfPref, limit: Number(e.target.value) })}
+          >
+            {PDF_COUNTS.map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+      <ErrorText error={pdfError} />
+      {pdfs === null ? (
+        <p className="muted">Loading…</p>
+      ) : pdfs.length === 0 ? (
+        <p className="muted">{pdfPref.view === 'untagged' ? 'No untagged papers with a PDF.' : 'None yet.'}</p>
       ) : (
         <div className="table-wrap">
           <table>

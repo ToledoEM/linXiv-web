@@ -132,6 +132,39 @@ def test_stats_and_pdf_list(client, fake):
     assert client.get("/api/pdfs").json()["pdfs"][0]["size_bytes"] == 2215244
 
 
+def _pdf_rows(n):
+    return {
+        "pdfs": [
+            {"source_id": f"local:p{i}", "title": f"P{i}", "version": 1, "size_bytes": i * 10}
+            for i in range(n)
+        ]
+    }
+
+
+def test_pdf_list_views(client, fake):
+    fake.on("pdf", "list", result=_pdf_rows(30))
+    by_size = client.get("/api/pdfs", params={"view": "size", "limit": 10}).json()
+    assert [p["size_bytes"] for p in by_size["pdfs"]] == [i * 10 for i in range(29, 19, -1)]
+    assert by_size["total"] == 30
+    rand = client.get("/api/pdfs", params={"view": "random", "limit": 20}).json()["pdfs"]
+    assert len(rand) == 20 and len({p["source_id"] for p in rand}) == 20
+    fake.on(
+        "list",
+        result=[{"source_id": f"local:p{i}", "tags": ["x"] if i % 2 else []} for i in range(30)],
+    )
+    untagged = client.get("/api/pdfs", params={"view": "untagged"}).json()["pdfs"]
+    assert [p["source_id"] for p in untagged] == [f"local:p{i}" for i in range(0, 20, 2)]
+    assert len(client.get("/api/pdfs").json()["pdfs"]) == 30
+
+
+def test_pdf_list_limit_bounds(client, fake):
+    fake.on("pdf", "list", result=_pdf_rows(3))
+    assert client.get("/api/pdfs", params={"limit": 9}).status_code == 422
+    assert client.get("/api/pdfs", params={"limit": 101}).status_code == 422
+    assert client.get("/api/pdfs", params={"view": "odd"}).status_code == 422
+    assert len(client.get("/api/pdfs", params={"view": "random", "limit": 10}).json()["pdfs"]) == 3
+
+
 # --- PDFs ---
 
 

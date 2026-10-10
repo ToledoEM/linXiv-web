@@ -49,6 +49,8 @@ export interface PaperVersions {
   versions: Paper[]
 }
 
+export type SavedPdfView = 'all' | 'random' | 'size' | 'untagged'
+
 export interface SavedPdf {
   source_id: string
   title: string

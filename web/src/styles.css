@@ -306,6 +306,7 @@ textarea { resize: vertical; width: 100%; }
 .paper-table .col-tags-wide { width: 22rem; }
 .tags-cell { display: flex; flex-wrap: wrap; }
 .tags-cell .pill { max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: inline-block; }
+.section-head .toolbar { margin-bottom: 0; }
 .column-widths { display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; }
 .doi-line { margin-top: 0.15rem; text-decoration: none; }
 .doi-line:hover { text-decoration: underline; }
