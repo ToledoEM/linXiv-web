@@ -160,6 +160,7 @@ Open http://127.0.0.1:8086 (or `http://<machine-ip>:8086` with `LINXIV_WEB_BIND=
 | `LINXIV_WEB_PASSWORD` | none | Plain password, hashed in memory at startup (dev only) |
 | `LINXIV_WEB_SECRET_KEY` | generated, kept in `<data dir>/linxiv-web-state.db` | Session signing key. Changing it logs everyone out |
 | `LINXIV_WEB_COOKIE_SECURE` | `false` | Set to `true` behind HTTPS |
+| `LINXIV_WEB_HSTS` | `false` | Send `Strict-Transport-Security` (1 year). Only behind HTTPS: browsers then refuse plain HTTP to this host |
 | `LINXIV_WEB_REMEMBER_DAYS` | `90` | Login lifetime when "Remember me" is ticked (otherwise the login lasts until the browser closes, at most 14 days) |
 | `LINXIV_WEB_DATA_DIR` | `/data` | linXiv data dir (`papers.db`). Passed to the CLI and MCP server as `LINXIV_DATA_DIR` |
 | `LINXIV_WEB_PDF_DIR` | `/pdfs` | PDF directory, symlinked from `<data dir>/pdfs` |
@@ -172,6 +173,7 @@ Open http://127.0.0.1:8086 (or `http://<machine-ip>:8086` with `LINXIV_WEB_BIND=
 | `ARXIV_MAILTO`, `CROSSREF_MAILTO`, `OPENALEX_MAILTO` | none | Contact addresses sent to those services; override the values set in Settings |
 | `NCBI_API_KEY` | none | PubMed key; overrides the one set in Settings |
 | `GEMINI_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GENAI_API_KEY_TAG_GEN` | none | AI provider keys (the last one is for the OpenAI-compatible endpoint); override the ones set in Settings |
+| `LINXIV_WEB_AI_ALLOWED_HOSTS` | none | Comma-separated host names the OpenAI-compatible base URL may use. Unset: any host except cloud metadata addresses (`169.254.0.0/16`, `fd00:ec2::254`, `100.100.100.200`), which are always refused |
 
 Keys entered in Settings are stored in the linXiv settings store and are never sent back to the browser (only their last 4 characters).
 
@@ -220,6 +222,9 @@ All routes except `/api/health`, `/api/login`, `/api/me` and `/mcp` need a sessi
 |---|---|
 | `POST /api/password` `{current, new, remember?}` | Change the stored admin password (409 when it comes from `LINXIV_WEB_PASSWORD(_HASH)`); logs out every other session |
 | `POST /api/sessions/revoke-others` | Log out every session except the caller's; returns `{revoked}` |
+| `GET /api/activity?limit`, `GET /api/activity/export` | Activity log, newest first / as CSV: every POST/PUT/PATCH/DELETE under `/api/` with time, client address, route, path parameters, status (Settings saves: key names only). Kept in `<data dir>/logs/activity.jsonl`, 5 MiB + one rotated file |
+| `DELETE /api/activity` `{confirm: "delete activity log"}` | Clear the activity log (the clear is recorded) |
+| `GET /api/system/diagnostics` | Markdown report for bug reports: versions, configuration, library counts, disk, health, running jobs, DNS + TCP 443 reachability of outside services. Secrets and addresses that could locate the server only as set / not set |
 | `GET /api/search?q&source=arxiv\|openalex\|crossref&max` | `search` |
 | `POST /api/papers/{id}/fetch?source=` | `fetch`, then `paper get` |
 | `GET /api/papers?q&tag&pdf=has\|none&fulltext&limit&offset&category&sort&dir` | `list` filtered server-side; a `q` of 3+ characters also runs `paper search` (TeX full text and notes), hits flagged `deep_match`; `fulltext=true` returns only the `paper search` hits. Each paper also gets `pdf_file` (its PDF's path inside the PDF folder) and `title_suspect` (the title looks like junk read from the PDF, or unlike the file name) |

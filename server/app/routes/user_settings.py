@@ -14,6 +14,7 @@ from fastapi import APIRouter, Request
 from pydantic import BaseModel, ConfigDict, Field
 
 from .. import logs
+from ..activity import note_fields
 from .common import run
 from .feed import clear_feed_cache
 from .mcp import settings_changed as mcp_settings_changed
@@ -163,6 +164,7 @@ async def get_settings(request: Request):
 @router.patch("/settings")
 async def update_settings(request: Request, body: SettingsPatch):
     patch = body.model_dump(exclude_none=True)
+    note_fields(request, patch)  # key names only, never values (API keys)
     for key, value in patch.items():
         # The CLI JSON-parses the value, so bools/ints go as JSON; an email is
         # never valid JSON and stays a string.

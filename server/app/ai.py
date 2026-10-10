@@ -9,11 +9,15 @@ report the exception type only.
 
 from __future__ import annotations
 
+import asyncio
+import ipaddress
 import json
+import os
 import re
+import socket
 from dataclasses import dataclass
 from typing import Any
-from urllib.parse import quote
+from urllib.parse import quote, urlsplit
 
 import httpx
 
@@ -86,6 +90,39 @@ def config_from(stored: dict) -> AIConfig:
     return AIConfig(provider, (stored.get("genai_model") or "").strip(), key, base_url)
 
 
+# The OpenAI-compatible base URL may point at the LAN (LM Studio, Ollama), so only
+# addresses that are never an AI server are refused: cloud instance metadata.
+METADATA_NETS = [
+    ipaddress.ip_network(n) for n in ("169.254.0.0/16", "fd00:ec2::254/128", "100.100.100.200/32")
+]
+
+
+def _allowed_hosts() -> set[str]:
+    raw = os.environ.get("LINXIV_WEB_AI_ALLOWED_HOSTS", "")
+    return {h.strip().lower() for h in raw.split(",") if h.strip()}
+
+
+async def check_base_url(url: str) -> None:
+    """Refuse a generic base URL whose host resolves to cloud metadata, or that is
+    not in LINXIV_WEB_AI_ALLOWED_HOSTS when that list is set."""
+    host = (urlsplit(url).hostname or "").lower()
+    if not host:
+        raise AIError("The AI base URL has no host.", 400)
+    allowed = _allowed_hosts()
+    if allowed and host not in allowed:
+        raise AIError(f"AI host {host!r} is not in LINXIV_WEB_AI_ALLOWED_HOSTS.", 400)
+    try:
+        infos = await asyncio.get_running_loop().getaddrinfo(host, None, type=socket.SOCK_STREAM)
+    except OSError as e:
+        raise AIError(f"Cannot resolve AI host {host!r}") from e
+    for info in infos:
+        ip = ipaddress.ip_address(str(info[4][0]).split("%", 1)[0])
+        if isinstance(ip, ipaddress.IPv6Address) and ip.ipv4_mapped:
+            ip = ip.ipv4_mapped
+        if any(ip in net for net in METADATA_NETS):
+            raise AIError(f"AI host {host!r} resolves to a blocked address ({ip}).", 400)
+
+
 def _http() -> httpx.AsyncClient:
     # No redirects: a key must never follow a redirect to another host.
     return httpx.AsyncClient(
@@ -108,6 +145,8 @@ def _redact(text: str, cfg: AIConfig) -> str:
 
 
 async def _call(cfg: AIConfig, method: str, url: str, body: dict | None = None) -> Any:
+    if cfg.provider == "generic":
+        await check_base_url(url)
     try:
         async with _http() as client:
             timeout = GENERIC_TIMEOUT if cfg.provider == "generic" else TIMEOUT

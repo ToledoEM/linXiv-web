@@ -23,7 +23,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from ..cli import CLIError
 from ..jobs import Job, JobBusy, Jobs
-from ..pdf_text import PdfTextError, extract_text
+from ..pdf_text import PdfTextError, extract_text_async
 from .common import ident, run
 from .pdfs import _inside
 
@@ -89,7 +89,7 @@ async def index_pdf_text(app: FastAPI, source_id: str) -> dict:
     if not _inside(path, [s.data_dir, s.pdf_dir]) or not path.is_file():
         raise PdfTextFailed("PDF file missing on disk")
     try:
-        text, truncated = await asyncio.to_thread(extract_text, path, PDF_MAX_PAGES, PDF_MAX_CHARS)
+        text, truncated = await extract_text_async(path, PDF_MAX_PAGES, PDF_MAX_CHARS)
     except PdfTextError as e:
         raise PdfTextFailed(str(e)) from e
     if not text.strip():

@@ -195,6 +195,48 @@ def test_models_generic_without_key(client, fake, monkeypatch):
     assert "authorization" not in seen[0].headers
 
 
+# ---- generic base URL: cloud metadata refused, LAN allowed ----
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "http://169.254.169.254/v1",
+        "http://[fd00:ec2::254]/v1",
+        "http://100.100.100.200/v1",
+        "http://[::ffff:169.254.169.254]/v1",
+    ],
+)
+def test_generic_base_url_metadata_refused(client, fake, monkeypatch, url):
+    seen: list = []
+    _mock(monkeypatch, lambda req: httpx.Response(200, json={"data": []}), seen)
+    fake.on("settings", "get", result={**_stored("generic"), "genai_base_url": url})
+    r = client.get("/api/ai/models")
+    assert r.status_code == 400
+    assert "blocked address" in r.json()["detail"]
+    assert seen == []  # nothing sent, key included
+
+
+@pytest.mark.parametrize("host", ["127.0.0.1", "10.0.0.7", "192.168.1.5", "[::1]"])
+def test_generic_base_url_lan_allowed(host):
+    asyncio.run(ai.check_base_url(f"http://{host}:1234/v1/models"))
+
+
+def test_generic_allowed_hosts_env(monkeypatch):
+    monkeypatch.setenv("LINXIV_WEB_AI_ALLOWED_HOSTS", "192.168.1.5, llm.lan")
+    asyncio.run(ai.check_base_url("http://192.168.1.5:1234/v1/models"))
+    with pytest.raises(ai.AIError, match="LINXIV_WEB_AI_ALLOWED_HOSTS"):
+        asyncio.run(ai.check_base_url("http://10.0.0.7:1234/v1/models"))
+
+
+def test_hosted_providers_skip_base_url_check(client, fake, monkeypatch):
+    monkeypatch.setenv("LINXIV_WEB_AI_ALLOWED_HOSTS", "only.this.lan")
+    seen: list = []
+    _mock(monkeypatch, lambda req: httpx.Response(200, json={"data": [{"id": "gpt-x"}]}), seen)
+    fake.on("settings", "get", result=_stored("openai"))
+    assert client.get("/api/ai/models").status_code == 200
+
+
 # ---- errors ----
 
 
@@ -590,6 +632,35 @@ def test_summary_nothing_to_send_and_bad_reply(client, fake, monkeypatch):
 def test_summary_refused_when_off(client, fake):
     fake.on("settings", "get", result={**_stored("openai"), "ai_enabled": False})
     assert client.post("/api/ai/summary/p1").status_code == 409
+
+
+def test_extract_text_runs_at_most_two_at_once(monkeypatch, tmp_path):
+    import threading
+    import time
+
+    from app import pdf_text
+
+    running = peak = 0
+    lock = threading.Lock()
+
+    def slow(path, max_pages, max_chars):
+        nonlocal running, peak
+        with lock:
+            running += 1
+            peak = max(peak, running)
+        time.sleep(0.05)
+        with lock:
+            running -= 1
+        return "t", False
+
+    monkeypatch.setattr(pdf_text, "extract_text", slow)
+    monkeypatch.setattr(pdf_text, "_slots", asyncio.Semaphore(pdf_text.MAX_PARALLEL))
+
+    async def many():
+        return await asyncio.gather(*(pdf_text.extract_text_async(tmp_path) for _ in range(6)))
+
+    assert asyncio.run(many()) == [("t", False)] * 6
+    assert peak == pdf_text.MAX_PARALLEL == 2
 
 
 def test_extract_text_caps(tmp_path):

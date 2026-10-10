@@ -3,6 +3,7 @@ character cap, so a huge or hostile PDF can't stall the server."""
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from pathlib import Path
 
@@ -44,3 +45,17 @@ def extract_text(
     except Exception as e:  # pypdf raises many types on malformed files
         raise PdfTextError(f"could not read the PDF ({type(e).__name__})") from e
     return "\n\n".join(parts)[:max_chars], truncated
+
+
+# pypdf is CPU-bound and can hold a lot of memory on big files: at most this many
+# extractions run at once (AI summary, PDF full-text index); the rest wait.
+MAX_PARALLEL = 2
+_slots = asyncio.Semaphore(MAX_PARALLEL)
+
+
+async def extract_text_async(
+    path: Path, max_pages: int = MAX_PAGES, max_chars: int = MAX_CHARS
+) -> tuple[str, bool]:
+    """extract_text in a worker thread, at most MAX_PARALLEL at a time."""
+    async with _slots:
+        return await asyncio.to_thread(extract_text, path, max_pages, max_chars)

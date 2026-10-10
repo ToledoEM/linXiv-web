@@ -88,6 +88,9 @@ COPY --from=cli-build /out/linxiv /usr/local/bin/linxiv
 # MCP server (stdio); the web server bridges it to /mcp when enabled in Settings.
 COPY --from=cli-build /out/linxiv-mcp /usr/local/bin/linxiv-mcp
 COPY --from=cli-build /out/libpdfium.so /usr/local/lib/pdfium/libpdfium.so
+# linXiv version the CLI was built from, shown in Settings → About diagnostics.
+ARG LINXIV_REF
+ENV LINXIV_WEB_LINXIV_REF=${LINXIV_REF}
 
 WORKDIR /app/server
 COPY server/pyproject.toml server/uv.lock ./

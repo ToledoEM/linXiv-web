@@ -49,6 +49,8 @@ class Settings:
     allow_external: bool = False
     # Reverse proxies (IPs or CIDRs) whose X-Forwarded-For is believed.
     trusted_proxies: tuple[str, ...] = ()
+    # Send Strict-Transport-Security (only when served over HTTPS).
+    hsts: bool = False
 
     @property
     def auth_enabled(self) -> bool:
@@ -76,6 +78,7 @@ def load() -> Settings:
         remember_days=max(1, int(os.environ.get("LINXIV_WEB_REMEMBER_DAYS", "90"))),
         log_level=os.environ.get("LINXIV_WEB_LOG_LEVEL", "info").strip().lower() or "info",
         allow_external=_bool("LINXIV_WEB_ALLOW_EXTERNAL"),
+        hsts=_bool("LINXIV_WEB_HSTS"),
         trusted_proxies=tuple(
             p.strip()
             for p in os.environ.get("LINXIV_WEB_TRUSTED_PROXIES", "").split(",")

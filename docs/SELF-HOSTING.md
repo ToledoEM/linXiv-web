@@ -162,6 +162,7 @@ Keep `LINXIV_WEB_BIND=127.0.0.1` and let the proxy on the same host forward to i
 
 ```sh
 LINXIV_WEB_COOKIE_SECURE=true
+LINXIV_WEB_HSTS=true   # optional: browsers stop using plain HTTP for this host
 ```
 
 The proxy must pass the original `Host` header: linXiv-web rejects writes whose `Origin` doesn't match the host it sees.

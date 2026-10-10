@@ -8,8 +8,9 @@ import shutil
 from pathlib import Path
 
 from fastapi import APIRouter, Request
+from fastapi.responses import PlainTextResponse
 
-from .. import logs
+from .. import diagnostics, logs
 from ..cli import CLIError
 from ..pdf_layout import storage_bytes
 from .common import run, settings
@@ -133,3 +134,30 @@ async def system_status(request: Request):
             issues.append({"level": "info", "message": msg})
 
     return {"disk": disk, "issues": issues}
+
+
+@router.get("/system/diagnostics")
+async def system_diagnostics(request: Request):
+    """Markdown report for bug reports; secrets and locating addresses only as set/unset."""
+    try:
+        out = await run(request, ["settings", "get"])
+        stored = out if isinstance(out, dict) else {}
+    except CLIError:
+        stored = {}
+    try:
+        stats = await run(request, ["stats"])
+    except CLIError:
+        stats = None
+    status = await system_status(request)
+    results = await asyncio.gather(*(diagnostics.reach(h) for h in diagnostics.SERVICES))
+    text = diagnostics.render(
+        version=request.app.version,
+        settings=settings(request),
+        login_from=request.app.state.auth.login_from,
+        stored=stored,
+        stats=stats if isinstance(stats, dict) else None,
+        status=status,
+        jobs=[j.public() for j in request.app.state.jobs.list() if j.state == "running"],
+        reachability=dict(zip(diagnostics.SERVICES, results, strict=True)),
+    )
+    return PlainTextResponse(text, media_type="text/markdown; charset=utf-8")

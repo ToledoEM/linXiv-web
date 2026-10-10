@@ -8,7 +8,6 @@ the user accepts through the normal tag routes.
 
 from __future__ import annotations
 
-import asyncio
 import json
 import re
 import time
@@ -16,7 +15,7 @@ import time
 from fastapi import APIRouter, HTTPException, Request
 
 from .. import ai
-from ..pdf_text import PdfTextError, extract_text
+from ..pdf_text import PdfTextError, extract_text_async
 from .common import ident, run
 from .pdfs import managed_pdf_path
 
@@ -279,7 +278,7 @@ async def summarize(request: Request, source_id: str, pdf: bool = False):
     if pdf:
         path = await managed_pdf_path(request, sid)
         try:
-            body, truncated = await asyncio.to_thread(extract_text, path)
+            body, truncated = await extract_text_async(path)
         except PdfTextError as e:
             raise HTTPException(status_code=422, detail=str(e)) from e
         if not body.strip():

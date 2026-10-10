@@ -15,12 +15,14 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from . import logs
 from . import settings as settings_mod
+from .activity import ActivityLog
 from .auth import Auth, require_auth
 from .cli import CLIError, LinxivCLI, Runner
 from .fulltext_worker import FullTextWorker
 from .jobs import Jobs
 from .mcp_bridge import McpBridge
 from .netguard import ClientGuard, parse_networks
+from .routes import activity as activity_routes
 from .routes import (
     add,
     ai,
@@ -52,13 +54,26 @@ log = logging.getLogger("app")
 access_log = logging.getLogger("app.access")
 # Polled or static: not worth a line each.
 ACCESS_SKIP = ("/api/health", "/assets/")
+# Read-only job polling (activity tray, Settings cards); starting/cancelling is logged.
+ACCESS_SKIP_GET = ("/api/jobs",)
 
 
 class SecurityHeaders(BaseHTTPMiddleware):
+    def __init__(self, app, *, hsts: bool = False):
+        super().__init__(app)
+        self.hsts = hsts
+
     async def dispatch(self, request, call_next):
         response = await call_next(request)
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["Referrer-Policy"] = "same-origin"
+        # The app needs none of these browser features.
+        response.headers["Permissions-Policy"] = (
+            "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+        )
+        if self.hsts:
+            # Only when served over HTTPS (LINXIV_WEB_HSTS): browsers then refuse plain HTTP.
+            response.headers["Strict-Transport-Security"] = "max-age=31536000"
         # The PDF viewer embeds /api/papers/*/pdf in a same-origin <iframe>.
         response.headers["X-Frame-Options"] = "SAMEORIGIN"
         response.headers.setdefault(
@@ -74,7 +89,9 @@ class AccessLog(BaseHTTPMiddleware):
 
     async def dispatch(self, request, call_next):
         path = request.url.path
-        if path.startswith(ACCESS_SKIP):
+        if path.startswith(ACCESS_SKIP) or (
+            request.method == "GET" and path.startswith(ACCESS_SKIP_GET)
+        ):
             return await call_next(request)
         start = time.monotonic()
         status = 500
@@ -141,7 +158,8 @@ def create_app(
         [settings.mcp_bin], {"LINXIV_DATA_DIR": str(settings.data_dir)}, settings.timeout_long * 2
     )
     app.state.mcp_conf = None
-    app.add_middleware(SecurityHeaders)
+    app.add_middleware(SecurityHeaders, hsts=settings.hsts)
+    app.add_middleware(ActivityLog, data_dir=settings.data_dir)
     app.add_middleware(AccessLog)
     # Outermost: refused public clients never reach the access log (a scanner
     # could fill it); ClientGuard logs them itself, rate-limited.
@@ -162,6 +180,12 @@ def create_app(
         if exc.status_code >= 500:
             log.warning("%s %s: %s", request.method, request.url.path, exc.detail)
         return await http_exception_handler(request, exc)
+
+    @app.exception_handler(Exception)
+    async def _unexpected(_: Request, exc: Exception):
+        # The traceback reaches the app log through uvicorn; the client gets JSON
+        # (api.ts reads `detail`) and no internals.
+        return JSONResponse({"detail": "internal server error"}, status_code=500)
 
     @app.get("/api/health")
     async def health():
@@ -192,6 +216,7 @@ def create_app(
     app.include_router(versions.router, dependencies=guarded)
     app.include_router(sources.router, dependencies=guarded)
     app.include_router(log_routes.router, dependencies=guarded)
+    app.include_router(activity_routes.router, dependencies=guarded)
     # Before library: its GET /papers/{id:path} would swallow .../lookup.
     app.include_router(metadata.router, dependencies=guarded)
     app.include_router(library.router, dependencies=guarded)

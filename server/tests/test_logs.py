@@ -127,6 +127,15 @@ def test_upstream_5xx_detail_is_logged(client, fake, settings, monkeypatch):
     assert "WARNING app.access: GET /api/papers/doi:10.1101/x/lookup 502" in text
 
 
+def test_job_polling_not_in_access_log(client, settings):
+    client.get("/api/jobs")
+    client.get("/api/jobs/999")
+    client.post("/api/jobs/999/cancel")
+    text = _log_file(settings.data_dir).read_text()
+    assert "GET /api/jobs" not in text
+    assert "POST /api/jobs/999/cancel" in text
+
+
 def test_cli_failure_logged_with_redacted_args(settings, tmp_path):
     logs.setup(settings.data_dir, "debug")
     script = tmp_path / "fail.sh"
