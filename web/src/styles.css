@@ -290,20 +290,8 @@ textarea { resize: vertical; width: 100%; }
 .check-col { width: 2rem; padding-right: 0; }
 /* Paper tables (Library, project, reading list): full width, fixed layout, sizes from Settings → Appearance. */
 .content:has(.paper-table) { max-width: none; }
-.paper-table { table-layout: fixed; min-width: 40rem; }
+.paper-table { table-layout: fixed; }
 .paper-table td { overflow-wrap: anywhere; }
-.paper-table .col-check { width: 2.4rem; }
-.paper-table .col-published { width: 7.5rem; }
-.paper-table .col-pdf { width: 4.5rem; }
-.paper-table .col-authors-narrow { width: 9rem; }
-.paper-table .col-authors-normal { width: 14rem; }
-.paper-table .col-authors-wide { width: 20rem; }
-.paper-table .col-category-narrow { width: 8rem; }
-.paper-table .col-category-normal { width: 12rem; }
-.paper-table .col-category-wide { width: 18rem; }
-.paper-table .col-tags-narrow { width: 9rem; }
-.paper-table .col-tags-normal { width: 14rem; }
-.paper-table .col-tags-wide { width: 22rem; }
 .tags-cell { display: flex; flex-wrap: wrap; }
 .tags-cell .pill { max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: inline-block; }
 .section-head .toolbar { margin-bottom: 0; }

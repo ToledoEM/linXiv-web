@@ -18,7 +18,7 @@ import {
 } from '../paperSort'
 import { AddToProjectBar } from '../projectParts'
 import { toggled } from '../projects'
-import { useTableColumns } from '../tableColumns'
+import { tableMinWidth, useTableColumns } from '../tableColumns'
 import { MathText } from '../tex'
 
 /** Selection bar action: BibTeX for the selected papers. */
@@ -258,7 +258,7 @@ export default function Library() {
           {papers && papers.length === 0 && <p className="muted">No papers.</p>}
           {papers && papers.length > 0 && (
             <div className="table-wrap">
-              <table className="paper-table">
+              <table className="paper-table" style={{ minWidth: tableMinWidth(cols) }}>
                 <PaperColGroup cols={cols} />
                 <thead>
                   <tr>

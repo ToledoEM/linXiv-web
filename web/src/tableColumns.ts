@@ -92,5 +92,25 @@ export function useTableColumns(): TableColumns {
   return cols
 }
 
-/** Class for a sized column's `<col>`: `col-authors-wide` etc. */
-export const colClass = (cols: TableColumns, key: WidthKey) => `col-${key}-${cols.width[key]}`
+/** Column widths in rem. Title has none: it takes what is left, at least TITLE_MIN. */
+export const FIXED_REM = { check: 2.4, published: 7.5, pdf: 4.5 }
+export const WIDTH_REM: Record<WidthKey, Record<ColumnWidth, number>> = {
+  authors: { narrow: 9, normal: 14, wide: 20 },
+  category: { narrow: 8, normal: 12, wide: 18 },
+  tags: { narrow: 9, normal: 14, wide: 22 },
+}
+const TITLE_MIN = 18
+
+export const colRem = (cols: TableColumns, key: WidthKey) => WIDTH_REM[key][cols.width[key]]
+
+/** Table min width: shown columns + room for the title, so a narrow area (batch
+ *  panel open) scrolls the table sideways instead of squeezing Title to nothing. */
+export function tableMinWidth(cols: TableColumns): string {
+  let rem = FIXED_REM.check + TITLE_MIN
+  if (cols.show.authors) rem += colRem(cols, 'authors')
+  if (cols.show.published) rem += FIXED_REM.published
+  if (cols.show.category) rem += colRem(cols, 'category')
+  if (cols.show.tags) rem += colRem(cols, 'tags')
+  if (cols.show.pdf) rem += FIXED_REM.pdf
+  return `${rem}rem`
+}

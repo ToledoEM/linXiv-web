@@ -5,7 +5,7 @@ import { DoiLine, ErrorText, PaperColGroup, SortHeader, TagCell } from '../compo
 import { loadSort, nextSort, parsePaperSort, saveSort, sortPapers, type PaperSortKey } from '../paperSort'
 import { DeleteButton, ProjectForm, Swatch } from '../projectParts'
 import { failedMessage, isReadingList, READING_LIST_TAG, toggled } from '../projects'
-import { useTableColumns, type ColumnKey } from '../tableColumns'
+import { tableMinWidth, useTableColumns, type ColumnKey } from '../tableColumns'
 import { MathText } from '../tex'
 import type { Paper, Project, ProjectInput } from '../types'
 
@@ -341,7 +341,7 @@ export default function ProjectDetail() {
         <p className="muted">No papers in this project. Add papers from your library to start organizing it.</p>
       ) : (
         <div className="table-wrap">
-          <table className="paper-table">
+          <table className="paper-table" style={{ minWidth: tableMinWidth(cols) }}>
             <PaperColGroup cols={cols} />
             <thead>
               <tr>

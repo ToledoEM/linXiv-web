@@ -1,4 +1,4 @@
-import { colClass, type TableColumns } from './tableColumns'
+import { colRem, FIXED_REM, type TableColumns } from './tableColumns'
 
 export function Authors({ authors, max = 6 }: { authors: string[]; max?: number }) {
   if (!authors?.length) return null
@@ -39,13 +39,13 @@ export function ErrorText({ error }: { error?: string }) {
 export function PaperColGroup({ cols }: { cols: TableColumns }) {
   return (
     <colgroup>
-      <col className="col-check" />
+      <col style={{ width: `${FIXED_REM.check}rem` }} />
       <col />
-      {cols.show.authors && <col className={colClass(cols, 'authors')} />}
-      {cols.show.published && <col className="col-published" />}
-      {cols.show.category && <col className={colClass(cols, 'category')} />}
-      {cols.show.tags && <col className={colClass(cols, 'tags')} />}
-      {cols.show.pdf && <col className="col-pdf" />}
+      {cols.show.authors && <col style={{ width: `${colRem(cols, 'authors')}rem` }} />}
+      {cols.show.published && <col style={{ width: `${FIXED_REM.published}rem` }} />}
+      {cols.show.category && <col style={{ width: `${colRem(cols, 'category')}rem` }} />}
+      {cols.show.tags && <col style={{ width: `${colRem(cols, 'tags')}rem` }} />}
+      {cols.show.pdf && <col style={{ width: `${FIXED_REM.pdf}rem` }} />}
     </colgroup>
   )
 }
