@@ -68,7 +68,7 @@ export default function Graph() {
     } catch {
       // storage unavailable: preference lasts for this page load only
     }
-    load(hideSingle)
+    void load(hideSingle)
   }, [hideSingle, load])
 
   const index = useMemo(() => (view ? indexView(view) : null), [view])
@@ -128,7 +128,7 @@ export default function Graph() {
         return
       }
       const sid = index?.paperById.get(id)?.source_id
-      if (sid) navigate(`/paper/${idPath(sid)}`)
+      if (sid) void navigate(`/paper/${idPath(sid)}`)
     },
     [index, navigate],
   )

@@ -22,7 +22,7 @@ export default function FeedRules() {
       .catch((err) => setError((err as Error).message))
 
   useEffect(() => {
-    load()
+    void load()
   }, [])
 
   const run = async (fn: () => Promise<unknown>) => {
@@ -42,7 +42,7 @@ export default function FeedRules() {
     e.preventDefault()
     const k = keywords.trim()
     if (!k || busy) return
-    run(async () => {
+    void run(async () => {
       await api.addFeedRule({ field, keywords: k, action })
       setKeywords('')
     })

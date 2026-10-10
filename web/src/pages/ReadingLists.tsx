@@ -77,7 +77,7 @@ export default function ReadingLists() {
   }, [showArchived])
 
   useEffect(() => {
-    load()
+    void load()
   }, [load])
 
   const act = async (fn: () => Promise<unknown>) => {

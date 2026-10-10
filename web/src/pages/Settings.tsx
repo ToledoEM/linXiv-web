@@ -159,7 +159,7 @@ export default function Settings() {
     e.preventDefault()
     const keys = changed(id)
     if (!keys.length) return
-    run(id, () => api.updateSettings(Object.fromEntries(keys.map((k) => [k, draft[k]]))), 'Saved.')
+    void run(id, () => api.updateSettings(Object.fromEntries(keys.map((k) => [k, draft[k]]))), 'Saved.')
   }
 
   const saveBar = (id: SectionId): ReactNode => {
@@ -498,7 +498,7 @@ export default function Settings() {
   // Picking a group by hand takes over the URL so a reload doesn't jump back to a stale hash.
   const select = (id: GroupId) => {
     setActive(id)
-    if (hash !== '') navigate({ pathname, search }, { replace: true })
+    if (hash !== '') void navigate({ pathname, search }, { replace: true })
   }
 
   return (

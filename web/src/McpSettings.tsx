@@ -69,7 +69,7 @@ export default function McpSettings({
   )
 
   useEffect(() => {
-    load()
+    void load()
   }, [load, saved.mcp_enabled, saved.mcp_profile])
 
   const run = async (fn: () => Promise<void>) => {
@@ -141,7 +141,7 @@ export default function McpSettings({
               onClick={() => {
                 if (!armed) return setArmed(true)
                 setArmed(false)
-                run(async () => {
+                void run(async () => {
                   await api.mcpRevokeToken()
                   setToken('')
                 })

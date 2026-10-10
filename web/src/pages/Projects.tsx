@@ -93,7 +93,7 @@ export default function Projects() {
   }, [showArchived])
 
   useEffect(() => {
-    load()
+    void load()
   }, [load])
 
   const act = async (p: Project, action: 'archive' | 'restore' | 'delete') => {

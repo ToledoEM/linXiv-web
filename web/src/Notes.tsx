@@ -55,7 +55,7 @@ function NoteEditor({
   }
 
   return (
-    <div className="card note-editor" onKeyDown={submitOnCtrlEnter(save)}>
+    <div className="card note-editor" onKeyDown={submitOnCtrlEnter(() => void save())}>
       <label className="field">
         <span>Scope</span>
         {initial || projects.length === 0 ? (
@@ -208,7 +208,7 @@ export default function Notes({
   }, [sourceId])
 
   useEffect(() => {
-    load()
+    void load()
   }, [load])
 
   const saved = async () => {

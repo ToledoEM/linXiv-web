@@ -124,7 +124,7 @@ export default function AuthorDetail() {
   }, [authorId])
 
   useEffect(() => {
-    load()
+    void load()
   }, [load])
 
   const pickerMatches = useMemo(() => {
@@ -158,7 +158,7 @@ export default function AuthorDetail() {
     setError('')
     try {
       await api.deleteAuthor(authorId)
-      navigate('/authors')
+      void navigate('/authors')
     } catch (err) {
       setError((err as Error).message)
       setBusy(false)
@@ -195,7 +195,7 @@ export default function AuthorDetail() {
           onCancel={() => setEditing(false)}
           onSaved={() => {
             setEditing(false)
-            load()
+            void load()
           }}
         />
       ) : (
@@ -259,7 +259,7 @@ export default function AuthorDetail() {
             <button
               className={armed === 'merge:orcid' ? 'danger armed' : ''}
               disabled={busy}
-              onClick={armOr('merge:orcid', () => merge(orcidDupes.map((a) => a.author_id)))}
+              onClick={armOr('merge:orcid', () => void merge(orcidDupes.map((a) => a.author_id)))}
             >
               {armed === 'merge:orcid'
                 ? 'Confirm merge: cannot be undone'
@@ -317,7 +317,7 @@ export default function AuthorDetail() {
           <button
             className={armed === 'merge:picker' ? 'danger armed' : ''}
             disabled={busy || picked.length === 0}
-            onClick={armOr('merge:picker', () => merge(picked))}
+            onClick={armOr('merge:picker', () => void merge(picked))}
           >
             {busy
               ? 'Merging…'
@@ -338,7 +338,7 @@ export default function AuthorDetail() {
         <button
           className={armed === 'delete' ? 'danger armed' : 'danger'}
           disabled={busy || linked > 0}
-          onClick={armOr('delete', remove)}
+          onClick={armOr('delete', () => void remove())}
         >
           {armed === 'delete' ? 'Confirm delete' : 'Delete author'}
         </button>

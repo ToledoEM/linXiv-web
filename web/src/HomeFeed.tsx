@@ -130,7 +130,7 @@ export default function HomeFeed() {
   }, [])
 
   useEffect(() => {
-    load()
+    void load()
   }, [load])
 
   if (!configured) return null

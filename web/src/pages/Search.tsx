@@ -91,7 +91,7 @@ export default function Search() {
 
   const submit = (e: FormEvent) => {
     e.preventDefault()
-    run(source)
+    void run(source)
   }
 
   const insertQuery = (query: string) => {
@@ -106,7 +106,7 @@ export default function Search() {
     setSource(tab)
     if (tab !== 'arxiv') setAdvancedOpen(false)
     setResults(null)
-    if (q.trim()) run(tab)
+    if (q.trim()) void run(tab)
   }
 
   const add = async (r: SearchResult, withPdf: boolean) => {

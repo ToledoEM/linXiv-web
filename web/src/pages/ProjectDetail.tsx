@@ -176,7 +176,7 @@ export default function ProjectDetail() {
   }, [projectId])
 
   useEffect(() => {
-    load()
+    void load()
   }, [load])
 
   const run = async (fn: () => Promise<unknown>, after?: () => void) => {
@@ -271,7 +271,7 @@ export default function ProjectDetail() {
                     onClick={() =>
                       run(
                         () => api.archiveProject(projectId),
-                        () => navigate(home),
+                        () => void navigate(home),
                       )
                     }
                   >
@@ -284,7 +284,7 @@ export default function ProjectDetail() {
                 onConfirm={() =>
                   run(
                     () => api.deleteProject(projectId),
-                    () => navigate(home),
+                    () => void navigate(home),
                   )
                 }
               />

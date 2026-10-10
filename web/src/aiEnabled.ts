@@ -24,7 +24,7 @@ export function useAiEnabled(): boolean {
   const [on, setOn] = useState(false)
   useEffect(() => {
     let live = true
-    load().then((v) => live && setOn(v))
+    void load().then((v) => live && setOn(v))
     const handler = (e: Event) => setOn((e as CustomEvent<boolean>).detail)
     window.addEventListener(EVENT, handler)
     return () => {

@@ -68,7 +68,9 @@ function HighlightItem({
             aria-label="Comment"
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={submitOnCtrlEnter(() => !busy && changed && save())}
+            onKeyDown={submitOnCtrlEnter(() => {
+              if (!busy && changed) void save()
+            })}
           />
           {anchor && <ColorSwatches value={color} onChange={setColor} />}
           <div className="actions">

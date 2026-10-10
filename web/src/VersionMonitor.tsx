@@ -22,7 +22,7 @@ export default function VersionMonitor() {
   }, [])
 
   useEffect(() => {
-    load()
+    void load()
   }, [load])
 
   const check = async () => {

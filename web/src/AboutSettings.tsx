@@ -69,7 +69,7 @@ export default function AboutSettings({
       .updateStatus()
       .then(setUpdate)
       .catch((err) => setCheckError((err as Error).message))
-    loadSystem()
+    void loadSystem()
   }, [loadSystem])
 
   const check = async () => {
@@ -77,7 +77,7 @@ export default function AboutSettings({
     setCheckError('')
     try {
       setUpdate(await api.checkUpdate())
-      loadSystem()
+      void loadSystem()
     } catch (err) {
       setCheckError((err as Error).message)
     } finally {

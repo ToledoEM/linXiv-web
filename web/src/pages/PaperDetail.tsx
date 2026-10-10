@@ -48,7 +48,7 @@ export default function PaperDetail() {
   )
 
   useEffect(() => {
-    loadAnnotations()
+    void loadAnnotations()
   }, [loadAnnotations])
 
   const load = useCallback(async () => {
@@ -62,7 +62,7 @@ export default function PaperDetail() {
   }, [id])
 
   useEffect(() => {
-    load()
+    void load()
   }, [load])
 
   const act = async (label: string, fn: () => Promise<unknown>) => {
@@ -81,7 +81,7 @@ export default function PaperDetail() {
   const addTag = (e: FormEvent) => {
     e.preventDefault()
     const tags = newTag.split(',').map((t) => t.trim()).filter(Boolean)
-    if (tags.length) act('tags', () => api.addTags(id, tags)).then(() => setNewTag(''))
+    if (tags.length) void act('tags', () => api.addTags(id, tags)).then(() => setNewTag(''))
   }
 
   const suggestTags = () =>
@@ -98,7 +98,7 @@ export default function PaperDetail() {
     setBusy('delete')
     try {
       await api.deletePaper(id)
-      navigate('/library')
+      void navigate('/library')
     } catch (err) {
       setError((err as Error).message)
       setBusy('')

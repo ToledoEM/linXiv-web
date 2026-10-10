@@ -214,7 +214,7 @@ export default function PdfReader({
     const pdf = pdfDocRef.current
     if (!findOpen || pageIndexes || !pdf) return
     let cancelled = false
-    ;(async () => {
+    void (async () => {
       const idx: PageIndex[] = []
       try {
         for (let i = 1; i <= pdf.numPages; i++) {
@@ -580,7 +580,7 @@ export default function PdfReader({
           onClick={(e) => e.stopPropagation()}
           onKeyDown={(e) => {
             if (e.key === 'Escape') setPopup(null)
-            else submitOnCtrlEnter(savePopup)(e)
+            else submitOnCtrlEnter(() => void savePopup())(e)
           }}
         >
           {popup.anchor.quote && <p className="pdf-quote small">“{popup.anchor.quote}”</p>}

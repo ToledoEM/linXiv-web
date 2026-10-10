@@ -47,7 +47,7 @@ export default function App() {
 
   // A page switched off in Settings → Sidebar is unreachable by URL too (desktop AppShell).
   useEffect(() => {
-    if (hiddenPageFor(pathname, pages)) navigate('/', { replace: true })
+    if (hiddenPageFor(pathname, pages)) void navigate('/', { replace: true })
   }, [pathname, pages, navigate])
 
   useEffect(() => {
@@ -79,7 +79,7 @@ export default function App() {
   const logout = async () => {
     await api.logout()
     setAuth((a) => ({ ...a, authenticated: false }))
-    navigate('/')
+    void navigate('/')
   }
 
   return (

@@ -52,7 +52,7 @@ export default function AppLogs({
   }, [])
 
   useEffect(() => {
-    load(span)
+    void load(span)
   }, [load, span])
 
   // Newest lines are at the bottom: show them first.

@@ -26,7 +26,7 @@ export function useLookupSource(): DefaultLookupSource | null {
   const [source, setSource] = useState<DefaultLookupSource | null>(null)
   useEffect(() => {
     let live = true
-    load().then((v) => live && setSource(v))
+    void load().then((v) => live && setSource(v))
     const handler = (e: Event) => setSource((e as CustomEvent<DefaultLookupSource>).detail)
     window.addEventListener(EVENT, handler)
     return () => {
