@@ -237,7 +237,8 @@ class McpBridge:
 
     @staticmethod
     async def _response(proc: asyncio.subprocess.Process, request_id: object) -> dict:
-        assert proc.stdout is not None
+        if proc.stdout is None:
+            raise BrokenPipeError("linxiv-mcp has no stdout")
         while True:
             line = await proc.stdout.readline()
             if not line:

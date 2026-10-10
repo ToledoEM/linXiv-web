@@ -21,6 +21,8 @@ from typing import Annotated, Literal
 from urllib.parse import quote
 
 import httpx
+from defusedxml import DefusedXmlException
+from defusedxml.ElementTree import fromstring as safe_fromstring
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -220,7 +222,7 @@ def _pubmed_date(article: ET.Element) -> str | None:
 
 def _pubmed_parse(xml: bytes) -> list[dict]:
     out = []
-    for art in ET.fromstring(xml).iter("PubmedArticle"):
+    for art in safe_fromstring(xml).iter("PubmedArticle"):
         cit = art.find("MedlineCitation")
         a = cit.find("Article") if cit is not None else None
         if cit is None or a is None:
@@ -285,7 +287,7 @@ async def _pubmed(term: str, api_key: str = "") -> list[dict]:
     )
     try:
         return _pubmed_parse(xml)
-    except ET.ParseError as e:
+    except (ET.ParseError, DefusedXmlException) as e:
         raise HTTPException(status_code=502, detail="PubMed lookup failed (bad XML)") from e
 
 

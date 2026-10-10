@@ -23,11 +23,11 @@ from .cli import CLIError, Runner
 log = logging.getLogger(__name__)
 
 IMAGE = "ghcr.io/toledoem/linxiv-web"
-TOKEN_URL = "https://ghcr.io/token?scope=repository:toledoem/linxiv-web:pull&service=ghcr.io"
+TOKEN_URL = "https://ghcr.io/token?scope=repository:toledoem/linxiv-web:pull&service=ghcr.io"  # noqa: S105
 TAGS_URL = "https://ghcr.io/v2/toledoem/linxiv-web/tags/list?n=1000"
 MODE_SETTING = "web_update_check"
 STATUS_SETTING = "web_update_status"
-TOKEN_SETTING = "GHCR_TOKEN"
+TOKEN_SETTING = "GHCR_TOKEN"  # noqa: S105 (settings key name)
 INTERVALS = {"daily": 86_400, "weekly": 7 * 86_400, "monthly": 30 * 86_400}
 OFF_POLL = 3600  # settings re-read while off (PATCH wakes it sooner)
 RETRY_AFTER = 3600  # after a failed scheduled check

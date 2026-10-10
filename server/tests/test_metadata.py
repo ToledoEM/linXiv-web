@@ -146,6 +146,27 @@ def test_lookup_pubmed_falls_back_to_title(client, fake, monkeypatch):
     assert [u.params["term"] for u in seen[:2]] == ["10.9/none[doi]", "Deep learning[title]"]
 
 
+def test_lookup_pubmed_refuses_xml_entities(client, fake, monkeypatch):
+    bomb = (
+        b'<?xml version="1.0"?><!DOCTYPE a [<!ENTITY x "xxxxxxxxxx">'
+        b'<!ENTITY y "&x;&x;&x;&x;&x;&x;&x;&x;&x;&x;">]>'
+        b"<PubmedArticleSet>&y;</PubmedArticleSet>"
+    )
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        if req.url.path.endswith("esearch.fcgi"):
+            return httpx.Response(200, json={"esearchresult": {"idlist": ["1"]}})
+        return httpx.Response(200, content=bomb)
+
+    monkeypatch.setattr(
+        metadata, "_http", lambda: httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    )
+    fake.on("paper", "get", result={"source_id": SID, "doi": "10.1/x", "title": "T"})
+    r = client.get(f"/api/papers/{SID}/lookup", params={"source": "pubmed"})
+    assert r.status_code == 502
+    assert r.json()["detail"] == "PubMed lookup failed (bad XML)"
+
+
 def test_lookup_pubmed_errors(client, fake, monkeypatch):
     def down(req):
         raise httpx.ConnectError("no route")
