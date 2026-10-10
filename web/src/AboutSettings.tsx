@@ -12,10 +12,15 @@ const MODES: { value: UpdateMode; label: string }[] = [
 
 const when = (ts: string) => new Date(ts).toLocaleString()
 
-/** Disk sizes in GiB/TiB, as on Sonarr's status page. */
+/** Folder sizes: B up to TB. */
 function formatSize(n: number): string {
-  const gib = n / 1024 ** 3
-  return gib >= 1024 ? `${(gib / 1024).toFixed(1)} TiB` : `${gib.toFixed(1)} GiB`
+  const units = ['B', 'KB', 'MB', 'GB', 'TB']
+  let i = 0
+  while (n >= 1024 && i < units.length - 1) {
+    n /= 1024
+    i++
+  }
+  return i === 0 ? `${n} B` : `${n.toFixed(1)} ${units[i]}`
 }
 
 function UpdateLine({ u }: { u: UpdateStatus }) {
@@ -144,48 +149,53 @@ export default function AboutSettings({
 
       <div className="card settings-section">
         <h3>Disk space</h3>
+        <p className="muted small">Space linXiv uses in each folder.</p>
         {system && (
           <div className="table-wrap">
             <table className="disk-table">
               <thead>
                 <tr>
                   <th>Location</th>
-                  <th>Free space</th>
-                  <th>Total space</th>
-                  <th aria-label="Used" />
+                  <th>Used</th>
+                  <th>Files</th>
+                  <th aria-label="Share of linXiv's total" />
                 </tr>
               </thead>
               <tbody>
-                {system.disk.map((d) => (
-                  <tr key={d.label}>
-                    <td>
-                      <span className="mono">{d.path}</span>
-                      <span className="muted small block">{d.label}</span>
-                    </td>
-                    {d.error || d.total === undefined || d.free === undefined ? (
-                      <td colSpan={3} className="error">
-                        {d.error ?? 'unknown'}
+                {system.disk.map((d) => {
+                  const all = system.disk.reduce((sum, r) => sum + (r.used ?? 0), 0)
+                  const share = all > 0 && d.used !== undefined ? (d.used / all) * 100 : 0
+                  return (
+                    <tr key={d.label}>
+                      <td>
+                        <span className="mono">{d.path}</span>
+                        <span className="muted small block">{d.label}</span>
                       </td>
-                    ) : (
-                      <>
-                        <td className="nowrap">{formatSize(d.free)}</td>
-                        <td className="nowrap">{formatSize(d.total)}</td>
-                        <td className="disk-bar-cell">
-                          <div
-                            className="disk-bar"
-                            role="meter"
-                            aria-valuemin={0}
-                            aria-valuemax={100}
-                            aria-valuenow={Math.round(((d.total - d.free) / d.total) * 100)}
-                            title={`${Math.round(((d.total - d.free) / d.total) * 100)}% used`}
-                          >
-                            <div style={{ width: `${((d.total - d.free) / d.total) * 100}%` }} />
-                          </div>
+                      {d.error || d.used === undefined ? (
+                        <td colSpan={3} className="error">
+                          {d.error ?? 'unknown'}
                         </td>
-                      </>
-                    )}
-                  </tr>
-                ))}
+                      ) : (
+                        <>
+                          <td className="nowrap">{formatSize(d.used)}</td>
+                          <td className="nowrap">{(d.files ?? 0).toLocaleString()}</td>
+                          <td className="disk-bar-cell">
+                            <div
+                              className="disk-bar"
+                              role="meter"
+                              aria-valuemin={0}
+                              aria-valuemax={100}
+                              aria-valuenow={Math.round(share)}
+                              title={`${Math.round(share)}% of linXiv's total`}
+                            >
+                              <div style={{ width: `${share}%` }} />
+                            </div>
+                          </td>
+                        </>
+                      )}
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>

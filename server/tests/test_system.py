@@ -125,10 +125,21 @@ def test_settings_update_mode_and_token(client, fake):
 def test_system_status_disk_and_issues(client, fake, dirs):
     stored = {"pdf_save_limit_mb": 1, "web_update_status": json.dumps({"latest": "9.0.0"})}
     _store(fake, stored)
-    _data, pdfs = dirs
+    data, pdfs = dirs
     (pdfs / "big.pdf").write_bytes(b"%PDF" + b"0" * 1024 * 1024)
+    (pdfs / "2026").mkdir()
+    (pdfs / "2026" / "a.pdf").write_bytes(b"%PDF-1")
+    (data / "papers.db").write_bytes(b"x" * 100)
+    (data / "logs").mkdir(exist_ok=True)
+    (data / "logs" / "extra.log").write_bytes(b"y" * 50)
     body = client.get("/api/system/status").json()
-    assert [d["label"].split(" ")[0] for d in body["disk"]] == ["Data", "PDFs", "Logs"]
+    rows = {d["label"].split(" ")[0]: d for d in body["disk"]}
+    assert list(rows) == ["Data", "PDFs", "Logs"]
+    # Data leaves out logs/ and the pdfs link; each has its own row.
+    assert rows["Data"]["used"] == 100 and rows["Data"]["files"] == 1
+    assert rows["PDFs"]["used"] == 4 + 1024 * 1024 + 6 and rows["PDFs"]["files"] == 2
+    # The app's own log file grows while the request runs: at least extra.log.
+    assert rows["Logs"]["used"] >= 50 and rows["Logs"]["files"] >= 1
     assert all(d["total"] > 0 for d in body["disk"])
     levels = {i["level"]: i["message"] for i in body["issues"]}
     assert "PDF storage limit" in levels["error"]

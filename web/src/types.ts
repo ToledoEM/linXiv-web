@@ -214,9 +214,12 @@ export interface UpdateStatus {
 export interface DiskRow {
   label: string
   path: string
+  /** Bytes and file count inside the folder (linXiv's own usage). */
+  used?: number
+  files?: number
+  /** Free / total of the folder's filesystem (feeds the Health check). */
   total?: number
   free?: number
-  used?: number
   error?: string
 }
 

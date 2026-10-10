@@ -35,27 +35,55 @@ async def update_check(request: Request):
     return await request.app.state.update_checker.check()
 
 
-def _locations(data_dir: Path, pdf_dir: Path) -> list[tuple[str, Path]]:
+def _locations(data_dir: Path, pdf_dir: Path) -> list[tuple[str, Path, set[Path]]]:
+    """(label, folder, sub-paths left out). Data skips logs/ and the pdfs link: own rows."""
+    log_dir = logs.log_dir(data_dir)
     return [
-        ("Data (library database, settings)", data_dir),
-        ("PDFs", pdf_dir),
-        ("Logs", logs.log_dir(data_dir)),
+        ("Data (library database, settings)", data_dir, {log_dir, data_dir / "pdfs"}),
+        ("PDFs", pdf_dir, set()),
+        ("Logs", log_dir, set()),
     ]
 
 
-def _disk(label: str, path: Path) -> dict:
+def folder_usage(path: Path, skip: set[Path]) -> tuple[int, int]:
+    """(bytes, files) under `path`, symlinks not followed, `skip` paths left out."""
+    total = files = 0
+    stack = [path]
+    while stack:
+        try:
+            entries = list(os.scandir(stack.pop()))
+        except OSError:
+            continue
+        for e in entries:
+            if Path(e.path) in skip:
+                continue
+            try:
+                if e.is_dir(follow_symlinks=False):
+                    stack.append(Path(e.path))
+                elif e.is_file(follow_symlinks=False):
+                    total += e.stat(follow_symlinks=False).st_size
+                    files += 1
+            except OSError:
+                continue
+    return total, files
+
+
+def _disk(label: str, path: Path, skip: set[Path]) -> dict:
+    """Space the folder uses; free/total of its filesystem feed the Health check."""
     row: dict = {"label": label, "path": str(path)}
     try:
         usage = shutil.disk_usage(path)
-        row.update(total=usage.total, free=usage.free, used=usage.used)
     except OSError as e:
         row["error"] = e.strerror or type(e).__name__
+        return row
+    used, files = folder_usage(path, skip)
+    row.update(used=used, files=files, total=usage.total, free=usage.free)
     return row
 
 
 @router.get("/system/status")
 async def system_status(request: Request):
-    """Disk space per location plus configuration issues (Sonarr-style Health)."""
+    """Space used per folder (data, PDFs, logs) plus configuration issues."""
     cfg = settings(request)
     issues: list[dict] = []
     stored: dict = {}
@@ -66,7 +94,7 @@ async def system_status(request: Request):
         issues.append({"level": "error", "message": f"linxiv CLI not responding: {e.message}"})
 
     disk = await asyncio.to_thread(
-        lambda: [_disk(label, path) for label, path in _locations(cfg.data_dir, cfg.pdf_dir)]
+        lambda: [_disk(*loc) for loc in _locations(cfg.data_dir, cfg.pdf_dir)]
     )
     for row in disk:
         if row.get("error"):
