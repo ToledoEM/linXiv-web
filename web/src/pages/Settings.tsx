@@ -10,6 +10,7 @@ import Backup from '../Backup'
 import DisplayControls from '../DisplayControls'
 import { ErrorText } from '../components'
 import FeedRules from '../FeedRules'
+import LoginSettings from '../LoginSettings'
 import FullTextIndex from '../FullTextIndex'
 import OrcidBackfill from '../OrcidBackfill'
 import PaperTableSettings from '../PaperTableSettings'
@@ -372,6 +373,7 @@ export default function Settings() {
           </div>
         </form>
 
+        <LoginSettings />
         <Backup />
         <form onSubmit={save('logs')} onKeyDown={formSubmitOnCtrlEnter}>
           <AppLogs level={draft.web_log_level} onLevel={(v) => set('web_log_level', v)} footer={saveBar('logs')} />

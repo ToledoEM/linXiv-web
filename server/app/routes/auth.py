@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import secrets
 
-from fastapi import APIRouter, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..auth import (
@@ -11,6 +11,7 @@ from ..auth import (
     PASSWORD_MIN,
     SESSION_COOKIE,
     SESSION_MAX_AGE,
+    require_auth,
 )
 
 router = APIRouter(prefix="/api", tags=["auth"])
@@ -27,7 +28,8 @@ def login(body: LoginRequest, request: Request, response: Response):
     auth = request.app.state.auth
     if not auth.enabled:
         return {"ok": True}
-    client = request.client.host if request.client else "unknown"
+    # Real client address behind trusted proxies (app/netguard.py).
+    client = getattr(request.state, "client_ip", None) or "unknown"
     if auth.throttled(client):
         raise HTTPException(status_code=429, detail="too many login attempts, try again later")
     if not auth.verify_password(body.password):
@@ -79,4 +81,41 @@ def me(request: Request):
         "auth_enabled": auth.enabled,
         "setup_required": auth.setup_required,
         "authenticated": (not auth.enabled) or auth.is_valid(request.cookies.get(SESSION_COOKIE)),
+        "password_source": auth.login_from,
     }
+
+
+class PasswordChange(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    current: str = Field(max_length=PASSWORD_MAX)
+    new: str = Field(min_length=PASSWORD_MIN, max_length=PASSWORD_MAX)
+    remember: bool = False
+
+
+@router.post("/password", dependencies=[Depends(require_auth)])
+def change_password(body: PasswordChange, request: Request, response: Response):
+    """Change the stored admin password; every other browser is logged out."""
+    auth = request.app.state.auth
+    if auth.login_from == "env":
+        raise HTTPException(
+            status_code=409,
+            detail="the password comes from LINXIV_WEB_PASSWORD(_HASH); change it there",
+        )
+    if auth.login_from != "stored":
+        raise HTTPException(status_code=409, detail="no password is set")
+    client = getattr(request.state, "client_ip", None) or "unknown"
+    if auth.throttled(client):
+        raise HTTPException(status_code=429, detail="too many attempts, try again later")
+    if not auth.verify_password(body.current):
+        auth.record_failure(client)
+        raise HTTPException(status_code=403, detail="current password is wrong")
+    auth.change_password(body.new)
+    _start_session(auth, response, body.remember)
+    return {"ok": True}
+
+
+@router.post("/sessions/revoke-others", dependencies=[Depends(require_auth)])
+def revoke_others(request: Request):
+    """Log out every other browser; this one stays logged in."""
+    auth = request.app.state.auth
+    return {"revoked": auth.revoke_others(request.cookies.get(SESSION_COOKIE))}

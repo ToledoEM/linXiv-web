@@ -1,7 +1,8 @@
 """Single-admin login: argon2 password check, signed session cookie, CSRF double-submit.
 
-Sessions live in process memory (one uvicorn worker), so logout revokes the
-token and a restart logs everyone out.
+Sessions live in `<data dir>/linxiv-web-state.db` (app/state_db.py) with the
+signing key, so a restart keeps everyone logged in and logout revokes the token.
+LINXIV_WEB_SECRET_KEY, when set, replaces the stored key.
 
 Password source, first match wins: LINXIV_WEB_PASSWORD_HASH, LINXIV_WEB_PASSWORD,
 then the hash stored by first-run setup in `<data dir>/linxiv-web-auth.json`.
@@ -26,6 +27,7 @@ from fastapi import HTTPException, Request
 from itsdangerous import BadSignature, URLSafeTimedSerializer
 
 from .settings import Settings, is_loopback
+from .state_db import StateDB
 
 SESSION_COOKIE = "lxw_session"
 CSRF_COOKIE = "lxw_csrf"
@@ -72,6 +74,22 @@ def write_stored_hash(data_dir: Path, password_hash: str) -> None:
         os.close(fd)
 
 
+def replace_stored_hash(data_dir: Path, password_hash: str) -> None:
+    """Write the auth file (0600) atomically, replacing any previous password."""
+    path = auth_file(data_dir)
+    body = json.dumps(
+        {"password_hash": password_hash, "created": datetime.now(UTC).isoformat()}, indent=2
+    )
+    tmp = path.with_name(f".{path.name}.{secrets.token_hex(4)}")
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    try:
+        os.write(fd, body.encode("utf-8"))
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+    os.replace(tmp, path)
+
+
 class Auth:
     def __init__(self, settings: Settings) -> None:
         self.cookie_secure = settings.cookie_secure
@@ -81,15 +99,17 @@ class Auth:
         self._hash = settings.password_hash
         if not self._hash and settings.password:
             self._hash = self._hasher.hash(settings.password)
+        # "env": set by environment, read-only here; "stored": changeable in Settings.
+        self.login_from: str | None = "env" if self._hash else None
         if not self._hash:
             self._hash = stored_hash(settings.data_dir)
+            self.login_from = "stored" if self._hash else None
         self.setup_required = not self._hash and not is_loopback(settings.host)
         self.enabled = bool(self._hash) or self.setup_required
         self._setup_lock = threading.Lock()
-        key = settings.secret_key or secrets.token_hex(32)
+        self._state = StateDB(settings.data_dir)
+        key = settings.secret_key or self._state.secret_key()
         self._serializer = URLSafeTimedSerializer(key, salt="linxiv-web-session")
-        self._sessions: dict[str, float] = {}
-        self._failures: dict[str, list[float]] = {}
 
     # --- first-run setup ---
 
@@ -104,12 +124,31 @@ class Auth:
             except FileExistsError:
                 return False
             self._hash = password_hash
+            self.login_from = "stored"
             self.setup_required = False
             return True
+
+    def change_password(self, new_password: str) -> None:
+        """Replace the stored password (caller checked the current one) and end every
+        session; the caller starts a fresh one for the browser that asked."""
+        password_hash = self._hasher.hash(new_password)
+        replace_stored_hash(self._data_dir, password_hash)
+        self._hash = password_hash
+        self._state.drop_all_sessions()
+
+    def revoke_others(self, token: str | None) -> int:
+        """End every session except the one holding `token`. Returns how many ended."""
+        return self._state.drop_other_sessions(self._sid(token))
 
     # --- password + throttle ---
 
     def verify_password(self, password: str) -> bool:
+        if self.login_from == "stored":
+            # Re-read: `python -m app reset-password` may have replaced it.
+            try:
+                self._hash = stored_hash(self._data_dir) or self._hash
+            except ValueError:
+                return False
         if not self._hash:
             return False
         try:
@@ -117,23 +156,24 @@ class Auth:
         except (VerificationError, InvalidHashError):
             return False
 
+    # Failures persist in the state DB, so a restart doesn't reset the count.
     def throttled(self, client: str) -> bool:
         cutoff = time.time() - LOGIN_WINDOW
-        recent = [t for t in self._failures.get(client, []) if t >= cutoff]
-        self._failures[client] = recent
-        return len(recent) >= LOGIN_MAX_ATTEMPTS
+        return self._state.failures_since(client, cutoff) >= LOGIN_MAX_ATTEMPTS
 
     def record_failure(self, client: str) -> None:
-        self._failures.setdefault(client, []).append(time.time())
+        now = time.time()
+        self._state.add_failure(client, now, prune_before=now - LOGIN_WINDOW)
 
     def clear_failures(self, client: str) -> None:
-        self._failures.pop(client, None)
+        self._state.clear_failures(client)
 
     # --- sessions ---
 
     def create_session(self, max_age: int = SESSION_MAX_AGE) -> str:
         sid = secrets.token_urlsafe(24)
-        self._sessions[sid] = time.time() + max_age
+        now = time.time()
+        self._state.add_session(sid, now + max_age, now)
         return self._serializer.dumps({"sid": sid})
 
     def _sid(self, token: str | None) -> str | None:
@@ -152,16 +192,18 @@ class Auth:
         sid = self._sid(token)
         if sid is None:
             return False
-        expiry = self._sessions.get(sid)
-        if expiry is None or expiry < time.time():
-            self._sessions.pop(sid, None)
+        expiry = self._state.session_expiry(sid)
+        if expiry is None:
+            return False
+        if expiry < time.time():
+            self._state.drop_session(sid)
             return False
         return True
 
     def revoke(self, token: str | None) -> None:
         sid = self._sid(token)
         if sid:
-            self._sessions.pop(sid, None)
+            self._state.drop_session(sid)
 
     # --- request guard ---
 

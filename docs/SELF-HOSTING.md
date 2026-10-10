@@ -103,7 +103,17 @@ Put it in `.env` next to `docker-compose.yml`, in single quotes (the hash contai
 LINXIV_WEB_PASSWORD_HASH='$argon2id$v=19$m=65536,t=3,p=4$...'
 ```
 
-### Resetting a forgotten password
+### Changing or resetting the password
+
+Logged in: **Settings → Server & data → Login** changes the password and logs out every other browser. "Log out other sessions" there ends all sessions except yours.
+
+Forgotten password: set a new one from the server, no restart needed (every browser is logged out):
+
+```sh
+docker compose exec linxiv-web python -m app reset-password
+```
+
+Or remove the stored password so the next visitor runs first-run setup again (the library is untouched):
 
 ```sh
 docker compose down
@@ -111,19 +121,19 @@ rm data/linxiv-web-auth.json
 docker compose up -d
 ```
 
-The next visitor runs first-run setup again. The library is untouched.
+A password set with `LINXIV_WEB_PASSWORD_HASH` / `LINXIV_WEB_PASSWORD` always wins; change it in `.env` instead.
 
 ## Logging in
 
 Tick **Remember me on this browser** to stay logged in for 90 days (`LINXIV_WEB_REMEMBER_DAYS` changes this). Without it, the login ends when the browser closes, and after 14 days at most.
 
-Sessions live in server memory, so restarting or updating the container logs everyone out.
+Sessions are kept in `data/linxiv-web-state.db`, so restarting or updating the container keeps you logged in.
 
 ## Where your data lives
 
 | Host directory | Container | Contents |
 |---|---|---|
-| `data/` (`LINXIV_WEB_DATA_HOST`) | `/data` | `papers.db` (library), `user_settings.json` (linXiv settings, including API keys entered in Settings), `linxiv-web-auth.json` (admin password hash) |
+| `data/` (`LINXIV_WEB_DATA_HOST`) | `/data` | `papers.db` (library), `user_settings.json` (linXiv settings, including API keys entered in Settings), `linxiv-web-auth.json` (admin password hash), `linxiv-web-state.db` (sessions, login throttle) |
 | `pdfs/` (`LINXIV_WEB_PDF_HOST`) | `/pdfs` | PDFs, flat or in year/journal subfolders (Settings → Library → PDF folders) |
 
 Keep `data/` on a local disk: SQLite over network shares or exFAT is unreliable. `pdfs/` may live on a NAS or external drive.
@@ -156,6 +166,8 @@ LINXIV_WEB_COOKIE_SECURE=true
 
 The proxy must pass the original `Host` header: linXiv-web rejects writes whose `Origin` doesn't match the host it sees.
 
+Public clients: linXiv-web serves only loopback, private LAN and link-local addresses unless `LINXIV_WEB_ALLOW_EXTERNAL=true`. Behind a proxy it sees the proxy's address, so everyone passes as the proxy. To see real client addresses, list the proxy in `LINXIV_WEB_TRUSTED_PROXIES` (from inside the container it usually shows up as the Docker gateway, e.g. `172.17.0.1`, or the whole `172.16.0.0/12`) and make it send `X-Forwarded-For`; then internet clients need `LINXIV_WEB_ALLOW_EXTERNAL=true`.
+
 Caddy (passes `Host` by default, gets certificates itself):
 
 ```
@@ -176,6 +188,7 @@ server {
     location / {
         proxy_pass http://127.0.0.1:8086;
         proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_read_timeout 300s;  # long searches, imports, AI calls
     }
 }
@@ -192,6 +205,8 @@ Settings changed in the web UI are stored in `data/`. Environment variables go i
 | `LINXIV_WEB_PASSWORD_HASH` | none | Admin password hash; skips first-run setup |
 | `LINXIV_WEB_REMEMBER_DAYS` | `90` | Login lifetime with Remember me |
 | `LINXIV_WEB_COOKIE_SECURE` | `false` | `true` behind HTTPS |
+| `LINXIV_WEB_ALLOW_EXTERNAL` | `false` | Serve public IP addresses (else 403) |
+| `LINXIV_WEB_TRUSTED_PROXIES` | none | Proxy IPs/CIDRs whose `X-Forwarded-For` is believed |
 | `LINXIV_WEB_MAX_UPLOAD_MB` | `200` | Upload size cap |
 | `CROSSREF_MAILTO`, `NCBI_API_KEY`, `GEMINI_API_KEY`, … | none | Override the values entered in Settings |
 
@@ -246,6 +261,8 @@ and run `docker compose build && docker compose up -d`. The first build compiles
 | Container exits with `linxiv-web-auth.json is unreadable` | The stored password file is damaged: delete it and run setup again |
 | `invalid password` after setting `LINXIV_WEB_PASSWORD_HASH` | Keep the hash in single quotes in `.env`; compose expands `$` otherwise |
 | Writes fail with `cross-origin request rejected` behind a proxy | The proxy must forward the original `Host` header |
+| `403 External requests are disabled` | The client has a public IP address: set `LINXIV_WEB_ALLOW_EXTERNAL=true`, or reach it over LAN/VPN |
+| Container exits with `LINXIV_WEB_TRUSTED_PROXIES: '…' is not an IP or CIDR` | Use addresses or CIDRs, not host names |
 | Old interface after an update | Hard reload with Cmd/Ctrl+Shift+R |
-| Logged out after a restart | Expected: sessions are kept in memory |
+| Logged out after a restart | `LINXIV_WEB_SECRET_KEY` changed, or `data/linxiv-web-state.db` was deleted |
 | `docker compose pull` says `denied` | Log in to ghcr.io (see Quick start) |

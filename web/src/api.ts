@@ -168,7 +168,16 @@ export function saveBlob(blob: Blob, filename: string) {
 }
 
 export const api = {
-  me: () => request<{ auth_enabled: boolean; setup_required: boolean; authenticated: boolean }>('GET', '/api/me'),
+  me: () =>
+    request<{
+      auth_enabled: boolean
+      setup_required: boolean
+      authenticated: boolean
+      password_source: 'env' | 'stored' | null
+    }>('GET', '/api/me'),
+  changePassword: (current: string, next: string) =>
+    request('POST', '/api/password', { current, new: next }),
+  revokeOtherSessions: () => request<{ revoked: number }>('POST', '/api/sessions/revoke-others'),
   setup: (password: string) => request('POST', '/api/setup', { password }),
   health: () => request<{ ok: boolean; version: string }>('GET', '/api/health'),
   updateStatus: () => request<UpdateStatus>('GET', '/api/update'),

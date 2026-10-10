@@ -116,8 +116,9 @@ services:
 # Login password: argon2 hash (see the command below)
 LINXIV_WEB_PASSWORD_HASH='$argon2id$v=19$m=65536,t=3,p=4$REPLACE$ME'
 
-# Session signing key, so a restart doesn't log you out (any long random string)
-LINXIV_WEB_SECRET_KEY=change-me-to-a-long-random-string
+# Optional session signing key (any long random string). Unset: one is
+# generated and kept in the data dir. Changing it logs everyone out.
+# LINXIV_WEB_SECRET_KEY=
 
 # Where the port is published (docker-compose.yml above)
 LINXIV_WEB_BIND=127.0.0.1
@@ -157,12 +158,14 @@ Open http://127.0.0.1:8086 (or `http://<machine-ip>:8086` with `LINXIV_WEB_BIND=
 |---|---|---|
 | `LINXIV_WEB_PASSWORD_HASH` | none | argon2 hash of the login password (`python -m app hash-password`). Without it (or `LINXIV_WEB_PASSWORD`), first-run setup in the browser creates the password, stored in `<data dir>/linxiv-web-auth.json` |
 | `LINXIV_WEB_PASSWORD` | none | Plain password, hashed in memory at startup (dev only) |
-| `LINXIV_WEB_SECRET_KEY` | random per start | Session signing key. If unset, a restart logs everyone out |
+| `LINXIV_WEB_SECRET_KEY` | generated, kept in `<data dir>/linxiv-web-state.db` | Session signing key. Changing it logs everyone out |
 | `LINXIV_WEB_COOKIE_SECURE` | `false` | Set to `true` behind HTTPS |
 | `LINXIV_WEB_REMEMBER_DAYS` | `90` | Login lifetime when "Remember me" is ticked (otherwise the login lasts until the browser closes, at most 14 days) |
 | `LINXIV_WEB_DATA_DIR` | `/data` | linXiv data dir (`papers.db`). Passed to the CLI and MCP server as `LINXIV_DATA_DIR` |
 | `LINXIV_WEB_PDF_DIR` | `/pdfs` | PDF directory, symlinked from `<data dir>/pdfs` |
 | `LINXIV_WEB_HOST` / `LINXIV_WEB_PORT` | `0.0.0.0` / `8000` in the image | Listen address |
+| `LINXIV_WEB_ALLOW_EXTERNAL` | `false` | Serve clients with public IP addresses. Off: only loopback, private LAN and link-local clients get through (others get 403) |
+| `LINXIV_WEB_TRUSTED_PROXIES` | none | Comma-separated IPs/CIDRs of reverse proxies whose `X-Forwarded-For` is believed (read right to left). Unlisted proxies count as the client |
 | `LINXIV_WEB_MAX_UPLOAD_MB` | `200` | Upload size cap |
 | `LINXIV_WEB_TIMEOUT_LONG` / `_SHORT` | `120` / `30` | CLI timeout in seconds (search, fetch, download and import use the long one) |
 | `LINXIV_BIN` / `LINXIV_MCP_BIN` | `linxiv` / `linxiv-mcp` | CLI and MCP server binaries |
@@ -215,6 +218,8 @@ All routes except `/api/health`, `/api/login`, `/api/me` and `/mcp` need a sessi
 
 | Route | linxiv command / behaviour |
 |---|---|
+| `POST /api/password` `{current, new, remember?}` | Change the stored admin password (409 when it comes from `LINXIV_WEB_PASSWORD(_HASH)`); logs out every other session |
+| `POST /api/sessions/revoke-others` | Log out every session except the caller's; returns `{revoked}` |
 | `GET /api/search?q&source=arxiv\|openalex\|crossref&max` | `search` |
 | `POST /api/papers/{id}/fetch?source=` | `fetch`, then `paper get` |
 | `GET /api/papers?q&tag&pdf=has\|none&fulltext&limit&offset&category&sort&dir` | `list` filtered server-side; a `q` of 3+ characters also runs `paper search` (TeX full text and notes), hits flagged `deep_match`; `fulltext=true` returns only the `paper search` hits. Each paper also gets `pdf_file` (its PDF's path inside the PDF folder) and `title_suspect` (the title looks like junk read from the PDF, or unlike the file name) |

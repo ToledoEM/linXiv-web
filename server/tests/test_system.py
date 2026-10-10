@@ -136,7 +136,9 @@ def test_system_status_disk_and_issues(client, fake, dirs):
     rows = {d["label"].split(" ")[0]: d for d in body["disk"]}
     assert list(rows) == ["Data", "PDFs", "Logs"]
     # Data leaves out logs/ and the pdfs link; each has its own row.
-    assert rows["Data"]["used"] == 100 and rows["Data"]["files"] == 1
+    # papers.db + linxiv-web's own state DB (login throttle).
+    state = (data / "linxiv-web-state.db").stat().st_size
+    assert rows["Data"]["used"] == 100 + state and rows["Data"]["files"] == 2
     assert rows["PDFs"]["used"] == 4 + 1024 * 1024 + 6 and rows["PDFs"]["files"] == 2
     # The app's own log file grows while the request runs: at least extra.log.
     assert rows["Logs"]["used"] >= 50 and rows["Logs"]["files"] >= 1

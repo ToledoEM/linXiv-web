@@ -45,6 +45,10 @@ class Settings:
     remember_days: int = 90
     # Start-up app log level; Settings → Logs overrides it once saved.
     log_level: str = "info"
+    # Serve clients outside loopback/private LAN/link-local (app/netguard.py).
+    allow_external: bool = False
+    # Reverse proxies (IPs or CIDRs) whose X-Forwarded-For is believed.
+    trusted_proxies: tuple[str, ...] = ()
 
     @property
     def auth_enabled(self) -> bool:
@@ -71,4 +75,10 @@ def load() -> Settings:
         mcp_bin=os.environ.get("LINXIV_MCP_BIN", "linxiv-mcp"),
         remember_days=max(1, int(os.environ.get("LINXIV_WEB_REMEMBER_DAYS", "90"))),
         log_level=os.environ.get("LINXIV_WEB_LOG_LEVEL", "info").strip().lower() or "info",
+        allow_external=_bool("LINXIV_WEB_ALLOW_EXTERNAL"),
+        trusted_proxies=tuple(
+            p.strip()
+            for p in os.environ.get("LINXIV_WEB_TRUSTED_PROXIES", "").split(",")
+            if p.strip()
+        ),
     )

@@ -20,6 +20,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - CodeQL (Python, TypeScript, Actions) and OpenSSF Scorecard workflows. Both skip while the repository is private, because code scanning on private repositories needs GitHub Advanced Security.
 - Dependabot: weekly grouped updates for uv, npm, GitHub Actions and Docker base images.
 - Server branch-coverage gate: pytest fails below 90%.
+- Web unit tests with Vitest (`npm test`, `npm run coverage`), run in CI; notes Markdown export checked against the server's golden file.
 - `SECURITY.md` and this changelog.
 - Docker image publishing: a push to `main` builds and pushes only when `server/pyproject.toml` holds a version not yet in GHCR; manual workflow runs always rebuild.
 - GitHub Actions pinned to commit SHAs; `docker.yml` grants no permissions by default.

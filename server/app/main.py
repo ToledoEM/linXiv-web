@@ -20,6 +20,7 @@ from .cli import CLIError, LinxivCLI, Runner
 from .fulltext_worker import FullTextWorker
 from .jobs import Jobs
 from .mcp_bridge import McpBridge
+from .netguard import ClientGuard, parse_networks
 from .routes import (
     add,
     ai,
@@ -142,6 +143,13 @@ def create_app(
     app.state.mcp_conf = None
     app.add_middleware(SecurityHeaders)
     app.add_middleware(AccessLog)
+    # Outermost: refused public clients never reach the access log (a scanner
+    # could fill it); ClientGuard logs them itself, rate-limited.
+    app.add_middleware(
+        ClientGuard,
+        allow_external=settings.allow_external,
+        trusted_proxies=parse_networks(settings.trusted_proxies),
+    )
 
     @app.exception_handler(CLIError)
     async def _cli_error(_: Request, exc: CLIError):

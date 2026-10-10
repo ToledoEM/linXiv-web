@@ -72,6 +72,9 @@ def settings(dirs) -> Settings:
         max_upload_mb=1,
         timeout_long=120,
         timeout_short=30,
+        # TestClient's peer is "testclient", not an IP; tests/test_netguard.py
+        # covers the guard with real addresses.
+        allow_external=True,
     )
 
 
