@@ -24,8 +24,45 @@ env:
   BUILDX_NO_DEFAULT_ATTESTATIONS: "1"
 
 jobs:
+  version:
+    name: Version check
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: read
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      publish: ${{ steps.meta.outputs.publish }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      # Push to main publishes only a version not yet in GHCR; manual runs always rebuild.
+      - name: Read server version, compare with GHCR
+        id: meta
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          version=$(sed -n 's/^version = "\(.*\)"/\1/p' server/pyproject.toml | head -n1)
+          if [ -z "$version" ]; then
+            echo "::error::no version in server/pyproject.toml"
+            exit 1
+          fi
+          publish=true
+          if [ "$EVENT" = push ] && docker buildx imagetools inspect "$IMAGE:$version" >/dev/null 2>&1; then
+            echo "::notice::$IMAGE:$version already published; bump server/pyproject.toml to release"
+            publish=false
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "publish=$publish" >> "$GITHUB_OUTPUT"
+
   build:
     name: Build ${{ matrix.arch }}
+    needs: version
+    if: needs.version.outputs.publish == 'true'
     runs-on: ${{ matrix.runner }}
     permissions:
       contents: read
@@ -76,22 +113,13 @@ jobs:
 
   merge:
     name: Publish manifest
-    needs: build
+    needs: [version, build]
+    if: needs.version.outputs.publish == 'true'
     runs-on: ubuntu-24.04
     permissions:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
-      - name: Read server version
-        id: meta
-        run: |
-          version=$(sed -n 's/^version = "\(.*\)"/\1/p' server/pyproject.toml | head -n1)
-          if [ -z "$version" ]; then
-            echo "::error::no version in server/pyproject.toml"
-            exit 1
-          fi
-          echo "version=$version" >> "$GITHUB_OUTPUT"
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           path: digests
@@ -106,7 +134,7 @@ jobs:
       - name: Create multi-arch manifest
         working-directory: digests
         env:
-          VERSION: ${{ steps.meta.outputs.version }}
+          VERSION: ${{ needs.version.outputs.version }}
         run: |
           docker buildx imagetools create -t "$IMAGE:$VERSION" \
             $(printf "$IMAGE@sha256:%s " *)
