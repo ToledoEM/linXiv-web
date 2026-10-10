@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent, type KeyboardEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
 import { api } from './api'
 import { ErrorText } from './components'
 import { failedMessage, hasTag, isReadingList, PRESET_COLORS, READING_LIST_TAG } from './projects'
@@ -169,6 +169,46 @@ export function DeleteButton({ busy, onConfirm }: { busy: boolean; onConfirm: ()
         Cancel
       </button>
     </>
+  )
+}
+
+/** Delete with undo: the first press swaps the button for an "Undo (n)" countdown; the delete runs when it ends.
+ *  Leaving the page before then cancels it. */
+export function UndoDeleteButton({
+  label,
+  busy,
+  onConfirm,
+  seconds = 5,
+}: {
+  label: string
+  busy: boolean
+  onConfirm: () => void
+  seconds?: number
+}) {
+  const [left, setLeft] = useState(0)
+  const confirm = useRef(onConfirm)
+  useEffect(() => {
+    confirm.current = onConfirm
+  }, [onConfirm])
+  useEffect(() => {
+    if (left <= 0) return
+    const t = setTimeout(() => {
+      if (left === 1) confirm.current()
+      setLeft(left - 1)
+    }, 1000)
+    return () => clearTimeout(t)
+  }, [left])
+  if (left > 0) {
+    return (
+      <button className="danger armed" onClick={() => setLeft(0)} title="Cancel the delete">
+        Undo ({left})
+      </button>
+    )
+  }
+  return (
+    <button className="danger" disabled={busy} onClick={() => setLeft(seconds)}>
+      {label}
+    </button>
   )
 }
 

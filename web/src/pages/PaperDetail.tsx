@@ -11,6 +11,7 @@ import MetadataEditor from '../MetadataEditor'
 import Notes from '../Notes'
 import TagSuggestions from '../TagSuggestions'
 import { toggled } from '../projects'
+import { UndoDeleteButton } from '../projectParts'
 import { MathText } from '../tex'
 
 // pdf.js is large: load the reader only when a PDF is opened.
@@ -31,7 +32,6 @@ export default function PaperDetail() {
   const [pickedTags, setPickedTags] = useState<Set<string>>(new Set())
   const [customUrl, setCustomUrl] = useState('')
   const [showPdf, setShowPdf] = useState(false)
-  const [confirmDelete, setConfirmDelete] = useState(false)
   const [editingMeta, setEditingMeta] = useState(false)
   const [sourceNote, setSourceNote] = useState('')
   const [annotations, setAnnotations] = useState<Annotation[]>([])
@@ -272,9 +272,7 @@ export default function PaperDetail() {
             <a href={pdfUrl(sid)} target="_blank" rel="noreferrer">
               Open in new tab
             </a>
-            <button className="danger" disabled={!!busy} onClick={() => act('pdf', () => api.deletePdf(id))}>
-              Delete PDF
-            </button>
+            <UndoDeleteButton label="Delete PDF" busy={!!busy} onConfirm={() => act('pdf', () => api.deletePdf(id))} />
           </>
         ) : (
           <>
@@ -360,19 +358,8 @@ export default function PaperDetail() {
 
       <h3>Danger zone</h3>
       <div className="actions">
-        {confirmDelete ? (
-          <>
-            <span>Move this paper to trash?</span>
-            <button className="danger" disabled={!!busy} onClick={deletePaper}>
-              Yes, delete
-            </button>
-            <button onClick={() => setConfirmDelete(false)}>Cancel</button>
-          </>
-        ) : (
-          <button className="danger" onClick={() => setConfirmDelete(true)}>
-            Delete paper
-          </button>
-        )}
+        <UndoDeleteButton label="Delete paper" busy={!!busy} onConfirm={deletePaper} />
+        <span className="muted small">Moves the paper to the trash.</span>
       </div>
     </section>
   )
