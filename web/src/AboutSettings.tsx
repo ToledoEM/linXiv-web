@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { api } from './api'
 import { ErrorText } from './components'
-import type { NcbiKeyStatus, SystemStatus, UpdateMode, UpdateStatus, UserSettings } from './types'
+import type { SystemStatus, UpdateMode, UpdateStatus, UserSettings } from './types'
 
 const MODES: { value: UpdateMode; label: string }[] = [
   { value: 'off', label: 'Off' },
@@ -35,18 +35,10 @@ function UpdateLine({ u }: { u: UpdateStatus }) {
 export default function AboutSettings({
   draft,
   set,
-  token,
-  envOverrides,
-  busy,
-  onRemoveToken,
   footer,
 }: {
   draft: UserSettings
   set: <K extends keyof UserSettings>(key: K, value: UserSettings[K]) => void
-  token: NcbiKeyStatus | null
-  envOverrides: string[]
-  busy: boolean
-  onRemoveToken: () => void
   footer: ReactNode
 }) {
   const [update, setUpdate] = useState<UpdateStatus | null>(null)
@@ -130,31 +122,6 @@ export default function AboutSettings({
             ))}
           </select>
         </label>
-        <label className="field">
-          <span>GitHub token (only while the image is private)</span>
-          <input
-            type="password"
-            autoComplete="off"
-            spellCheck={false}
-            value={draft.GHCR_TOKEN}
-            placeholder={token?.set ? 'Enter a new token to replace it' : 'Token with read:packages'}
-            onChange={(e) => set('GHCR_TOKEN', e.target.value.trim())}
-          />
-          <span className="muted small">
-            {token?.source === 'env' || envOverrides.includes('GHCR_TOKEN')
-              ? `Set by the server environment (…${token?.last4 ?? ''}); it takes precedence.`
-              : token?.set
-                ? `Token saved (…${token.last4}).`
-                : 'Not set: public images need none.'}
-          </span>
-        </label>
-        {token?.source === 'settings' && (
-          <div className="actions">
-            <button type="button" className="link danger-link" disabled={busy} onClick={onRemoveToken}>
-              Remove GitHub token
-            </button>
-          </div>
-        )}
         {footer}
       </div>
 

@@ -1,7 +1,7 @@
 """New linXiv-web releases: the highest x.y.z tag of the GHCR image.
 
-Anonymous pulls work only while the package is public; a GitHub token with
-`read:packages` (setting/env `GHCR_TOKEN`) reads a private one. The checker
+Anonymous pulls work only while the package is public (env/setting
+`GHCR_TOKEN`, a token with `read:packages`, reads a private one). The checker
 runs on demand (`check()`) and, when `web_update_check` is daily/weekly/
 monthly, in a background loop like the full-text worker. The last result is
 kept in the web-only setting `web_update_status` (JSON string, never PATCHable).
@@ -64,10 +64,7 @@ def _client() -> httpx.AsyncClient:
 async def _get_json(client: httpx.AsyncClient, url: str, **kw) -> dict:
     async with client.stream("GET", url, **kw) as r:
         if r.status_code in (401, 403):
-            raise UpdateError(
-                "image not readable: the package is private; add a GitHub token "
-                "with read:packages (Settings → About)"
-            )
+            raise UpdateError("image not readable: the ghcr.io package is private")
         if r.status_code == 404:
             raise UpdateError("image not found on ghcr.io")
         if r.status_code != 200:

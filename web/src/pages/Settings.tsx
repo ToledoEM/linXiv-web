@@ -41,7 +41,7 @@ type SectionId =
   | 'update'
 const SECTIONS: Record<SectionId, (keyof UserSettings)[]> = {
   contacts: ['ARXIV_MAILTO', 'CROSSREF_MAILTO', 'OPENALEX_MAILTO', 'NCBI_API_KEY'],
-  update: ['web_update_check', 'GHCR_TOKEN'],
+  update: ['web_update_check'],
   ai: [
     'ai_enabled',
     'genai_provider',
@@ -87,7 +87,6 @@ export default function Settings() {
   const [envOverrides, setEnvOverrides] = useState<string[]>([])
   const [ncbi, setNcbi] = useState<NcbiKeyStatus | null>(null)
   const [aiKeys, setAiKeys] = useState<Record<AiKeyName, NcbiKeyStatus> | null>(null)
-  const [ghcrToken, setGhcrToken] = useState<NcbiKeyStatus | null>(null)
   const [storageMb, setStorageMb] = useState<number | null>(null)
   const [error, setError] = useState('')
   const [status, setStatus] = useState<Partial<Record<SectionId, string>>>({})
@@ -111,7 +110,6 @@ export default function Settings() {
         setEnvOverrides(r.env_overrides)
         setNcbi(r.ncbi_api_key)
         setAiKeys(r.ai_keys)
-        setGhcrToken(r.ghcr_token)
       })
       .catch((err) => setError((err as Error).message))
     api
@@ -138,7 +136,6 @@ export default function Settings() {
     setEnvOverrides(r.env_overrides)
     setNcbi(r.ncbi_api_key)
     setAiKeys(r.ai_keys)
-    setGhcrToken(r.ghcr_token)
     setAiEnabled(r.settings.ai_enabled)
     setTexEnabled(r.settings.tex_rendering_enabled)
     setLookupSource(r.settings.web_lookup_source)
@@ -492,12 +489,6 @@ export default function Settings() {
         <AboutSettings
           draft={draft}
           set={set}
-          token={ghcrToken}
-          envOverrides={envOverrides}
-          busy={busy !== null}
-          onRemoveToken={() =>
-            run('update', () => api.updateSettings({ GHCR_TOKEN: '' }), 'GitHub token removed.')
-          }
           footer={saveBar('update')}
         />
       </form>
