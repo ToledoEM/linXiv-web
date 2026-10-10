@@ -112,5 +112,7 @@ ENV PATH="/app/server/.venv/bin:${PATH}" \
 
 USER appuser
 EXPOSE 8000
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+    CMD ["python", "-c", "import os, urllib.request; urllib.request.urlopen('http://127.0.0.1:%s/api/health' % os.environ.get('LINXIV_WEB_PORT', '8000'), timeout=4)"]
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["python", "-m", "app"]
