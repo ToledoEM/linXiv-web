@@ -11,6 +11,7 @@ import { ErrorText } from '../components'
 import FeedRules from '../FeedRules'
 import FullTextIndex from '../FullTextIndex'
 import OrcidBackfill from '../OrcidBackfill'
+import PaperTableSettings from '../PaperTableSettings'
 import PdfLayout from '../PdfLayout'
 import PdfTextIndex from '../PdfTextIndex'
 import ThemePicker from '../ThemePicker'
@@ -241,6 +242,8 @@ export default function Settings() {
             ))}
           </div>
         </div>
+
+        <PaperTableSettings />
       </>
     ),
     library: (

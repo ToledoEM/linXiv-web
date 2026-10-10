@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api, idPath, projectExportUrl, type ExportFormat } from '../api'
-import { ErrorText, SortHeader } from '../components'
+import { DoiLine, ErrorText, PaperColGroup, SortHeader, TagCell } from '../components'
 import { loadSort, nextSort, parsePaperSort, saveSort, sortPapers, type PaperSortKey } from '../paperSort'
 import { DeleteButton, ProjectForm, Swatch } from '../projectParts'
 import { failedMessage, isReadingList, READING_LIST_TAG, toggled } from '../projects'
+import { useTableColumns, type ColumnKey } from '../tableColumns'
 import { MathText } from '../tex'
 import type { Paper, Project, ProjectInput } from '../types'
 
@@ -151,6 +152,7 @@ export default function ProjectDetail() {
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [busy, setBusy] = useState(false)
   const [sort, setSort] = useState(() => loadSort(SORT_KEY, parsePaperSort, null))
+  const cols = useTableColumns()
 
   useEffect(() => saveSort(SORT_KEY, sort), [sort])
   const shown = useMemo(() => (papers ? sortPapers(papers, sort) : null), [papers, sort])
@@ -335,7 +337,8 @@ export default function ProjectDetail() {
         <p className="muted">No papers in this project. Add papers from your library to start organizing it.</p>
       ) : (
         <div className="table-wrap">
-          <table>
+          <table className="paper-table">
+            <PaperColGroup cols={cols} />
             <thead>
               <tr>
                 <th className="check-col">
@@ -355,7 +358,9 @@ export default function ProjectDetail() {
                     ['tags', 'Tags'],
                     ['pdf', 'PDF'],
                   ] as [PaperSortKey, string][]
-                ).map(([key, label]) => (
+                )
+                  .filter(([key]) => key === 'title' || cols.show[key as ColumnKey])
+                  .map(([key, label]) => (
                   <SortHeader
                     key={key}
                     label={label}
@@ -381,21 +386,18 @@ export default function ProjectDetail() {
                       <MathText forceInline>{p.title}</MathText>
                     </Link>
                     <div className="muted small mono">{p.source_id}</div>
+                    {(isReadingList(project) ? cols.doi.reading : cols.doi.projects) && <DoiLine doi={p.doi} />}
                   </td>
-                  <td className="small">
-                    {p.authors?.slice(0, 3).join(', ')}
-                    {p.authors?.length > 3 && ' et al.'}
-                  </td>
-                  <td className="nowrap">{p.published}</td>
-                  <td>{p.category}</td>
-                  <td>
-                    {p.tags?.map((t) => (
-                      <span key={t} className="pill">
-                        {t}
-                      </span>
-                    ))}
-                  </td>
-                  <td>{p.has_pdf ? '✓' : ''}</td>
+                  {cols.show.authors && (
+                    <td className="small">
+                      {p.authors?.slice(0, 3).join(', ')}
+                      {p.authors?.length > 3 && ' et al.'}
+                    </td>
+                  )}
+                  {cols.show.published && <td className="nowrap">{p.published}</td>}
+                  {cols.show.category && <td>{p.category}</td>}
+                  {cols.show.tags && <TagCell tags={p.tags} />}
+                  {cols.show.pdf && <td>{p.has_pdf ? '✓' : ''}</td>}
                 </tr>
               ))}
             </tbody>

@@ -5,7 +5,7 @@ import type { Paper } from '../types'
 import { useAiEnabled } from '../aiEnabled'
 import BatchMetadata from '../BatchMetadata'
 import BatchTags from '../BatchTags'
-import { ErrorText, SortHeader } from '../components'
+import { DoiLine, ErrorText, PaperColGroup, SortHeader, TagCell } from '../components'
 import { paperLabel } from '../format'
 import {
   loadSort,
@@ -18,6 +18,7 @@ import {
 } from '../paperSort'
 import { AddToProjectBar } from '../projectParts'
 import { toggled } from '../projects'
+import { useTableColumns } from '../tableColumns'
 import { MathText } from '../tex'
 
 type PdfFilter = 'all' | 'has' | 'none'
@@ -73,6 +74,7 @@ export default function Library() {
   // Batch panel content: metadata lookup, or AI tag suggestions (when AI is on).
   const [batchMode, setBatchMode] = useState<'metadata' | 'tags'>('metadata')
   const aiOn = useAiEnabled()
+  const cols = useTableColumns()
   const mode = aiOn ? batchMode : 'metadata'
   const [reload, setReload] = useState(0)
 
@@ -231,7 +233,8 @@ export default function Library() {
           {papers && papers.length === 0 && <p className="muted">No papers.</p>}
           {papers && papers.length > 0 && (
             <div className="table-wrap">
-              <table>
+              <table className="paper-table">
+                <PaperColGroup cols={cols} />
                 <thead>
                   <tr>
                     <th className="check-col">
@@ -250,11 +253,17 @@ export default function Library() {
                       />
                     </th>
                     <SortHeader label="Title" dir={headerDir('title')} onClick={() => sortBy('title')} />
-                    <SortHeader label="Authors" dir={headerDir('authors')} onClick={() => sortBy('authors')} />
-                    <SortHeader label="Published" dir={headerDir('published')} onClick={() => sortBy('published')} />
-                    <SortHeader label="Category" dir={headerDir('category')} onClick={() => sortBy('category')} />
-                    <SortHeader label="Tags" dir={headerDir('tags')} onClick={() => sortBy('tags')} />
-                    <SortHeader label="PDF" dir={headerDir('pdf')} onClick={() => sortBy('pdf')} />
+                    {cols.show.authors && (
+                      <SortHeader label="Authors" dir={headerDir('authors')} onClick={() => sortBy('authors')} />
+                    )}
+                    {cols.show.published && (
+                      <SortHeader label="Published" dir={headerDir('published')} onClick={() => sortBy('published')} />
+                    )}
+                    {cols.show.category && (
+                      <SortHeader label="Category" dir={headerDir('category')} onClick={() => sortBy('category')} />
+                    )}
+                    {cols.show.tags && <SortHeader label="Tags" dir={headerDir('tags')} onClick={() => sortBy('tags')} />}
+                    {cols.show.pdf && <SortHeader label="PDF" dir={headerDir('pdf')} onClick={() => sortBy('pdf')} />}
                   </tr>
                 </thead>
                 <tbody>
@@ -292,21 +301,18 @@ export default function Library() {
                             full text / notes
                           </span>
                         )}
+                        {cols.doi.library && <DoiLine doi={p.doi} />}
                       </td>
-                      <td className="small">
-                        {p.authors?.slice(0, 3).join(', ')}
-                        {p.authors?.length > 3 && ' et al.'}
-                      </td>
-                      <td className="nowrap">{p.published}</td>
-                      <td>{p.category}</td>
-                      <td>
-                        {p.tags?.map((t) => (
-                          <span key={t} className="pill">
-                            {t}
-                          </span>
-                        ))}
-                      </td>
-                      <td>{p.has_pdf ? '✓' : ''}</td>
+                      {cols.show.authors && (
+                        <td className="small">
+                          {p.authors?.slice(0, 3).join(', ')}
+                          {p.authors?.length > 3 && ' et al.'}
+                        </td>
+                      )}
+                      {cols.show.published && <td className="nowrap">{p.published}</td>}
+                      {cols.show.category && <td>{p.category}</td>}
+                      {cols.show.tags && <TagCell tags={p.tags} />}
+                      {cols.show.pdf && <td>{p.has_pdf ? '✓' : ''}</td>}
                     </tr>
                   ))}
                 </tbody>
