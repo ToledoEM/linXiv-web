@@ -11,7 +11,7 @@ ARG LINXIV_REF=v0.7.0
 ARG LINXIV_SRC=git
 
 # --- linXiv source: pinned upstream tag (default) ---
-FROM rust:1-bookworm AS linxiv-src-git
+FROM rust:1-bookworm@sha256:114c7a4425406451c2866b6aafe69fe29b1b298832db1277d411ac73c82d04d6 AS linxiv-src-git
 ARG LINXIV_REF
 RUN git clone --depth 1 --branch "${LINXIV_REF}" \
       --recurse-submodules --shallow-submodules \
@@ -25,7 +25,7 @@ COPY --from=linxiv-local src-tauri/ /src/src-tauri/
 FROM linxiv-src-${LINXIV_SRC} AS linxiv-src
 
 # --- Stage 1: build the linxiv CLI and MCP server (Tauri-free crates, no webkit/gtk) ---
-FROM rust:1-bookworm AS cli-build
+FROM rust:1-bookworm@sha256:114c7a4425406451c2866b6aafe69fe29b1b298832db1277d411ac73c82d04d6 AS cli-build
 WORKDIR /src
 COPY --from=linxiv-src /src/scripts/ scripts/
 # Runtime dlopen'd PDF library (PDF import metadata extraction).
@@ -42,7 +42,7 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
     && install -D src-tauri/vendor/pdfium/lib/libpdfium.so /out/libpdfium.so
 
 # Standalone CLI image, used for discovery and the real-CLI integration test.
-FROM debian:bookworm-slim AS cli
+FROM debian:bookworm-slim@sha256:7c7b2c966bc9ee8cedfeef67e0e279108992c77681fa595db4a9d65c06ccc587 AS cli
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates \
     && rm -rf /var/lib/apt/lists/*
@@ -55,8 +55,8 @@ ENTRYPOINT ["linxiv"]
 
 # --- Server tests + lint, with the real CLI for the integration test ---
 #   docker build --target server-test .
-FROM python:3.11-slim-bookworm AS server-test
-COPY --from=ghcr.io/astral-sh/uv:0.8 /uv /usr/local/bin/uv
+FROM python:3.11-slim-bookworm@sha256:0a310eeecf4e1f5a0743f9a6520c90c88d089c903ca5fd283f501e3a805f5f89 AS server-test
+COPY --from=ghcr.io/astral-sh/uv:0.8@sha256:1d31be550ff927957472b2a491dc3de1ea9b5c2d319a9cea5b6a48021e2990a6 /uv /usr/local/bin/uv
 COPY --from=cli-build /out/linxiv /usr/local/bin/linxiv
 COPY --from=cli-build /out/linxiv-mcp /usr/local/bin/linxiv-mcp
 COPY --from=cli-build /out/libpdfium.so /usr/local/lib/pdfium/libpdfium.so
@@ -70,7 +70,7 @@ COPY server/ ./
 RUN uv run ruff check . && uv run ruff format --check . && uv run pytest -rs
 
 # --- Stage 2: build the React SPA ---
-FROM node:22-slim AS web-build
+FROM node:22-slim@sha256:c3de60bf2f9dd0ac6370e6117950ff62d6e339527e7472301c9c78a017978392 AS web-build
 WORKDIR /app/web
 COPY web/package.json web/package-lock.json ./
 RUN npm ci
@@ -78,11 +78,11 @@ COPY web/ ./
 RUN npm run build
 
 # --- Stage 3: Python runtime ---
-FROM python:3.11-slim-bookworm AS runtime
+FROM python:3.11-slim-bookworm@sha256:0a310eeecf4e1f5a0743f9a6520c90c88d089c903ca5fd283f501e3a805f5f89 AS runtime
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates \
     && rm -rf /var/lib/apt/lists/*
-COPY --from=ghcr.io/astral-sh/uv:0.8 /uv /usr/local/bin/uv
+COPY --from=ghcr.io/astral-sh/uv:0.8@sha256:1d31be550ff927957472b2a491dc3de1ea9b5c2d319a9cea5b6a48021e2990a6 /uv /usr/local/bin/uv
 
 COPY --from=cli-build /out/linxiv /usr/local/bin/linxiv
 # MCP server (stdio); the web server bridges it to /mcp when enabled in Settings.
