@@ -87,6 +87,10 @@ export interface UserSettings {
   web_lookup_source: DefaultLookupSource
   /** App log level (Settings → Server & data → Logs). */
   web_log_level: LogLevel
+  /** Automatic release check (Settings → About). */
+  web_update_check: UpdateMode
+  /** Write-only GitHub token (read:packages) for the release check. */
+  GHCR_TOKEN: string
   /** Write-only: always "" from the server; send a new key to set it, "" to remove. */
   NCBI_API_KEY: string
   /** AI features master switch (off by default). */
@@ -190,6 +194,35 @@ export interface SettingsResponse {
   ncbi_api_key: NcbiKeyStatus
   /** AI provider key statuses; the keys themselves are never returned. */
   ai_keys: Record<AiKeyName, NcbiKeyStatus>
+  /** GitHub token for the release check; the token itself is never returned. */
+  ghcr_token: NcbiKeyStatus
+}
+
+export type UpdateMode = 'off' | 'daily' | 'weekly' | 'monthly'
+
+/** Settings → About release check (GHCR image tags). */
+export interface UpdateStatus {
+  current: string
+  latest: string | null
+  update_available: boolean
+  checked_at: string | null
+  error: string | null
+  image: string
+  mode: UpdateMode
+}
+
+export interface DiskRow {
+  label: string
+  path: string
+  total?: number
+  free?: number
+  used?: number
+  error?: string
+}
+
+export interface SystemStatus {
+  disk: DiskRow[]
+  issues: { level: 'error' | 'warning' | 'info'; message: string }[]
 }
 
 export interface NcbiKeyStatus {

@@ -26,6 +26,8 @@ import type {
   ProjectInput,
   SavedPdf,
   SavedPdfView,
+  SystemStatus,
+  UpdateStatus,
   SearchResult,
   SettingsResponse,
   SummaryResult,
@@ -169,6 +171,9 @@ export const api = {
   me: () => request<{ auth_enabled: boolean; setup_required: boolean; authenticated: boolean }>('GET', '/api/me'),
   setup: (password: string) => request('POST', '/api/setup', { password }),
   health: () => request<{ ok: boolean; version: string }>('GET', '/api/health'),
+  updateStatus: () => request<UpdateStatus>('GET', '/api/update'),
+  checkUpdate: () => request<UpdateStatus>('POST', '/api/update/check'),
+  systemStatus: () => request<SystemStatus>('GET', '/api/system/status'),
   login: (password: string, remember = false) => request('POST', '/api/login', { password, remember }),
   logout: () => request('POST', '/api/logout'),
 

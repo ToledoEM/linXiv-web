@@ -38,6 +38,8 @@ DEFAULTS: dict[str, object] = {
     "web_lookup_source": "auto",
     # App log level (web-only key); LINXIV_WEB_LOG_LEVEL applies until it is saved.
     "web_log_level": "",
+    # Automatic release check (web-only key): off, daily, weekly or monthly.
+    "web_update_check": "off",
     # AI features (web-only keys): off until the user opts in.
     "ai_enabled": False,
     "genai_provider": "gemini",
@@ -58,7 +60,9 @@ NCBI_KEY_RE = r"^$|^[A-Za-z0-9]{20,64}$"
 # to the generic OpenAI-compatible endpoint.
 AI_KEYS = ("GEMINI_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GENAI_API_KEY_TAG_GEN")
 AI_KEY_RE = r"^$|^[\x21-\x7e]{8,256}$"
-SECRET_KEYS = (NCBI_KEY, *AI_KEYS)
+# GitHub token (read:packages) for the release check while the GHCR package is private.
+GHCR_KEY = "GHCR_TOKEN"
+SECRET_KEYS = (NCBI_KEY, *AI_KEYS, GHCR_KEY)
 # Free-text values the CLI would otherwise JSON-parse ("123" -> int).
 QUOTED_KEYS = (
     *SECRET_KEYS,
@@ -68,6 +72,7 @@ QUOTED_KEYS = (
     "mcp_profile",
     "web_lookup_source",
     "web_log_level",
+    "web_update_check",
 )
 MODEL_RE = r"^[A-Za-z0-9._:/@+-]{0,128}$"
 BASE_URL = r"^$|^[Hh][Tt][Tt][Pp][Ss]?://[^\s/?#]+[^\s?#]*$"
@@ -103,6 +108,8 @@ class SettingsPatch(BaseModel):
         Literal["auto", "crossref", "arxiv", "openalex", "pubmed", "biorxiv"] | None
     ) = None
     web_log_level: Literal["debug", "info", "warning", "error"] | None = None
+    web_update_check: Literal["off", "daily", "weekly", "monthly"] | None = None
+    GHCR_TOKEN: str | None = Field(None, pattern=AI_KEY_RE)
 
 
 async def _current(request: Request) -> dict:
@@ -114,6 +121,8 @@ async def _current(request: Request) -> dict:
     # Not saved yet: show the level in use (LINXIV_WEB_LOG_LEVEL or "info").
     if values["web_log_level"] not in logs.LEVELS:
         values["web_log_level"] = logs.level_name()
+    if values["web_update_check"] not in ("off", "daily", "weekly", "monthly"):
+        values["web_update_check"] = "off"
     if values["web_lookup_source"] not in LOOKUP_SOURCES:
         values["web_lookup_source"] = "auto"
     env_overrides = [k for k in (*MAILTO_KEYS, *SECRET_KEYS) if os.environ.get(k)]
@@ -123,6 +132,7 @@ async def _current(request: Request) -> dict:
         "env_overrides": env_overrides,
         "ncbi_api_key": _status(raw, NCBI_KEY),
         "ai_keys": {k: _status(raw, k) for k in AI_KEYS},
+        "ghcr_token": _status(raw, GHCR_KEY),
     }
 
 
@@ -169,4 +179,6 @@ async def update_settings(request: Request, body: SettingsPatch):
     if "full_text_worker_enabled" in patch:
         # Start or stop the background indexer now, not at its next poll.
         request.app.state.fulltext_worker.wake()
+    if "web_update_check" in patch or GHCR_KEY in patch:
+        request.app.state.update_checker.wake()
     return await _current(request)

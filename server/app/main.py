@@ -37,12 +37,14 @@ from .routes import (
     pdfs,
     projects,
     sources,
+    system,
     trash,
     user_settings,
     versions,
 )
 from .routes import auth as auth_routes
 from .routes import logs as log_routes
+from .update_check import UpdateChecker
 
 __version__ = "0.1.0"
 log = logging.getLogger("app")
@@ -106,16 +108,18 @@ def create_app(
     async def lifespan(app: FastAPI):
         # The background indexer runs against the real CLI only; tests drive
         # FullTextWorker.step() directly.
-        task = None
+        task = update_task = None
         if runner is None:
             await _stored_log_level(app.state.cli, settings.timeout_short)
             task = asyncio.create_task(app.state.fulltext_worker.run())
+            update_task = asyncio.create_task(app.state.update_checker.run())
         log.info("linxiv-web %s started (log level %s)", __version__, logs.level_name())
         try:
             yield
         finally:
-            if task:
-                task.cancel()
+            for t in (task, update_task):
+                if t:
+                    t.cancel()
             await app.state.mcp.close_all()
             log.info("linxiv-web stopped")
 
@@ -131,6 +135,7 @@ def create_app(
     app.state.fulltext_worker = FullTextWorker(
         app.state.cli, app.state.jobs, settings.timeout_short, settings.timeout_long
     )
+    app.state.update_checker = UpdateChecker(app.state.cli, __version__, settings.timeout_short)
     app.state.mcp = McpBridge(
         [settings.mcp_bin], {"LINXIV_DATA_DIR": str(settings.data_dir)}, settings.timeout_long * 2
     )
@@ -168,6 +173,7 @@ def create_app(
     app.include_router(trash.router, dependencies=guarded)
     app.include_router(imports.router, dependencies=guarded)
     app.include_router(exports.router, dependencies=guarded)
+    app.include_router(system.router, dependencies=guarded)
     app.include_router(authors.router, dependencies=guarded)
     app.include_router(feed.router, dependencies=guarded)
     app.include_router(backup.router, dependencies=guarded)
