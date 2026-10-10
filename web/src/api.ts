@@ -133,6 +133,38 @@ const qs = (params: Record<string, string | number | boolean | undefined>) => {
   return s ? `?${s}` : ''
 }
 
+/** POST that returns a file: the body as a Blob (errors read like `request`). */
+async function requestBlob(url: string, body: unknown): Promise<Blob> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  const token = csrfToken()
+  if (token) headers['X-CSRF-Token'] = token
+  const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body), credentials: 'same-origin' })
+  if (res.status === 401) onUnauthorized()
+  if (!res.ok) {
+    let msg = res.statusText
+    try {
+      const detail = (await res.json())?.detail
+      msg = typeof detail === 'string' ? detail : JSON.stringify(detail ?? msg)
+    } catch {
+      // not JSON: keep the status text
+    }
+    throw new ApiError(res.status, msg)
+  }
+  return res.blob()
+}
+
+/** Hand a Blob to the browser as a download. */
+export function saveBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.append(a)
+  a.click()
+  a.remove()
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
+}
+
 export const api = {
   me: () => request<{ auth_enabled: boolean; setup_required: boolean; authenticated: boolean }>('GET', '/api/me'),
   setup: (password: string) => request('POST', '/api/setup', { password }),
@@ -181,6 +213,7 @@ export const api = {
   downloadPdf: (id: string, url?: string) =>
     request('POST', `/api/papers/${idPath(id)}/pdf`, url ? { url } : {}),
   deletePdf: (id: string) => request('DELETE', `/api/papers/${idPath(id)}/pdf`),
+  exportBibtex: (ids: string[]) => requestBlob('/api/export/bibtex', { ids }),
   pdfs: (view?: SavedPdfView, limit?: number) =>
     request<{ pdfs: SavedPdf[]; total?: number }>('GET', `/api/pdfs${qs({ view, limit })}`),
   importPdf: (file: File) => {

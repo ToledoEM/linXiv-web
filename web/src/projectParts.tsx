@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from 'react'
 import { api } from './api'
 import { ErrorText } from './components'
 import { failedMessage, hasTag, isReadingList, PRESET_COLORS, READING_LIST_TAG } from './projects'
@@ -216,9 +216,12 @@ export function UndoDeleteButton({
 export function AddToProjectBar({
   selected,
   onSelect,
+  extra,
 }: {
   selected: Set<string>
   onSelect: (ids: Set<string>) => void
+  /** More selection actions (Library: Export .bib), shown before Clear. */
+  extra?: ReactNode
 }) {
   const [projects, setProjects] = useState<Project[] | null>(null)
   const [target, setTarget] = useState('')
@@ -315,6 +318,7 @@ export function AddToProjectBar({
       <button onClick={addNew} disabled={busy || !name.trim()}>
         Create and add
       </button>
+      {extra}
       <span className="grow" />
       <button className="link" onClick={() => onSelect(new Set())} disabled={busy}>
         Clear

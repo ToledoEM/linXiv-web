@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { api, idPath } from '../api'
+import { api, idPath, saveBlob } from '../api'
 import type { Paper } from '../types'
 import { useAiEnabled } from '../aiEnabled'
 import BatchMetadata from '../BatchMetadata'
@@ -20,6 +20,31 @@ import { AddToProjectBar } from '../projectParts'
 import { toggled } from '../projects'
 import { useTableColumns } from '../tableColumns'
 import { MathText } from '../tex'
+
+/** Selection bar action: BibTeX for the selected papers. */
+function ExportBibButton({ ids }: { ids: Set<string> }) {
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const run = async () => {
+    setBusy(true)
+    setError('')
+    try {
+      saveBlob(await api.exportBibtex([...ids]), 'linxiv-selection.bib')
+    } catch (err) {
+      setError((err as Error).message)
+    } finally {
+      setBusy(false)
+    }
+  }
+  return (
+    <>
+      <button onClick={run} disabled={busy} title="Download a BibTeX file for the selected papers">
+        {busy ? 'Exporting…' : 'Export .bib'}
+      </button>
+      {error && <span className="error small">{error}</span>}
+    </>
+  )
+}
 
 type PdfFilter = 'all' | 'has' | 'none'
 
@@ -227,7 +252,7 @@ export default function Library() {
       {deepError && (
         <p className="muted small">Full text and notes could not be searched ({deepError}); showing other matches.</p>
       )}
-      <AddToProjectBar selected={selected} onSelect={setSelected} />
+      <AddToProjectBar selected={selected} onSelect={setSelected} extra={<ExportBibButton ids={selected} />} />
       <div className={batch ? 'library-batch' : undefined}>
         <div className="library-main">
           {papers && papers.length === 0 && <p className="muted">No papers.</p>}
