@@ -11,3 +11,6 @@ https://github.com/bblanchon/pdfium-binaries (BSD-3-Clause / Apache-2.0).
 The web interface bundles the Inter typeface (https://rsms.me/inter/, files from the
 linXiv desktop app), licensed under the SIL Open Font License 1.1
 (web/public/fonts/Inter-OFL.txt).
+
+The favicon and apple-touch icon (web/public/favicon.ico, apple-touch-icon.png) are
+the linXiv application icon, from https://github.com/linxiv-dev/linXiv (Apache-2.0).
