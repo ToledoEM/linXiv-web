@@ -53,6 +53,45 @@ def test_list_filters_by_text_and_tag(client, fake):
     assert "--limit" not in fake.calls[-1]
 
 
+def test_list_filters_untagged(client, fake):
+    base = fixture("list.json")[0]
+    papers = [
+        {**base, "source_id": "arxiv:1", "tags": ["nlp"]},
+        {**base, "source_id": "arxiv:2", "tags": []},
+        {**base, "source_id": "arxiv:3", "tags": None},
+    ]
+    fake.on("list", result=papers)
+    r = client.get("/api/papers", params={"untagged": "true"})
+    assert [p["source_id"] for p in r.json()] == ["arxiv:2", "arxiv:3"]
+    assert "--limit" not in fake.calls[-1]
+    assert client.get("/api/papers", params={"untagged": "true", "tag": "nlp"}).status_code == 400
+
+
+def test_tag_counts(client, fake):
+    base = fixture("list.json")[0]
+    papers = [
+        {**base, "source_id": "arxiv:1", "tags": ["nlp", "cv"]},
+        {**base, "source_id": "arxiv:2", "tags": ["nlp"]},
+        {**base, "source_id": "arxiv:3", "tags": []},
+        {**base, "source_id": "arxiv:4", "tags": ["bio"]},
+    ]
+    fake.on("list", result=papers)
+    fake.on("tag", "list-all", result=["bio", "cv", "nlp", "orphan"])
+    r = client.get("/api/tags/counts")
+    assert r.status_code == 200
+    assert r.json() == {
+        "tags": [
+            {"tag": "nlp", "count": 2},
+            {"tag": "bio", "count": 1},
+            {"tag": "cv", "count": 1},
+            {"tag": "orphan", "count": 0},
+        ],
+        "untagged": 1,
+        "total": 4,
+    }
+    assert ["list"] in fake.calls
+
+
 def test_list_filters_by_pdf_and_pages_in_python(client, fake):
     base = fixture("list.json")[0]
     papers = [{**base, "source_id": f"arxiv:{i}", "has_pdf": i % 2 == 0} for i in range(6)]

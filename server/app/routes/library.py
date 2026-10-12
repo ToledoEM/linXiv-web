@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Query, Request, Response
+from fastapi import APIRouter, HTTPException, Query, Request, Response
 from pydantic import BaseModel, Field
 
 from ..cli import CLIError
@@ -63,6 +63,7 @@ async def list_papers(
     q: str | None = None,
     fulltext: bool = False,
     tag: str | None = None,
+    untagged: bool = False,
     limit: int = Query(50, ge=1, le=1000),
     offset: int = Query(0, ge=0),
     category: str | None = None,
@@ -70,8 +71,8 @@ async def list_papers(
     dir: Literal["asc", "desc"] | None = None,
     pdf: Literal["has", "none"] | None = None,
 ):
-    """Library listing. `q`/`tag`/`pdf` filter `linxiv list` by title, abstract,
-    id, DOI, authors, tags and whether a PDF is saved. A `q` of 3+ characters also
+    """Library listing. `q`/`tag`/`untagged`/`pdf` filter `linxiv list` by title,
+    abstract, id, DOI, authors, tags (or none) and whether a PDF is saved. A `q` of 3+ characters also
     takes `paper search` hits (indexed TeX full text and note titles/bodies);
     papers found only that way carry `deep_match: true`. If that search fails the
     plain matches still return, with an `X-Deep-Search-Error` header.
@@ -80,7 +81,9 @@ async def list_papers(
         return await run(
             request, ["paper", "search", "--limit", str(limit), "--", ident(q, "query")]
         )
-    filtering = bool(q or tag or pdf)
+    if tag is not None and untagged:
+        raise HTTPException(status_code=400, detail="Use either tag or untagged, not both")
+    filtering = bool(q or tag or untagged or pdf)
     args = ["list", "--sort", sort]
     # The CLI has no text filter, so filtered listings page in Python.
     if not filtering:
@@ -109,6 +112,8 @@ async def list_papers(
     for p in papers:
         if tag is not None and tag not in (p.get("tags") or []):
             continue
+        if untagged and p.get("tags"):
+            continue
         if pdf is not None and bool(p.get("has_pdf")) != (pdf == "has"):
             continue
         if needle is None or _matches(p, needle):
@@ -126,6 +131,27 @@ async def categories(request: Request):
 @router.get("/tags")
 async def all_tags(request: Request):
     return await run(request, ["tag", "list-all"])
+
+
+@router.get("/tags/counts")
+async def tag_counts(request: Request):
+    """Papers per tag (count desc, then name), plus untagged and total paper counts.
+    Tags no paper carries are listed with 0."""
+    papers = [p for p in (await run(request, ["list"]) or []) if isinstance(p, dict)]
+    counts: dict[str, int] = {t: 0 for t in await run(request, ["tag", "list-all"]) or []}
+    untagged = 0
+    for p in papers:
+        tags = p.get("tags") or []
+        if not tags:
+            untagged += 1
+        for t in set(tags):
+            counts[t] = counts.get(t, 0) + 1
+    rows = sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))
+    return {
+        "tags": [{"tag": t, "count": n} for t, n in rows],
+        "untagged": untagged,
+        "total": len(papers),
+    }
 
 
 @router.get("/stats")

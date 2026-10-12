@@ -19,6 +19,7 @@ import Graph from './pages/Graph'
 import Projects from './pages/Projects'
 import ProjectDetail from './pages/ProjectDetail'
 import ReadingLists from './pages/ReadingLists'
+import Tags from './pages/Tags'
 import { setTexEnabled } from './texStore'
 import { useGlobalShortcuts } from './shortcuts'
 import { hiddenPageFor, useSidebarPages } from './sidebarPages'
@@ -27,6 +28,7 @@ const NAV: NavItem[] = [
   { to: '/', label: 'Home', icon: '⌂', end: true },
   { to: '/library', label: 'Library', icon: '▤' },
   { to: '/projects', label: 'Projects', icon: '◫' },
+  { to: '/tags', label: 'Tags', icon: '#', pageKey: 'tags' },
   { to: '/reading', label: 'Reading', icon: '☰', pageKey: 'reading' },
   { to: '/graph', label: 'Graph', icon: '⋈', pageKey: 'graph' },
   { to: '/search', label: 'Search', icon: '⌕', pageKey: 'search' },
@@ -93,6 +95,7 @@ export default function App() {
           <Route path="/projects" element={<Projects />} />
           <Route path="/projects/:id" element={<ProjectDetail />} />
           <Route path="/reading" element={<ReadingLists />} />
+          <Route path="/tags" element={<Tags />} />
           <Route path="/graph" element={<Graph />} />
           <Route path="/search" element={<Search />} />
           <Route path="/paper/*" element={<PaperDetail />} />

@@ -32,6 +32,7 @@ import type {
   SearchResult,
   SettingsResponse,
   SummaryResult,
+  TagCounts,
   TagSuggestion,
   Source,
   Stats,
@@ -215,6 +216,7 @@ export const api = {
     params: {
     q?: string
     tag?: string
+    untagged?: boolean
     fulltext?: boolean
     limit?: number
     sort?: string
@@ -242,6 +244,7 @@ export const api = {
   removeTag: (id: string, tag: string) =>
     request<{ tags: string[] }>('DELETE', `/api/papers/${idPath(id)}/tags${qs({ tag })}`),
   allTags: () => request<string[]>('GET', '/api/tags'),
+  tagCounts: () => request<TagCounts>('GET', '/api/tags/counts'),
 
   downloadPdf: (id: string, url?: string) =>
     request('POST', `/api/papers/${idPath(id)}/pdf`, url ? { url } : {}),

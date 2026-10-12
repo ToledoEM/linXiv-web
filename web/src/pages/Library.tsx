@@ -68,6 +68,8 @@ const SORTS = [
 // columns sort the loaded rows on top of it.
 const SERVER_KEYS: Partial<Record<PaperSortKey, string>> = { title: 'title', published: 'published' }
 const SORT_KEY = 'lxw.librarySort'
+// Tag select value for papers without tags (`?untagged=1`); not a valid tag name.
+const UNTAGGED = '\u0000untagged'
 
 interface StoredSort {
   server: string
@@ -84,7 +86,7 @@ function parseStored(raw: unknown): StoredSort {
 export default function Library() {
   const [q, setQ] = useState('')
   const [params] = useSearchParams()
-  const [tag, setTag] = useState(() => params.get('tag') ?? '')
+  const [tag, setTag] = useState(() => (params.get('untagged') ? UNTAGGED : (params.get('tag') ?? '')))
   const [deepError, setDeepError] = useState('')
   const [stored] = useState(() => loadSort(SORT_KEY, parseStored, { server: SORTS[0].value, column: null }))
   const [sort, setSort] = useState<string>(stored.server)
@@ -118,7 +120,8 @@ export default function Library() {
         .papers(
           {
             q: q.trim() || undefined,
-            tag: tag || undefined,
+            tag: tag && tag !== UNTAGGED ? tag : undefined,
+            untagged: tag === UNTAGGED || undefined,
             sort: by,
             dir,
             pdf: pdf === 'all' ? undefined : pdf,
@@ -241,6 +244,7 @@ export default function Library() {
         />
         <select aria-label="Tag" value={tag} onChange={(e) => setTag(e.target.value)}>
           <option value="">All tags</option>
+          <option value={UNTAGGED}>Untagged</option>
           {tags.map((t) => (
             <option key={t} value={t}>
               {t}
