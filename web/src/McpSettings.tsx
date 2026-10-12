@@ -41,7 +41,7 @@ function Snippet({ text }: { text: string }) {
   )
 }
 
-/** Settings → MCP: serve linXiv's MCP tools at /mcp for Claude Code / Codex. Part of the Settings form. */
+/** Settings → MCP: serve linXiv's MCP tools at /mcp for Claude Code / Codex / OpenCode. Part of the Settings form. */
 export default function McpSettings({
   draft,
   saved,
@@ -90,7 +90,7 @@ export default function McpSettings({
 
   return (
     <div className="card settings-section">
-      <h3>MCP server (Claude Code / Codex)</h3>
+      <h3>MCP server (Claude Code / Codex / OpenCode)</h3>
       <label className="check">
         <input type="checkbox" checked={draft.mcp_enabled} onChange={(e) => set('mcp_enabled', e.target.checked)} />
         Serve linXiv&apos;s MCP tools at <span className="mono">/mcp</span>
@@ -160,7 +160,7 @@ export default function McpSettings({
 
       {(token || status?.token.set) && (
         <details className="mcp-setup" open={!!token}>
-          <summary>Connect Claude Code or Codex</summary>
+          <summary>Connect Claude Code, Codex or OpenCode</summary>
           <span className="muted small">Claude Code:</span>
           <Snippet text={`claude mcp add --transport http linxiv ${url} --header "Authorization: Bearer ${shown}"`} />
           <span className="muted small">Codex (token from an environment variable):</span>
@@ -171,6 +171,27 @@ export default function McpSettings({
             or in <span className="mono">~/.codex/config.toml</span>:
           </span>
           <Snippet text={`[mcp_servers.linxiv]\nurl = "${url}"\nbearer_token_env_var = "LINXIV_MCP_TOKEN"`} />
+          <span className="muted small">
+            OpenCode, in <span className="mono">opencode.json</span> (token from{' '}
+            <span className="mono">LINXIV_MCP_TOKEN</span>):
+          </span>
+          <Snippet
+            text={JSON.stringify(
+              {
+                $schema: 'https://opencode.ai/config.json',
+                mcp: {
+                  linxiv: {
+                    type: 'remote',
+                    url,
+                    enabled: true,
+                    headers: { Authorization: 'Bearer {env:LINXIV_MCP_TOKEN}' },
+                  },
+                },
+              },
+              null,
+              2,
+            )}
+          />
           {!token && <span className="muted small">Replace the token to see it in these commands.</span>}
           {!saved.mcp_enabled && <span className="muted small">Turn the server on and save first.</span>}
         </details>
