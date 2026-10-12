@@ -122,6 +122,13 @@ export interface McpStatus {
 export type AiProvider = 'gemini' | 'openai' | 'anthropic' | 'generic'
 export type AiKeyName = 'GEMINI_API_KEY' | 'OPENAI_API_KEY' | 'ANTHROPIC_API_KEY' | 'GENAI_API_KEY_TAG_GEN'
 
+/** `GET /api/tags/counts`: papers per tag (count desc), untagged and total papers. */
+export interface TagCounts {
+  tags: { tag: string; count: number }[]
+  untagged: number
+  total: number
+}
+
 /** One AI tag suggestion; `known` = already used somewhere in the library. */
 export interface TagSuggestion {
   tag: string

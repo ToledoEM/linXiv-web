@@ -4,11 +4,12 @@
 
 import { useEffect, useState } from 'react'
 
-export type PageKey = 'reading' | 'graph' | 'search' | 'add' | 'upload' | 'trash'
+export type PageKey = 'reading' | 'tags' | 'graph' | 'search' | 'add' | 'upload' | 'trash'
 export type SidebarPages = Record<PageKey, boolean>
 
 export const PAGE_OPTIONS: { key: PageKey; route: string; label: string; description: string }[] = [
   { key: 'reading', route: '/reading', label: 'Reading', description: 'Reading lists' },
+  { key: 'tags', route: '/tags', label: 'Tags', description: 'Tags and how many papers carry each' },
   { key: 'graph', route: '/graph', label: 'Graph', description: 'Knowledge graph of papers, authors and tags' },
   { key: 'search', route: '/search', label: 'Search', description: 'arXiv / OpenAlex / Crossref search' },
   { key: 'add', route: '/add', label: 'Add Paper', description: 'Add papers by link, DOI or arXiv ID' },
@@ -18,6 +19,7 @@ export const PAGE_OPTIONS: { key: PageKey; route: string; label: string; descrip
 
 export const DEFAULT_SIDEBAR_PAGES: SidebarPages = {
   reading: true,
+  tags: true,
   graph: true,
   search: true,
   add: true,

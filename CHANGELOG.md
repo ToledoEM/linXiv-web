@@ -40,6 +40,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Typed confirmation dialog for restoring a backup ("replace library"), clearing the server log ("clear logs") and deleting the activity log.
 - `LINXIV_WEB_HSTS=true` sends `Strict-Transport-Security` (for HTTPS deployments). Every response carries a `Permissions-Policy` turning off camera, microphone, geolocation, payment and USB.
 - `LINXIV_WEB_AI_ALLOWED_HOSTS` restricts which hosts the OpenAI-compatible AI base URL may use.
+- Tags page (`/tags`, hideable in Settings → Sidebar): every tag with its paper count, untagged and total papers, filter box, sort by name or count; a row opens the Library filtered to that tag. `GET /api/tags/counts`.
+- Library tag filter "Untagged" (`GET /api/papers?untagged=true`, `/library?untagged=1`).
+- Paper page Delete paper / Delete PDF: no countdown. The first press puts Undo in the button's place and the delete button beside it; nothing is deleted until that second press.
+- Metadata lookup compare: "Apply and Save" writes the picked fields in one step (was Apply, then Save).
 
 ### Security
 - PubMed lookup parses NCBI XML with `defusedxml`; replies with entity declarations are refused (502) instead of expanded.

@@ -24,12 +24,14 @@ import { formSubmitOnCtrlEnter } from './submitShortcut'
 function Compare({
   current,
   candidate,
+  saving,
   onApply,
   onClose,
 }: {
   current: Form
   candidate: MetadataCandidate
-  onApply: (patch: Partial<Form>) => void
+  saving: boolean
+  onApply: (patch: Partial<Form>) => Promise<void>
   onClose: () => void
 }) {
   const found = fromCandidate(candidate)
@@ -88,15 +90,14 @@ function Compare({
       </div>
       <div className="actions">
         <button
-          disabled={!picked.size}
-          onClick={() => onApply(Object.fromEntries([...picked].map((k) => [k, found[k]])) as Partial<Form>)}
+          disabled={!picked.size || saving}
+          onClick={() => void onApply(Object.fromEntries([...picked].map((k) => [k, found[k]])) as Partial<Form>)}
         >
-          Apply selected
+          {saving ? 'Saving…' : 'Apply and Save'}
         </button>
-        <button className="link" onClick={onClose}>
+        <button className="link" onClick={onClose} disabled={saving}>
           Cancel
         </button>
-        <span className="muted small">Applied values fill the form; nothing is saved until you press Save.</span>
       </div>
     </div>
   )
@@ -144,9 +145,8 @@ export default function MetadataEditor({
     }
   }
 
-  const save = async (e: FormEvent) => {
-    e.preventDefault()
-    const checked = toMetadataInput(form)
+  const persist = async (next: Form) => {
+    const checked = toMetadataInput(next)
     if ('error' in checked) return setError(checked.error)
     setSaving(true)
     setError('')
@@ -157,6 +157,11 @@ export default function MetadataEditor({
       setError((err as Error).message)
       setSaving(false)
     }
+  }
+
+  const save = (e: FormEvent) => {
+    e.preventDefault()
+    void persist(form)
   }
 
   return (
@@ -217,8 +222,12 @@ export default function MetadataEditor({
             key={`${comparing.ref}`}
             current={form}
             candidate={comparing}
-            onApply={(patch) => {
-              set(patch)
+            saving={saving}
+            onApply={async (patch) => {
+              const next = { ...form, ...patch }
+              setForm(next)
+              // On success the editor closes; on failure the error shows under the filled form.
+              await persist(next)
               setComparing(null)
             }}
             onClose={() => setComparing(null)}
