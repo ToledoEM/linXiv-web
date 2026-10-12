@@ -128,10 +128,56 @@ PROFILES: dict[str, frozenset[str]] = {
     "write": frozenset(WRITE_TOOLS - ALWAYS_BLOCKED),
     "full": frozenset(FULL_TOOLS - ALWAYS_BLOCKED),
 }
+# Repeating the call with the same arguments changes nothing further.
+IDEMPOTENT_TOOLS = frozenset(
+    {
+        "ack_version",
+        "add_paper_to_project",
+        "add_papers_to_project",
+        "add_tags_to_paper",
+        "add_tags_to_project",
+        "archive_project",
+        "create_tag",
+        "remove_paper_from_all_projects",
+        "remove_paper_from_project",
+        "remove_tags_from_paper",
+        "remove_tags_from_project",
+        "restore_paper",
+        "restore_project",
+        "restore_project_from_trash",
+    }
+)
+# Reach outside services (arXiv, DOI resolvers, feeds, ORCID sources).
+OPEN_WORLD_TOOLS = frozenset(
+    {
+        "check_versions",
+        "download_pdf",
+        "fetch_full_text",
+        "fetch_paper",
+        "get_feed",
+        "orcid_backfill",
+        "resolve_doi",
+        "save_doi",
+        "search_papers",
+    }
+)
 
 
 def allowed(profile: str, name: object) -> bool:
     return isinstance(name, str) and name in PROFILES.get(profile, PROFILES["read"])
+
+
+def annotations_for(name: str) -> dict[str, Any]:
+    """MCP tool annotations (client hints) derived from the tool's tier; linxiv-mcp sets none."""
+    hints: dict[str, Any] = {"title": name.replace("_", " ").capitalize()}
+    if name in READ_TOOLS:
+        hints["readOnlyHint"] = True
+    else:
+        hints["readOnlyHint"] = False
+        hints["destructiveHint"] = name not in WRITE_TOOLS
+        hints["idempotentHint"] = name in IDEMPOTENT_TOOLS
+    hints["openWorldHint"] = name in OPEN_WORLD_TOOLS
+    return hints
 
 
 def call_refusal(profile: str, params: object) -> str | None:
@@ -149,8 +195,11 @@ def call_refusal(profile: str, params: object) -> str | None:
 
 def filter_tools(profile: str, result: object) -> object:
     if isinstance(result, dict) and isinstance(result.get("tools"), list):
+        # Upstream annotations, if linXiv ever sets them, win over the derived ones.
         tools = [
-            t for t in result["tools"] if isinstance(t, dict) and allowed(profile, t.get("name"))
+            {**t, "annotations": {**annotations_for(t["name"]), **(t.get("annotations") or {})}}
+            for t in result["tools"]
+            if isinstance(t, dict) and allowed(profile, t.get("name"))
         ]
         return {**result, "tools": tools}
     return result

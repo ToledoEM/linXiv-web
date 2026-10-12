@@ -13,7 +13,15 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import create_app
-from app.mcp_bridge import ALWAYS_BLOCKED, PROFILES, call_refusal
+from app.mcp_bridge import (
+    ALWAYS_BLOCKED,
+    IDEMPOTENT_TOOLS,
+    OPEN_WORLD_TOOLS,
+    PROFILES,
+    annotations_for,
+    call_refusal,
+    filter_tools,
+)
 
 FAKE = [sys.executable, str(Path(__file__).parent / "fixtures" / "fake_mcp.py")]
 TOKEN = "lxmcp_test-token-0123456789"
@@ -164,6 +172,29 @@ def test_policy_covers_every_real_tool():
     assert names == PROFILES["full"] | ALWAYS_BLOCKED
 
 
+def test_annotations_match_tier():
+    assert PROFILES["write"] >= IDEMPOTENT_TOOLS | OPEN_WORLD_TOOLS
+    for name in PROFILES["full"]:
+        hints = annotations_for(name)
+        assert hints["title"] and hints["openWorldHint"] == (name in OPEN_WORLD_TOOLS)
+        if name in PROFILES["read"]:
+            assert hints["readOnlyHint"] is True and "destructiveHint" not in hints, name
+        else:
+            assert hints["readOnlyHint"] is False, name
+            assert hints["destructiveHint"] == (name not in PROFILES["write"]), name
+    assert annotations_for("list_papers")["title"] == "List papers"
+    assert sum(annotations_for(n).get("destructiveHint", False) for n in PROFILES["full"]) == 7
+
+
+def test_filter_tools_annotates_and_keeps_upstream_hints():
+    listing = {
+        "tools": [{"name": "merge_papers"}, {"name": "get_paper", "annotations": {"title": "Up"}}]
+    }
+    tools = {t["name"]: t["annotations"] for t in filter_tools("full", listing)["tools"]}
+    assert tools["merge_papers"]["destructiveHint"] is True
+    assert tools["get_paper"] == {**annotations_for("get_paper"), "title": "Up"}
+
+
 def test_download_pdf_url_refused():
     assert call_refusal("write", {"name": "download_pdf", "arguments": {"paper_id": "x"}}) is None
     assert "url" in call_refusal(
@@ -207,8 +238,10 @@ def test_session_flow_and_filtering(mcp, fake):
     fake.on("settings", "get", result=_stored())
     sid = _init(mcp)
     assert _rpc(mcp, "notifications/initialized", sid=sid, msg_id=None).status_code == 202
-    tools = [t["name"] for t in _rpc(mcp, "tools/list", sid=sid).json()["result"]["tools"]]
-    assert tools == ["list_papers"]  # read profile: blocked, write-only and unknown tools hidden
+    listed = _rpc(mcp, "tools/list", sid=sid).json()["result"]["tools"]
+    # read profile: blocked, write-only and unknown tools hidden
+    assert [t["name"] for t in listed] == ["list_papers"]
+    assert listed[0]["annotations"]["readOnlyHint"] is True
     r = _rpc(mcp, "tools/call", {"name": "list_papers", "arguments": {}}, sid=sid, msg_id=7)
     assert r.json()["id"] == 7
     assert json.loads(r.json()["result"]["content"][0]["text"])["called"] == "list_papers"
@@ -230,8 +263,10 @@ def test_session_flow_and_filtering(mcp, fake):
 def test_write_profile(mcp, fake):
     fake.on("settings", "get", result=_stored(mcp_profile="write"))
     sid = _init(mcp)
-    tools = [t["name"] for t in _rpc(mcp, "tools/list", sid=sid).json()["result"]["tools"]]
-    assert tools == ["list_papers", "create_note", "download_pdf"]
+    listed = _rpc(mcp, "tools/list", sid=sid).json()["result"]["tools"]
+    assert [t["name"] for t in listed] == ["list_papers", "create_note", "download_pdf"]
+    hints = listed[1]["annotations"]
+    assert hints["readOnlyHint"] is False and hints["destructiveHint"] is False
     r = _rpc(
         mcp,
         "tools/call",
@@ -344,8 +379,9 @@ def test_real_linxiv_mcp(settings, fake):
         assert r.status_code == 200, r.text
         sid = r.headers["mcp-session-id"]
         assert _rpc(c, "notifications/initialized", sid=sid, msg_id=None).status_code == 202
-        tools = {t["name"] for t in _rpc(c, "tools/list", sid=sid).json()["result"]["tools"]}
-        assert tools == PROFILES["write"]
+        listed = _rpc(c, "tools/list", sid=sid).json()["result"]["tools"]
+        assert {t["name"] for t in listed} == PROFILES["write"]
+        assert all("readOnlyHint" in t["annotations"] for t in listed)
         r = _rpc(c, "tools/call", {"name": "get_stats", "arguments": {}}, sid=sid)
         stats = json.loads(r.json()["result"]["content"][0]["text"])
         assert stats["paper_count"] == 0
