@@ -189,7 +189,7 @@ Off by default. In **Settings → AI**: tick the switch, pick a provider (Gemini
 
 Every request carries a JSON Schema and a valid example reply (shown in Settings → AI). OpenAI and OpenAI-compatible servers get structured output (`response_format: json_schema`), which also keeps "thinking" models such as Qwen from spending the whole token budget on reasoning; a server that rejects it is retried with the schema in the prompt only. Anthropic uses a forced tool call. Requests time out after 90 s (300 s for OpenAI-compatible servers, since local models read long prompts slowly).
 
-## MCP server (Claude Code / Codex)
+## MCP server (Claude Code / Codex / OpenCode)
 
 Off by default. linXiv-web builds upstream's `linxiv-mcp` and serves its tools over MCP Streamable HTTP at `/mcp`. Each MCP session gets its own `linxiv-mcp` process (at most 4 sessions, closed after 30 minutes idle).
 
@@ -204,6 +204,8 @@ export LINXIV_MCP_TOKEN=<token>
 codex mcp add linxiv --url http://127.0.0.1:8086/mcp --bearer-token-env-var LINXIV_MCP_TOKEN
 ```
 
+OpenCode takes a remote server entry in `opencode.json` with `"headers": { "Authorization": "Bearer {env:LINXIV_MCP_TOKEN}" }`.
+
 | Profile | Tools | Adds |
 |---|---|---|
 | Read only (default) | 32 | search, get, list, refs, stats |
@@ -213,6 +215,8 @@ codex mcp add linxiv --url http://127.0.0.1:8086/mcp --bearer-token-env-var LINX
 Never exposed: `get_settings` / `update_setting` (the settings store holds API keys), backup and restore, and the import/export tools that read or write server file paths. `download_pdf` with a caller-chosen `url` is refused; the paper's stored link is used. Tools added upstream stay hidden until they are classified.
 
 `/mcp` does not use the browser login: it needs the bearer token, answers 404 while switched off, and refuses requests that carry another site's `Origin`.
+
+Every listed tool carries MCP annotations (`readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint`, `title`) derived from its profile tier, so clients can auto-allow read-only tools and confirm destructive ones. Full guide with every tool, client setup and troubleshooting: [docs/MCP.md](docs/MCP.md).
 
 ## API
 
