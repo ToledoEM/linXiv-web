@@ -35,22 +35,31 @@ export default function AppLogs({
 }) {
   const [span, setSpan] = useState<LogWindow>('24h')
   const [data, setData] = useState<LogsResponse | null>(null)
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [armed, setArmed] = useState(false)
   const view = useRef<HTMLPreElement>(null)
 
-  const load = useCallback(async (w: LogWindow) => {
+  // Callers that reload on demand set `loading` first; the effect starts with it set.
+  const load = useCallback(
+    (w: LogWindow) =>
+      api
+        .logs(w, LIMIT)
+        .then(
+          (d) => {
+            setData(d)
+            setError('')
+          },
+          (err: Error) => setError(err.message),
+        )
+        .finally(() => setLoading(false)),
+    [],
+  )
+
+  const reload = () => {
     setLoading(true)
-    setError('')
-    try {
-      setData(await api.logs(w, LIMIT))
-    } catch (err) {
-      setError((err as Error).message)
-    } finally {
-      setLoading(false)
-    }
-  }, [])
+    return load(span)
+  }
 
   useEffect(() => {
     void load(span)
@@ -65,7 +74,7 @@ export default function AppLogs({
     setArmed(false)
     try {
       await api.clearLogs()
-      await load(span)
+      await reload()
     } catch (err) {
       setError((err as Error).message)
     }
@@ -93,14 +102,21 @@ export default function AppLogs({
       {footer}
 
       <div className="toolbar">
-        <select aria-label="Time window" value={span} onChange={(e) => setSpan(e.target.value as LogWindow)}>
+        <select
+          aria-label="Time window"
+          value={span}
+          onChange={(e) => {
+            setLoading(true)
+            setSpan(e.target.value as LogWindow)
+          }}
+        >
           {WINDOWS.map((w) => (
             <option key={w.value} value={w.value}>
               {w.label}
             </option>
           ))}
         </select>
-        <button type="button" disabled={loading} onClick={() => load(span)}>
+        <button type="button" disabled={loading} onClick={() => void reload()}>
           {loading ? 'Loading…' : 'Refresh'}
         </button>
         <a className="button" href={logsExportUrl(span)} download>

@@ -192,21 +192,19 @@ export default function Notes({
   const [editing, setEditing] = useState<'new' | number | null>(null)
   const [error, setError] = useState('')
 
-  const load = useCallback(async () => {
-    try {
-      const [n, active, archived] = await Promise.all([
-        api.notes({ paper: sourceId }),
-        api.projects('active'),
-        api.projects('archived'),
-      ])
-      setNotes(n)
-      // Active projects holding this paper are offered as scopes; archived ones only label old notes.
-      setProjects([...active, ...archived].filter((p) => p.source_ids.includes(sourceId)))
-      setError('')
-    } catch (err) {
-      setError((err as Error).message)
-    }
-  }, [sourceId])
+  const load = useCallback(
+    () =>
+      Promise.all([api.notes({ paper: sourceId }), api.projects('active'), api.projects('archived')]).then(
+        ([n, active, archived]) => {
+          setNotes(n)
+          // Active projects holding this paper are offered as scopes; archived ones only label old notes.
+          setProjects([...active, ...archived].filter((p) => p.source_ids.includes(sourceId)))
+          setError('')
+        },
+        (err: Error) => setError(err.message),
+      ),
+    [sourceId],
+  )
 
   useEffect(() => {
     void load()

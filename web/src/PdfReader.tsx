@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -143,14 +144,19 @@ export default function PdfReader({
 
   const slots = () => scrollerRef.current?.querySelectorAll<HTMLElement>('.pdf-page-slot')
 
+  // DOM only: the scroll handler then tracks the page that comes into view.
+  const scrollToPage = (target: number) => {
+    const scroller = scrollerRef.current
+    const el = slots()?.[target - 1]
+    if (scroller && el) scroller.scrollTop = el.offsetTop
+  }
+
   const goToPage = (target: number) => {
     if (numPages <= 0) return
     const next = Math.min(Math.max(target, 1), numPages)
     setPage(next)
     setPageInput(String(next))
-    const scroller = scrollerRef.current
-    const el = slots()?.[next - 1]
-    if (scroller && el) scroller.scrollTop = el.offsetTop
+    scrollToPage(next)
   }
 
   const onScroll = (e: UIEvent<HTMLDivElement>) => {
@@ -245,8 +251,7 @@ export default function PdfReader({
     findScrollPendingRef.current = true
     const m = matches[cur]
     const slot = slots()?.[m.page - 1]
-    if (!slot?.querySelector('.react-pdf__Page')) goToPage(m.page)
-    else if (!scrollToCurrentMark()) goToPage(m.page)
+    if (!slot?.querySelector('.react-pdf__Page') || !scrollToCurrentMark()) scrollToPage(m.page)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [findOpen, matches, cur])
 
@@ -286,19 +291,17 @@ export default function PdfReader({
   // Stable per-page callbacks: react-pdf rebuilds a page's text layer whenever
   // its callback props change identity.
   const latest = useRef({ matches, cur, scrollToCurrentMark })
-  latest.current = { matches, cur, scrollToCurrentMark }
-  const pageCbs = useRef(new Map<number, () => void>())
-  const onTextLayer = (pn: number) => {
-    let cb = pageCbs.current.get(pn)
-    if (!cb) {
-      cb = () => {
+  useLayoutEffect(() => {
+    latest.current = { matches, cur, scrollToCurrentMark }
+  })
+  const textLayerCbs = useMemo(
+    () =>
+      Array.from({ length: numPages }, (_, i) => () => {
         const l = latest.current
-        if (findScrollPendingRef.current && l.matches[l.cur]?.page === pn) l.scrollToCurrentMark()
-      }
-      pageCbs.current.set(pn, cb)
-    }
-    return cb
-  }
+        if (findScrollPendingRef.current && l.matches[l.cur]?.page === i + 1) l.scrollToCurrentMark()
+      }),
+    [numPages],
+  )
 
   // --- Highlights -----------------------------------------------------------
   // Floaters are position:fixed inside the CSS-zoomed root, so viewport px are
@@ -522,7 +525,7 @@ export default function PdfReader({
                   width={pageWidth}
                   devicePixelRatio={dpr}
                   customTextRenderer={textRenderer}
-                  onRenderTextLayerSuccess={onTextLayer(pn)}
+                  onRenderTextLayerSuccess={textLayerCbs[i]}
                   loading={<div className="pdf-page-loading" style={{ width: pageWidth, height: estPageHeight(width) }} />}
                   renderTextLayer
                   renderAnnotationLayer

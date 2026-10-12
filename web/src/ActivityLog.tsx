@@ -17,14 +17,17 @@ export default function ActivityLog() {
   const [armed, setArmed] = useState(false)
   const [busy, setBusy] = useState(false)
 
-  const load = useCallback(async () => {
-    setError('')
-    try {
-      setEvents((await api.activity(LIMIT)).events)
-    } catch (err) {
-      setError((err as Error).message)
-    }
-  }, [])
+  const load = useCallback(
+    () =>
+      api.activity(LIMIT).then(
+        (r) => {
+          setEvents(r.events)
+          setError('')
+        },
+        (err: Error) => setError(err.message),
+      ),
+    [],
+  )
 
   useEffect(() => {
     void load()

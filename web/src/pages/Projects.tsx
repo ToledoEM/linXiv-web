@@ -78,19 +78,21 @@ export default function Projects() {
   const [busy, setBusy] = useState<number | null>(null)
   const [error, setError] = useState('')
 
-  const load = useCallback(async () => {
-    try {
-      const [list, archived] = await Promise.all([
+  const load = useCallback(
+    () =>
+      Promise.all([
         api.projects(showArchived ? 'archived' : 'active'),
         showArchived ? null : api.projects('archived'),
-      ])
-      const own = list.filter((p) => !isReadingList(p))
-      setProjects(own)
-      setArchivedCount(archived ? archived.filter((p) => !isReadingList(p)).length : own.length)
-    } catch (err) {
-      setError((err as Error).message)
-    }
-  }, [showArchived])
+      ]).then(
+        ([list, archived]) => {
+          const own = list.filter((p) => !isReadingList(p))
+          setProjects(own)
+          setArchivedCount(archived ? archived.filter((p) => !isReadingList(p)).length : own.length)
+        },
+        (err: Error) => setError(err.message),
+      ),
+    [showArchived],
+  )
 
   useEffect(() => {
     void load()

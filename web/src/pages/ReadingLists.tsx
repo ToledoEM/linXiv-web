@@ -62,19 +62,21 @@ export default function ReadingLists() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
-  const load = useCallback(async () => {
-    try {
-      const [list, archived] = await Promise.all([
+  const load = useCallback(
+    () =>
+      Promise.all([
         api.projects(showArchived ? 'archived' : 'active'),
         showArchived ? null : api.projects('archived'),
-      ])
-      const own = list.filter(isReadingList)
-      setLists(own)
-      setArchivedCount(archived ? archived.filter(isReadingList).length : own.length)
-    } catch (err) {
-      setError((err as Error).message)
-    }
-  }, [showArchived])
+      ]).then(
+        ([list, archived]) => {
+          const own = list.filter(isReadingList)
+          setLists(own)
+          setArchivedCount(archived ? archived.filter(isReadingList).length : own.length)
+        },
+        (err: Error) => setError(err.message),
+      ),
+    [showArchived],
+  )
 
   useEffect(() => {
     void load()

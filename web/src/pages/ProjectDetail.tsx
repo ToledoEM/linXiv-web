@@ -148,7 +148,8 @@ export default function ProjectDetail() {
   const navigate = useNavigate()
   const [project, setProject] = useState<Project | null>(null)
   const [papers, setPapers] = useState<Paper[] | null>(null)
-  const [loadError, setLoadError] = useState('')
+  const [fetchError, setFetchError] = useState('')
+  const loadError = Number.isNaN(projectId) ? 'Project not found' : fetchError
   const [error, setError] = useState('')
   const [editing, setEditing] = useState(false)
   const [adding, setAdding] = useState(false)
@@ -162,17 +163,14 @@ export default function ProjectDetail() {
   const shown = useMemo(() => (papers ? sortPapers(papers, sort) : null), [papers, sort])
 
   const load = useCallback(async () => {
-    if (Number.isNaN(projectId)) {
-      setLoadError('Project not found')
-      return
-    }
-    try {
-      const [p, list] = await Promise.all([api.project(projectId), api.projectPapers(projectId)])
-      setProject(p)
-      setPapers(list)
-    } catch (err) {
-      setLoadError((err as Error).message)
-    }
+    if (Number.isNaN(projectId)) return
+    await Promise.all([api.project(projectId), api.projectPapers(projectId)]).then(
+      ([p, list]) => {
+        setProject(p)
+        setPapers(list)
+      },
+      (err: Error) => setFetchError(err.message),
+    )
   }, [projectId])
 
   useEffect(() => {

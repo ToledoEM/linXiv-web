@@ -50,17 +50,21 @@ export default function Graph() {
   }, [])
   const theme = useMemo(() => colorsFor(pref), [pref])
 
-  const load = useCallback(async (hide: boolean) => {
-    setLoading(true)
-    try {
-      setView(await api.graph(hide))
-      setError('')
-    } catch (err) {
-      setError((err as Error).message)
-    } finally {
-      setLoading(false)
-    }
-  }, [])
+  // `loading` starts set; the checkbox and Refresh set it again before reloading.
+  const load = useCallback(
+    (hide: boolean) =>
+      api
+        .graph(hide)
+        .then(
+          (v) => {
+            setView(v)
+            setError('')
+          },
+          (err: Error) => setError(err.message),
+        )
+        .finally(() => setLoading(false)),
+    [],
+  )
 
   useEffect(() => {
     try {
@@ -154,10 +158,25 @@ export default function Graph() {
             className="check"
             title="Drop authors linked to only one paper. They leave the graph entirely, so the Author filter can't match them either."
           >
-            <input type="checkbox" checked={hideSingle} onChange={(e) => setHideSingle(e.target.checked)} />
+            <input
+              type="checkbox"
+              checked={hideSingle}
+              onChange={(e) => {
+                setLoading(true)
+                setHideSingle(e.target.checked)
+              }}
+            />
             Hide single-paper authors
           </label>
-          <button type="button" className="link" disabled={loading} onClick={() => load(hideSingle)}>
+          <button
+            type="button"
+            className="link"
+            disabled={loading}
+            onClick={() => {
+              setLoading(true)
+              void load(hideSingle)
+            }}
+          >
             {loading ? 'Loading…' : 'Refresh'}
           </button>
         </span>

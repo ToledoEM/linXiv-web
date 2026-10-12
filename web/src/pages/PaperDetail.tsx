@@ -51,15 +51,19 @@ export default function PaperDetail() {
     void loadAnnotations()
   }, [loadAnnotations])
 
-  const load = useCallback(async () => {
-    try {
-      setPaper(await api.paper(id))
-      setVersions(await api.versions(id).catch(() => null))
-      setError('')
-    } catch (err) {
-      setError((err as Error).message)
-    }
-  }, [id])
+  const load = useCallback(
+    () =>
+      api.paper(id).then(
+        async (p) => {
+          setPaper(p)
+          const v = await api.versions(id).catch(() => null)
+          setVersions(v)
+          setError('')
+        },
+        (err: Error) => setError(err.message),
+      ),
+    [id],
+  )
 
   useEffect(() => {
     void load()

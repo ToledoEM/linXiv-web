@@ -96,7 +96,8 @@ export default function AuthorDetail() {
   const navigate = useNavigate()
   const [author, setAuthor] = useState<Detail | null>(null)
   const [suggest, setSuggest] = useState<MergeCandidates | null>(null)
-  const [loadError, setLoadError] = useState('')
+  const [fetchError, setFetchError] = useState('')
+  const loadError = Number.isNaN(authorId) ? 'Author not found' : fetchError
   const [editing, setEditing] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -108,19 +109,16 @@ export default function AuthorDetail() {
   const [picked, setPicked] = useState<number[]>([])
 
   const load = useCallback(async () => {
-    if (Number.isNaN(authorId)) {
-      setLoadError('Author not found')
-      return
-    }
-    try {
-      const [a, s, all] = await Promise.all([api.author(authorId), api.mergeCandidates(authorId), api.authors(false)])
-      setAuthor(a)
-      setSuggest(s)
-      setAllAuthors(all)
-      setLoadError('')
-    } catch (err) {
-      setLoadError((err as Error).message)
-    }
+    if (Number.isNaN(authorId)) return
+    await Promise.all([api.author(authorId), api.mergeCandidates(authorId), api.authors(false)]).then(
+      ([a, s, all]) => {
+        setAuthor(a)
+        setSuggest(s)
+        setAllAuthors(all)
+        setFetchError('')
+      },
+      (err: Error) => setFetchError(err.message),
+    )
   }, [authorId])
 
   useEffect(() => {

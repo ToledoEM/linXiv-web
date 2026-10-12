@@ -13,13 +13,14 @@ export default function VersionMonitor() {
   const [dismissing, setDismissing] = useState('')
   const [error, setError] = useState('')
 
-  const load = useCallback(async () => {
-    try {
-      setPending((await api.newVersions()).new_versions)
-    } catch (err) {
-      setError((err as Error).message)
-    }
-  }, [])
+  const load = useCallback(
+    () =>
+      api.newVersions().then(
+        (r) => setPending(r.new_versions),
+        (err: Error) => setError(err.message),
+      ),
+    [],
+  )
 
   useEffect(() => {
     void load()

@@ -115,19 +115,22 @@ export default function HomeFeed() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
-  const load = useCallback(async (refresh = false) => {
-    setLoading(true)
-    setError('')
-    try {
-      const r = await api.feed(refresh)
-      if (r.configured) setFeed(r)
-      setConfigured(r.configured)
-    } catch (err) {
-      setError((err as Error).message)
-    } finally {
-      setLoading(false)
-    }
-  }, [])
+  // `loading` starts set; Refresh sets it again before reloading.
+  const load = useCallback(
+    (refresh = false) =>
+      api
+        .feed(refresh)
+        .then(
+          (r) => {
+            if (r.configured) setFeed(r)
+            setConfigured(r.configured)
+            setError('')
+          },
+          (err: Error) => setError(err.message),
+        )
+        .finally(() => setLoading(false)),
+    [],
+  )
 
   useEffect(() => {
     void load()
@@ -147,7 +150,15 @@ export default function HomeFeed() {
     <div className="home-feed">
       <div className="page-head">
         <h3>{feed?.title || 'Home feed'}</h3>
-        <button type="button" className="link small page-head-action" disabled={loading} onClick={() => load(true)}>
+        <button
+          type="button"
+          className="link small page-head-action"
+          disabled={loading}
+          onClick={() => {
+            setLoading(true)
+            void load(true)
+          }}
+        >
           {loading ? 'Loading…' : 'Refresh'}
         </button>
       </div>
