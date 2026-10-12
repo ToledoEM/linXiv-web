@@ -12,6 +12,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Projects and reading lists with export (`.lxproj`, BibTeX, notes as Markdown) and `.lxproj` import; Authors with merge and ORCID backfill; knowledge graph.
 - Metadata lookup and review against Crossref, arXiv, OpenAlex, PubMed and bioRxiv/medRxiv, including lookup by PDF file name.
 - Optional AI features (Gemini, OpenAI, Anthropic, OpenAI-compatible): tag suggestions, summaries, metadata cleanup. Optional MCP server over HTTP with bearer token and tool profiles.
+- MCP `tools/list` carries tool annotations (`readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint`, `title`) derived from each tool's profile tier, since `linxiv-mcp` sets none; clients can auto-allow read-only tools and confirm destructive ones.
+- Settings → Integrations → MCP server: OpenCode connect snippet (`opencode.json`, token from `LINXIV_MCP_TOKEN`).
+- `docs/MCP.md`: setup, Claude Code / Codex / OpenCode clients, profiles, permission hints, full tool reference, security and troubleshooting.
 - Settings: themes, zoom and density, sidebar pages, shortcuts, PDF folder layouts, full-text indexing (TeX and PDF text), backup and restore, app logs, update check, disk space and health.
 - Single-admin login (argon2), first-run setup, "Remember me", CSRF protection, login throttling, SSRF guards on outbound downloads.
 - `scripts/bulk-import.sh` for server-side PDF ingest (copy, move, in situ).
@@ -29,7 +32,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - ESLint is type-aware and rejects un-handled promises (`no-floating-promises`, `no-misused-promises`).
 - Settings → Server & data → Login: change the admin password (logs out every other browser) and "Log out other sessions". `python -m app reset-password` sets a new password from the server without a restart. Passwords set by `LINXIV_WEB_PASSWORD(_HASH)` stay read-only here.
 - Logins survive restarts: sessions (stored as SHA-256 of their id) and the session signing key live in `<data dir>/linxiv-web-state.db` (mode 0600). `LINXIV_WEB_SECRET_KEY`, when set, replaces the stored key.
-- Activity log (Settings → Server & data → Activity): every POST/PUT/PATCH/DELETE under `/api/` with time, client address, route, path parameters and status; Settings saves record key names only, never values. CSV export; clearing needs a typed phrase and is itself recorded. `<data dir>/logs/activity.jsonl`, 5 MiB plus one rotated file.
+- Activity log (Settings → Server & data → Activity): every POST/PUT/PATCH/DELETE under `/api/` with time, client address, route, path parameters and status; Settings saves record key names only, never values. The page shows the latest 50 events; CSV export has the full log. Clearing needs a typed phrase and is itself recorded. `<data dir>/logs/activity.jsonl`, 5 MiB plus one rotated file.
 - Diagnostics report (Settings → About): versions, configuration, library counts, disk, health, running jobs and reachability of outside services, as Markdown to copy or download. Secrets and addresses that could locate the server appear only as set / not set.
 - Activity tray: running background jobs (TeX source index, PDF text index, PDF folders) with progress and Cancel on every page; finished jobs stay until dismissed.
 - Upload page: drag and drop PDFs; drops add to the selection, other file types are skipped with a note.
