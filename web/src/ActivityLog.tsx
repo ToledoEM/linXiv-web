@@ -5,7 +5,7 @@ import ConfirmDialog from './ConfirmDialog'
 import type { ActivityEvent } from './types'
 
 const PHRASE = 'delete activity log'
-const LIMIT = 200
+const LIMIT = 50
 
 const when = (at: string) => new Date(at).toLocaleString()
 const target = (t: Record<string, string>) => Object.values(t).join(', ')
