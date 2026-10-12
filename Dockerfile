@@ -55,7 +55,7 @@ ENTRYPOINT ["linxiv"]
 
 # --- Server tests + lint, with the real CLI for the integration test ---
 #   docker build --target server-test .
-FROM python:3.11-slim-bookworm@sha256:0a310eeecf4e1f5a0743f9a6520c90c88d089c903ca5fd283f501e3a805f5f89 AS server-test
+FROM python:3.14-slim-bookworm@sha256:48b13b003dda20b16f9442b8475aa05fe21bf6579a8c881db92ffb4d8fd20f83 AS server-test
 COPY --from=ghcr.io/astral-sh/uv:0.8@sha256:1d31be550ff927957472b2a491dc3de1ea9b5c2d319a9cea5b6a48021e2990a6 /uv /usr/local/bin/uv
 COPY --from=cli-build /out/linxiv /usr/local/bin/linxiv
 COPY --from=cli-build /out/linxiv-mcp /usr/local/bin/linxiv-mcp
@@ -70,7 +70,7 @@ COPY server/ ./
 RUN uv run ruff check . && uv run ruff format --check . && uv run pytest -rs
 
 # --- Stage 2: build the React SPA ---
-FROM node:22-slim@sha256:c3de60bf2f9dd0ac6370e6117950ff62d6e339527e7472301c9c78a017978392 AS web-build
+FROM node:25-slim@sha256:81db02c4b671288a03915da9534dbd54f96d0e7c24d80ccc54f5b36b2e684370 AS web-build
 WORKDIR /app/web
 COPY web/package.json web/package-lock.json ./
 RUN npm ci
@@ -78,7 +78,7 @@ COPY web/ ./
 RUN npm run build
 
 # --- Stage 3: Python runtime ---
-FROM python:3.11-slim-bookworm@sha256:0a310eeecf4e1f5a0743f9a6520c90c88d089c903ca5fd283f501e3a805f5f89 AS runtime
+FROM python:3.14-slim-bookworm@sha256:48b13b003dda20b16f9442b8475aa05fe21bf6579a8c881db92ffb4d8fd20f83 AS runtime
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates \
     && rm -rf /var/lib/apt/lists/*
