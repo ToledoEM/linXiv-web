@@ -45,6 +45,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Paper page Delete paper / Delete PDF: no countdown. The first press puts Undo in the button's place and the delete button beside it; nothing is deleted until that second press.
 - Metadata lookup compare: "Apply and Save" writes the picked fields in one step (was Apply, then Save).
 
+### Fixed
+- PDF reader showed blank pages for scanned PDFs (CCITT fax, JBIG2, JPEG 2000 images) since react-pdf 11 / pdf.js 6: the pdf.js wasm image decoders now ship under `/assets/pdfjs-wasm/` and the CSP allows `'wasm-unsafe-eval'` (WebAssembly only, no JS eval).
+
 ### Security
 - PubMed lookup parses NCBI XML with `defusedxml`; replies with entity declarations are refused (502) instead of expanded.
 - Requests from public IP addresses are refused (403) unless `LINXIV_WEB_ALLOW_EXTERNAL=true`; loopback, private LAN and link-local clients are served. `X-Forwarded-For` is read only from proxies listed in `LINXIV_WEB_TRUSTED_PROXIES` (IPs or CIDRs), right to left, so a client can't forge its address. Refused requests are logged once per address per minute.
