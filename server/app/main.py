@@ -79,7 +79,7 @@ class SecurityHeaders(BaseHTTPMiddleware):
         response.headers.setdefault(
             "Content-Security-Policy",
             "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; "
-            "script-src 'self'; frame-src 'self'; object-src 'self'; frame-ancestors 'self'",
+            "script-src 'self' 'wasm-unsafe-eval'; frame-src 'self'; object-src 'self'; frame-ancestors 'self'",
         )
         return response
 

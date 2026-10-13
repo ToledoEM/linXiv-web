@@ -108,11 +108,14 @@ export function highlightHtml(str: string, ranges: HighlightRange[]): string {
 
 /** Shared pdf.js init options (desktop pdfOptions.ts). Full download first, no
  * range/stream re-layout flashes; no eval (CSP has no 'unsafe-eval').
+ * `wasmUrl`: image decoders copied there by vite.config.ts; without them scanned
+ * (CCITT/JBIG2) pages render blank.
  * Module-level const: react-pdf reloads if identity changes. */
 export const pdfDocumentOptions = {
   disableStream: true,
   disableRange: true,
   isEvalSupported: false,
+  wasmUrl: `${import.meta.env.BASE_URL}assets/pdfjs-wasm/`,
 }
 
 /** Horizontal padding per page, subtracted from the scroller width. */

@@ -47,6 +47,29 @@ Like `linxiv-headless`, the server refuses to start if it binds to a non-loopbac
 
 The image builds `linxiv` and `linxiv-mcp` from upstream source at the `LINXIV_REF` build arg (default `v0.7.0`).
 
+## Resource usage
+
+Measured on a home server (2017 laptop, Intel i7-7560U, 4 threads, 16 GB RAM, amd64) running one container for 19 hours, with a library of 6,099 papers, 6,099 PDFs and 1,976 tags:
+
+| | |
+|---|---|
+| Image size | 357 MB on disk (91 MB compressed) |
+| Memory, idle | 155–185 MiB |
+| Memory, peak | 302 MiB |
+| CPU, idle | under 1% |
+| Data dir (`papers.db`, logs, state) | 16 MB |
+| PDFs | 12 GB (on a separate USB disk) |
+
+No CPU or memory limits were set.
+
+### Raspberry Pi 5
+
+It should run there. The image is published for `arm64`, and the bundled `linxiv` CLI and PDF library have arm64 builds. A peak of about 300 MiB fits on a 4 GB or 8 GB Pi 5. Nobody has tested it on a Pi yet. Three things to watch:
+
+- Pull the prebuilt image. Building on the Pi compiles the Rust CLI, which is slow and needs plenty of RAM or swap.
+- Keep the data dir on an SSD or NVMe drive, not the SD card. SQLite writes to `papers.db` often.
+- PDFs can sit on a USB or NVMe drive mounted at the PDF path.
+
 ## Run (Docker)
 
 To self-host from the prebuilt image (first-run setup, reverse proxy, backups, updates), see [docs/SELF-HOSTING.md](docs/SELF-HOSTING.md). To import a folder of PDFs already on the server without the web UI, see [docs/BULK-IMPORT.md](docs/BULK-IMPORT.md). The steps below build from this checkout.
