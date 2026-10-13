@@ -50,7 +50,7 @@ def test_list_filters_by_text_and_tag(client, fake):
     assert client.get("/api/papers", params={"q": "diffusion"}).json() == []
     assert len(client.get("/api/papers", params={"tag": "nlp"}).json()) == 1
     assert client.get("/api/papers", params={"tag": "cv"}).json() == []
-    assert "--limit" not in fake.calls[-1]
+    assert "--limit" not in [c for c in fake.calls if c[0] == "list"][-1]
 
 
 def test_list_filters_untagged(client, fake):
@@ -337,6 +337,20 @@ def test_search_quoted_phrase_stays_whole(client, fake):
     r = client.get("/api/papers", params={"q": '"softmax gating"'})
     assert [p["source_id"] for p in r.json()] == ["arxiv:2"]
     assert client.get("/api/papers", params={"q": '"gating softmax"'}).json() == []
+
+
+def test_filtered_list_cached_until_db_changes(client, fake, settings):
+    _lib(fake, [])
+    lists = lambda: [c for c in fake.calls if c[0] == "list"]  # noqa: E731
+    client.get("/api/papers", params={"q": "attention"})
+    client.get("/api/papers", params={"q": "other", "tag": "ml"})
+    assert len(lists()) == 1
+    client.get("/api/papers", params={"q": "other", "sort": "title"})
+    assert len(lists()) == 2
+    (settings.data_dir / "papers.db").write_bytes(b"changed")
+    r = client.get("/api/papers", params={"q": "attention"})
+    assert len(lists()) == 3
+    assert [p["source_id"] for p in r.json()] == ["arxiv:1"]
 
 
 def test_search_deep_hits_respect_filters(client, fake):

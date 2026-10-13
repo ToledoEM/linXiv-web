@@ -68,6 +68,34 @@ def _matches(paper: dict, terms: list[str]) -> bool:
     return all(any(t in f for f in text) for t in terms)
 
 
+def _db_stamp(request: Request) -> tuple:
+    """Changes whenever papers.db is written, by the CLI, linxiv-mcp or this server."""
+    db = settings(request).data_dir / "papers.db"
+    stamp = []
+    for f in (db, db.with_name(db.name + "-wal")):
+        try:
+            st = f.stat()
+            stamp.append((st.st_mtime_ns, st.st_size))
+        except OSError:
+            stamp.append(None)
+    return tuple(stamp)
+
+
+async def _full_list(request: Request, args: list[str]):
+    """Unpaged `linxiv list`, annotated, reused until papers.db changes. Callers
+    must not mutate the returned papers."""
+    cache = getattr(request.app.state, "list_cache", None)
+    if cache is None:
+        cache = request.app.state.list_cache = {}
+    stamp = _db_stamp(request)
+    for k in [k for k, (s, _) in cache.items() if s != stamp]:
+        del cache[k]
+    key = tuple(args)
+    if key not in cache:
+        cache[key] = (stamp, _annotate(request, await run(request, args)))
+    return cache[key][1]
+
+
 @router.get("/papers")
 async def list_papers(
     request: Request,
@@ -105,8 +133,10 @@ async def list_papers(
         args += ["--category", ident(category, "category")]
     if dir:
         args += ["--dir", dir]
-    papers = _annotate(request, await run(request, args))
-    if not filtering or not isinstance(papers, list):
+    if not filtering:
+        return _annotate(request, await run(request, args))
+    papers = await _full_list(request, args)
+    if not isinstance(papers, list):
         return papers
     terms = _terms(ident(q, "query")) if q else None
     deep: set[str] = set()
