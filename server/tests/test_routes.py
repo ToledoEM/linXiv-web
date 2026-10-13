@@ -325,6 +325,20 @@ def test_search_merges_fulltext_and_notes(client, fake):
     assert ["paper", "search", "--limit", "200", "--", "softmax"] in fake.calls
 
 
+def test_search_needs_every_word_in_any_field(client, fake):
+    _lib(fake, [])
+    r = client.get("/api/papers", params={"q": "other  GATING"})
+    assert [p["source_id"] for p in r.json()] == ["arxiv:2"]
+    assert client.get("/api/papers", params={"q": "other attention"}).json() == []
+
+
+def test_search_quoted_phrase_stays_whole(client, fake):
+    _lib(fake, [])
+    r = client.get("/api/papers", params={"q": '"softmax gating"'})
+    assert [p["source_id"] for p in r.json()] == ["arxiv:2"]
+    assert client.get("/api/papers", params={"q": '"gating softmax"'}).json() == []
+
+
 def test_search_deep_hits_respect_filters(client, fake):
     _lib(fake, [{"source_id": "arxiv:3"}, {"source_id": "arxiv:4"}])
     r = client.get("/api/papers", params={"q": "quokka", "tag": "ml", "pdf": "none"})

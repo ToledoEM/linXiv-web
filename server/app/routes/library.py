@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, HTTPException, Query, Request, Response
@@ -49,11 +50,22 @@ def _annotate(request: Request, papers):
     return papers
 
 
-def _matches(paper: dict, needle: str) -> bool:
+_TERM = re.compile(r'"([^"]+)"|(\S+)')
+
+
+def _terms(q: str) -> list[str]:
+    """Lowercased search words; a "quoted part" stays one phrase."""
+    terms = (a or b for a, b in _TERM.findall(q.lower()))
+    return [t for t in (t.strip() for t in terms) if t]
+
+
+def _matches(paper: dict, terms: list[str]) -> bool:
+    """Every term is in some field (title, abstract, id, DOI, authors, tags)."""
     fields = [paper.get("title"), paper.get("summary"), paper.get("source_id"), paper.get("doi")]
     fields += paper.get("authors") or []
     fields += paper.get("tags") or []
-    return any(needle in str(f).lower() for f in fields if f)
+    text = [str(f).lower() for f in fields if f]
+    return all(any(t in f for f in text) for t in terms)
 
 
 @router.get("/papers")
@@ -72,7 +84,8 @@ async def list_papers(
     pdf: Literal["has", "none"] | None = None,
 ):
     """Library listing. `q`/`tag`/`untagged`/`pdf` filter `linxiv list` by title,
-    abstract, id, DOI, authors, tags (or none) and whether a PDF is saved. A `q` of 3+ characters also
+    abstract, id, DOI, authors, tags (or none) and whether a PDF is saved; every word
+    of `q` must match, a "quoted phrase" as a whole. A `q` of 3+ characters also
     takes `paper search` hits (indexed TeX full text and note titles/bodies);
     papers found only that way carry `deep_match: true`. If that search fails the
     plain matches still return, with an `X-Deep-Search-Error` header.
@@ -95,9 +108,9 @@ async def list_papers(
     papers = _annotate(request, await run(request, args))
     if not filtering or not isinstance(papers, list):
         return papers
-    needle = ident(q, "query").lower() if q else None
+    terms = _terms(ident(q, "query")) if q else None
     deep: set[str] = set()
-    if needle and len(needle.strip()) >= DEEP_SEARCH_MIN:
+    if terms and len(q.strip()) >= DEEP_SEARCH_MIN:
         try:
             found = await run(
                 request,
@@ -116,7 +129,7 @@ async def list_papers(
             continue
         if pdf is not None and bool(p.get("has_pdf")) != (pdf == "has"):
             continue
-        if needle is None or _matches(p, needle):
+        if not terms or _matches(p, terms):
             hits.append(p)
         elif p.get("source_id") in deep:
             hits.append({**p, "deep_match": True})
