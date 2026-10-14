@@ -74,7 +74,8 @@ export function projectExportUrl(id: number, format: ExportFormat, pdfs = false)
 }
 
 /** App log export for a time window (GET; streamed with the session cookie). */
-export const logsExportUrl = (window: LogWindow) => `/api/logs/export?window=${window}`
+export const logsExportUrl = (window: LogWindow) =>
+  `/api/logs/export?window=${encodeURIComponent(window)}`
 export const ACTIVITY_EXPORT_URL = '/api/activity/export'
 export const DIAGNOSTICS_URL = '/api/system/diagnostics'
 
