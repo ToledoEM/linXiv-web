@@ -106,8 +106,10 @@ export default function AppLogs({
           aria-label="Time window"
           value={span}
           onChange={(e) => {
+            const w = WINDOWS.find((x) => x.value === e.target.value)?.value
+            if (!w) return
             setLoading(true)
-            setSpan(e.target.value as LogWindow)
+            setSpan(w)
           }}
         >
           {WINDOWS.map((w) => (
