@@ -138,9 +138,10 @@ async def _resolve(host: str) -> list[str]:
     return [info[4][0] for info in infos]
 
 
-async def _check_public(url: str) -> None:
+async def _check_public(url: str) -> str:
     """Refuse URLs that aren't http(s) or that resolve to a non-public address
-    (loopback, private LAN, link-local, cloud metadata...)."""
+    (loopback, private LAN, link-local, cloud metadata...). Returns the address
+    to connect to."""
     parts = urlsplit(url)
     if parts.scheme not in ("http", "https") or not parts.hostname:
         raise HTTPException(status_code=400, detail="PDF link must be http(s)")
@@ -150,6 +151,16 @@ async def _check_public(url: str) -> None:
         raise HTTPException(status_code=400, detail=f"cannot resolve {parts.hostname}") from e
     if not addrs or not all(ipaddress.ip_address(a.split("%")[0]).is_global for a in addrs):
         raise HTTPException(status_code=400, detail="PDF link must point at a public host")
+    return addrs[0].split("%")[0]
+
+
+def _pinned(url: str, ip: str) -> str:
+    """`url` with its host swapped for the checked address."""
+    parts = urlsplit(url)
+    host = f"[{ip}]" if ":" in ip else ip
+    if parts.port is not None:
+        host = f"{host}:{parts.port}"
+    return urlunsplit((parts.scheme, host, parts.path, parts.query, ""))
 
 
 def _client(timeout: float) -> httpx.AsyncClient:
@@ -159,11 +170,19 @@ def _client(timeout: float) -> httpx.AsyncClient:
 
 
 async def download_pdf_to(url: str, dest: Path, limit: int, timeout: float) -> None:
-    """Stream a PDF to `dest`, re-checking every redirect hop and capping the size."""
+    """Stream a PDF to `dest`, re-checking every redirect hop and capping the size.
+    Each hop connects to the address that passed the check (no second DNS lookup
+    to rebind); Host and TLS SNI/certificate checks keep the real host name."""
     async with _client(timeout) as client:
         for _ in range(_MAX_REDIRECTS + 1):
-            await _check_public(url)
-            async with client.stream("GET", url) as resp:
+            ip = await _check_public(url)
+            parts = urlsplit(url)
+            async with client.stream(
+                "GET",
+                _pinned(url, ip),
+                headers={"Host": parts.netloc.rpartition("@")[2]},
+                extensions={"sni_hostname": parts.hostname},
+            ) as resp:
                 if resp.is_redirect:
                     url = urljoin(url, resp.headers.get("location", ""))
                     continue
