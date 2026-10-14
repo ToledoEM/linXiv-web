@@ -1,4 +1,4 @@
-import { colRem, FIXED_REM, type TableColumns } from './tableColumns'
+import { colRem, FIXED_REM, PAGE_SIZES, type TableColumns } from './tableColumns'
 
 export function Authors({ authors, max = 6 }: { authors: string[]; max?: number }) {
   if (!authors?.length) return null
@@ -72,5 +72,46 @@ export function TagCell({ tags }: { tags?: string[] }) {
         ))}
       </div>
     </td>
+  )
+}
+
+/** Page controls under a paged table: previous / next and rows per page. */
+export function Pager({
+  page,
+  size,
+  total,
+  onPage,
+  onSize,
+}: {
+  page: number
+  size: number
+  total: number
+  onPage: (page: number) => void
+  onSize: (size: number) => void
+}) {
+  const pages = Math.max(1, Math.ceil(total / size))
+  return (
+    <nav className="toolbar pager" aria-label="Pages">
+      <button type="button" disabled={page <= 1} onClick={() => onPage(page - 1)}>
+        ‹ Prev
+      </button>
+      <span className="muted small">
+        Page {page} of {pages}
+      </span>
+      <button type="button" disabled={page >= pages} onClick={() => onPage(page + 1)}>
+        Next ›
+      </button>
+      <span className="grow" />
+      <label className="muted small">
+        Per page{' '}
+        <select aria-label="Papers per page" value={size} onChange={(e) => onSize(Number(e.target.value))}>
+          {PAGE_SIZES.map((n) => (
+            <option key={n} value={n}>
+              {n}
+            </option>
+          ))}
+        </select>
+      </label>
+    </nav>
   )
 }

@@ -228,6 +228,7 @@ ul.plain { padding-left: 1.1rem; }
 .field > span:first-child { font-weight: 600; }
 
 .library-count { margin: -0.75rem 0 0.75rem; }
+.pager { margin: 0.75rem 0 0; }
 .chips { display: flex; gap: 0.4rem; flex-wrap: wrap; }
 .chip { border: 1px solid var(--border); background: transparent; color: var(--muted); border-radius: 999px; padding: 0.2rem 0.8rem; font-size: 0.87rem; }
 .chip.active { border-color: var(--accent); background: var(--accent-soft); color: var(--text); }

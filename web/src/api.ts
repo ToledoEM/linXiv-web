@@ -219,6 +219,7 @@ export const api = {
     untagged?: boolean
     fulltext?: boolean
     limit?: number
+    offset?: number
     sort?: string
     dir?: 'asc' | 'desc'
     pdf?: 'has' | 'none'
