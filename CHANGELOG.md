@@ -4,7 +4,7 @@ All notable changes to linXiv-web are documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The version is `server/pyproject.toml` `version`; images are published to `ghcr.io/toledoem/linxiv-web:<version>`.
 
-## [0.1.0] - Unreleased
+## [0.1.0] - 2026-10-14
 
 ### Added
 - Browser UI over the `linxiv` CLI (linXiv v0.7.0): Home dashboard and arXiv feed, Library with search (title, abstract, full text, notes), sortable configurable tables, batch metadata edit and AI tags, paper page with PDF reader, highlights and notes.
