@@ -114,3 +114,6 @@ export function tableMinWidth(cols: TableColumns): string {
   if (cols.show.pdf) rem += FIXED_REM.pdf
   return `${rem}rem`
 }
+
+/** Rows per page offered under paged paper tables (Library). */
+export const PAGE_SIZES = [25, 50, 100, 200, 500]

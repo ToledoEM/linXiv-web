@@ -96,6 +96,40 @@ async def _full_list(request: Request, args: list[str]):
     return cache[key][1]
 
 
+SortKey = Literal["published", "added", "title", "authors", "category", "tags", "pdf"]
+CLI_SORTS = ("published", "added", "title")
+_DIGITS = re.compile(r"(\d+)")
+
+
+def _sort_value(p: dict, key: str) -> str:
+    if key == "authors":
+        value = (p.get("authors") or [""])[0]
+    elif key == "tags":
+        value = ", ".join(p.get("tags") or [])
+    elif key == "pdf":
+        value = "1" if p.get("has_pdf") else ""
+    else:
+        value = p.get(key)
+    return str(value or "").strip()
+
+
+def _natural(value: str) -> list[tuple[int, int | str]]:
+    """Case-insensitive, digit runs compared as numbers ("v2" before "v10")."""
+    return [
+        (0, int(part)) if part.isdigit() else (1, part)
+        for part in _DIGITS.split(value.casefold())
+        if part
+    ]
+
+
+def sort_papers(papers: list, key: str, dir: str) -> list:
+    """Stable sort by one column (web `paperSort.ts`); empty values last either way."""
+    keyed = [(_sort_value(p, key), p) for p in papers]
+    full = [x for x in keyed if x[0]]
+    full.sort(key=lambda x: _natural(x[0]), reverse=dir == "desc")
+    return [p for _, p in full] + [p for v, p in keyed if not v]
+
+
 @router.get("/papers")
 async def list_papers(
     request: Request,
@@ -107,7 +141,7 @@ async def list_papers(
     limit: int = Query(50, ge=1, le=1000),
     offset: int = Query(0, ge=0),
     category: str | None = None,
-    sort: Literal["published", "added", "title"] = "published",
+    sort: SortKey = "published",
     dir: Literal["asc", "desc"] | None = None,
     pdf: Literal["has", "none"] | None = None,
 ):
@@ -117,6 +151,8 @@ async def list_papers(
     takes `paper search` hits (indexed TeX full text and note titles/bodies);
     papers found only that way carry `deep_match: true`. If that search fails the
     plain matches still return, with an `X-Deep-Search-Error` header.
+    `sort` authors/category/tags/pdf orders the whole result before paging.
+    `X-Total-Count` carries the number of papers across all pages.
     `fulltext` alone returns the `paper search` hits only."""
     if q and fulltext:
         return await run(
@@ -124,17 +160,14 @@ async def list_papers(
         )
     if tag is not None and untagged:
         raise HTTPException(status_code=400, detail="Use either tag or untagged, not both")
-    filtering = bool(q or tag or untagged or pdf)
-    args = ["list", "--sort", sort]
-    # The CLI has no text filter, so filtered listings page in Python.
-    if not filtering:
-        args += ["--limit", str(limit), "--offset", str(offset)]
+    # The CLI sorts by date, added or title only and has no text filter, so the
+    # cached full list is filtered, sorted and paged here (and the total is known).
+    cli_sort = sort in CLI_SORTS
+    args = ["list", "--sort", sort if cli_sort else "published"]
     if category:
         args += ["--category", ident(category, "category")]
-    if dir:
+    if dir and cli_sort:
         args += ["--dir", dir]
-    if not filtering:
-        return _annotate(request, await run(request, args))
     papers = await _full_list(request, args)
     if not isinstance(papers, list):
         return papers
@@ -163,6 +196,9 @@ async def list_papers(
             hits.append(p)
         elif p.get("source_id") in deep:
             hits.append({**p, "deep_match": True})
+    if not cli_sort:
+        hits = sort_papers(hits, sort, dir or "asc")
+    response.headers["X-Total-Count"] = str(len(hits))
     return hits[offset : offset + limit]
 
 

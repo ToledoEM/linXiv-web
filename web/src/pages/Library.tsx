@@ -5,20 +5,12 @@ import type { Paper } from '../types'
 import { useAiEnabled } from '../aiEnabled'
 import BatchMetadata from '../BatchMetadata'
 import BatchTags from '../BatchTags'
-import { DoiLine, ErrorText, PaperColGroup, SortHeader, TagCell } from '../components'
+import { DoiLine, ErrorText, Pager, PaperColGroup, SortHeader, TagCell } from '../components'
 import { paperLabel } from '../format'
-import {
-  loadSort,
-  nextSort,
-  parsePaperSort,
-  saveSort,
-  sortPapers,
-  type PaperSort,
-  type PaperSortKey,
-} from '../paperSort'
+import { loadSort, nextSort, parsePaperSort, saveSort, type PaperSort, type PaperSortKey } from '../paperSort'
 import { AddToProjectBar } from '../projectParts'
 import { toggled } from '../projects'
-import { tableMinWidth, useTableColumns } from '../tableColumns'
+import { PAGE_SIZES, tableMinWidth, useTableColumns } from '../tableColumns'
 import { MathText } from '../tex'
 
 /** Selection bar action: BibTeX for the selected papers. */
@@ -64,10 +56,29 @@ const SORTS = [
   { value: 'title_desc', label: 'Title Z–A' },
 ] as const
 
-// Title / Published headers drive the server sort (the dropdown); the other
-// columns sort the loaded rows on top of it.
+// Title / Published headers drive the sort dropdown; the other columns sort the
+// whole library on the server too (`sort=authors|category|tags|pdf`).
 const SERVER_KEYS: Partial<Record<PaperSortKey, string>> = { title: 'title', published: 'published' }
 const SORT_KEY = 'lxw.librarySort'
+const PAGE_SIZE_KEY = 'lxw.libraryPageSize'
+const DEFAULT_PAGE_SIZE = 50
+
+function loadPageSize(): number {
+  try {
+    const n = Number(localStorage.getItem(PAGE_SIZE_KEY))
+    return PAGE_SIZES.includes(n) ? n : DEFAULT_PAGE_SIZE
+  } catch {
+    return DEFAULT_PAGE_SIZE
+  }
+}
+
+function savePageSize(n: number): void {
+  try {
+    localStorage.setItem(PAGE_SIZE_KEY, String(n))
+  } catch {
+    // storage unavailable: the choice lasts for this page load only
+  }
+}
 // Tag select value for papers without tags (`?untagged=1`); not a valid tag name.
 const UNTAGGED = '\u0000untagged'
 
@@ -104,6 +115,9 @@ export default function Library() {
   const cols = useTableColumns()
   const mode = aiOn ? batchMode : 'metadata'
   const [reload, setReload] = useState(0)
+  const [size, setSize] = useState(loadPageSize)
+  const [total, setTotal] = useState(NaN)
+  const [seen, setSeen] = useState<Record<string, string>>({})
 
   useEffect(() => {
     api
@@ -112,10 +126,19 @@ export default function Library() {
       .catch(() => setTags([]))
   }, [])
 
+  // Any filter or sort change goes back to page 1 (no extra fetch: the page is
+  // keyed to the query it belongs to).
+  const query = JSON.stringify([q.trim(), tag, sort, column, pdf, size])
+  const [paging, setPaging] = useState({ query, page: 1 })
+  // Deleting or untagging papers can shrink the result below the current page.
+  const lastPage = Number.isFinite(total) ? Math.max(1, Math.ceil(total / size)) : Infinity
+  const page = Math.min(paging.query === query ? paging.page : 1, lastPage)
+  const goTo = (n: number) => setPaging({ query, page: n })
+
   useEffect(() => {
     let cancelled = false
     const t = setTimeout(() => {
-      const [by, dir] = sort.split('_') as [string, 'asc' | 'desc']
+      const [by, dir] = column ? [column.key, column.dir] : (sort.split('_') as [string, 'asc' | 'desc'])
       api
         .papers(
           {
@@ -125,13 +148,19 @@ export default function Library() {
             sort: by,
             dir,
             pdf: pdf === 'all' ? undefined : pdf,
-            limit: 500,
+            limit: size,
+            offset: (page - 1) * size,
           },
-          (res) => !cancelled && setDeepError(res.headers.get('X-Deep-Search-Error') ?? ''),
+          (res) => {
+            if (cancelled) return
+            setDeepError(res.headers.get('X-Deep-Search-Error') ?? '')
+            setTotal(Number(res.headers.get('X-Total-Count') ?? NaN))
+          },
         )
         .then((p) => {
           if (!cancelled) {
             setPapers(p)
+            setSeen((s) => ({ ...s, ...Object.fromEntries(p.map((x) => [x.source_id, paperLabel(x)])) }))
             setError('')
           }
         })
@@ -141,11 +170,10 @@ export default function Library() {
       cancelled = true
       clearTimeout(t)
     }
-  }, [q, tag, sort, pdf, reload])
+  }, [q, tag, sort, column, pdf, page, size, reload])
 
   useEffect(() => saveSort(SORT_KEY, { server: sort, column }), [sort, column])
 
-  const shown = useMemo(() => (papers ? sortPapers(papers, column) : null), [papers, column])
   const [serverBy, serverDir] = sort.split('_') as [string, 'asc' | 'desc']
   const headerDir = (key: PaperSortKey) =>
     column ? (column.key === key ? column.dir : null) : SERVER_KEYS[key] === serverBy ? serverDir : null
@@ -165,17 +193,17 @@ export default function Library() {
   const allShownSelected = !!papers?.length && papers.every((p) => selected.has(p.source_id))
   // Batch cards follow table order; selected papers hidden by a filter go last.
   const batchIds = useMemo(() => {
-    const inTable = (shown ?? []).map((p) => p.source_id).filter((sid) => selected.has(sid))
+    const inTable = (papers ?? []).map((p) => p.source_id).filter((sid) => selected.has(sid))
     return [...inTable, ...[...selected].filter((sid) => !inTable.includes(sid))]
-  }, [shown, selected])
-  const titles = useMemo(() => Object.fromEntries((papers ?? []).map((p) => [p.source_id, paperLabel(p)])), [papers])
+  }, [papers, selected])
+  // Titles of every paper seen on any page, so selections from other pages keep a label.
+  const titles = seen
+  const count = Number.isFinite(total) ? total : (papers?.length ?? 0)
 
   return (
     <section>
       <h2>Library</h2>
-      <p className="muted small library-count">
-        {papers ? `${papers.length} paper${papers.length === 1 ? '' : 's'}` : '\u00a0'}
-      </p>
+      <p className="muted small library-count">{papers ? `${count} paper${count === 1 ? '' : 's'}` : '\u00a0'}</p>
       <div className="toolbar">
         <div className="chips" role="group" aria-label="PDF filter">
           {PDF_FILTERS.map((f) => (
@@ -296,7 +324,7 @@ export default function Library() {
                   </tr>
                 </thead>
                 <tbody>
-                  {shown?.map((p) => (
+                  {papers.map((p) => (
                     <tr key={p.source_id}>
                       <td className="check-col">
                         <input
@@ -347,6 +375,18 @@ export default function Library() {
                 </tbody>
               </table>
             </div>
+          )}
+          {papers && count > 0 && (
+            <Pager
+              page={page}
+              size={size}
+              total={count}
+              onPage={goTo}
+              onSize={(n) => {
+                setSize(n)
+                savePageSize(n)
+              }}
+            />
           )}
         </div>
         {batch && mode === 'tags' && (

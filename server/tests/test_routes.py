@@ -23,23 +23,39 @@ def test_search_rejects_bad_source_and_control_chars(client, fake):
     assert fake.calls == []
 
 
-def test_list_passes_paging(client, fake):
+def test_list_passes_sort_and_pages_with_total(client, fake):
     fake.on("list", result=fixture("list.json"))
     r = client.get("/api/papers", params={"limit": 5, "category": "cs.CL", "dir": "asc"})
     assert r.json()[0]["source_id"] == "arxiv:1706.03762"
-    assert fake.calls[-1] == [
-        "list",
-        "--sort",
-        "published",
-        "--limit",
-        "5",
-        "--offset",
-        "0",
-        "--category",
-        "cs.CL",
-        "--dir",
-        "asc",
+    assert fake.calls[-1] == ["list", "--sort", "published", "--category", "cs.CL", "--dir", "asc"]
+    total = len(fixture("list.json"))
+    assert r.headers["X-Total-Count"] == str(total)
+    page = client.get("/api/papers", params={"limit": 1, "offset": 1})
+    assert page.headers["X-Total-Count"] == str(total)
+    assert page.json() == []
+
+
+def test_list_sorts_columns_across_pages(client, fake):
+    rows = [
+        {"source_id": "a", "authors": ["beta"], "tags": [], "has_pdf": True, "category": "v10"},
+        {"source_id": "b", "authors": [], "tags": ["x"], "has_pdf": False, "category": "v2"},
+        {"source_id": "c", "authors": ["Alpha"], "tags": [], "has_pdf": True, "category": None},
+        {"source_id": "d", "authors": ["gamma"], "tags": ["a"], "has_pdf": False, "category": ""},
     ]
+    fake.on("list", result=rows)
+
+    def ids(**params):
+        return [p["source_id"] for p in client.get("/api/papers", params=params).json()]
+
+    # Empty values last in both directions; case-insensitive; numbers by value.
+    assert ids(sort="authors") == ["c", "a", "d", "b"]
+    assert ids(sort="authors", dir="desc") == ["d", "a", "c", "b"]
+    assert ids(sort="category") == ["b", "a", "c", "d"]
+    assert ids(sort="pdf", dir="desc") == ["a", "c", "b", "d"]
+    assert ids(sort="tags", limit=1, offset=1) == ["b"]
+    # The CLI only sorts by its own keys; a column sort lists by date first.
+    assert fake.calls[-1] == ["list", "--sort", "published"]
+    assert client.get("/api/papers", params={"sort": "doi"}).status_code == 422
 
 
 def test_list_filters_by_text_and_tag(client, fake):
