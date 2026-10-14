@@ -26,7 +26,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Server branch-coverage gate: pytest fails below 90%.
 - Web unit tests with Vitest (`npm test`, `npm run coverage`), run in CI; notes Markdown export checked against the server's golden file.
 - `SECURITY.md` and this changelog.
-- Docker image publishing: a push to `main` builds and pushes only when `server/pyproject.toml` holds a version not yet in GHCR; manual workflow runs always rebuild.
+- Docker image publishing from the `release` branch only; the run fails unless `server/pyproject.toml`, `server/app/main.py` and `web/package.json` agree and the version has no `v<version>` tag yet. Manual workflow runs rebuild the current version without tagging.
 - GitHub Actions pinned to commit SHAs; `docker.yml` grants no permissions by default.
 - Docker base images (`rust`, `debian`, `python`, `node`, `uv`) pinned by multi-arch digest.
 - Ruff runs bandit (`S`), bugbear (`B`), pyupgrade (`UP`), import order (`I`) and simplify (`SIM`) rules.
@@ -45,6 +45,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Library tag filter "Untagged" (`GET /api/papers?untagged=true`, `/library?untagged=1`).
 - Paper page Delete paper / Delete PDF: no countdown. The first press puts Undo in the button's place and the delete button beside it; nothing is deleted until that second press.
 - Metadata lookup compare: "Apply and Save" writes the picked fields in one step (was Apply, then Save).
+- Settings → Library → Metadata lookup: switch each source (Crossref, arXiv, OpenAlex, PubMed, bioRxiv/medRxiv, AI cleanup) on or off (`web_lookup_disabled`); switched-off sources leave Retrieve metadata and `GET /api/papers/{id}/lookup` refuses them. "Contacts & API keys" moved to the Library group below it; the "AI & sources" group is now "AI".
+- AI example replies in prompts and Settings are placeholders (`<tag 1>`, `<title>`), so models don't copy example content.
+- Library pages: 50 papers per page by default, pager with 25/50/100/200/500 per page (kept per browser); Authors, Category, Tags and PDF column sorts order the whole library on the server; `X-Total-Count` header on `GET /api/papers`.
+- Paper page shows the journal (stored journal, else journal reference; "arXiv preprint" for arXiv papers without one).
+- Release flow: a merge from `main` into the `release` branch publishes `ghcr.io/toledoem/linxiv-web:<version>` and `:latest`, tags `v<version>` and creates a GitHub Release from this changelog. Image carries OCI version/revision/source labels.
+- `branch-cleanup.yml`: deletes branches daily once their pull request has been merged for 3 days (never `main`/`release` or branches of open PRs; manual run defaults to a dry run).
 
 ### Fixed
 - PDF reader showed blank pages for scanned PDFs (CCITT fax, JBIG2, JPEG 2000 images) since react-pdf 11 / pdf.js 6: the pdf.js wasm image decoders now ship under `/assets/pdfjs-wasm/` and the CSP allows `'wasm-unsafe-eval'` (WebAssembly only, no JS eval).

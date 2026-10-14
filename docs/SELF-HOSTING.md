@@ -65,7 +65,7 @@ docker compose logs -f linxiv-web
 
 Open http://127.0.0.1:8086.
 
-The image is tagged with the linXiv-web version (`0.1.0`); there is no `latest` tag. While the GitHub package is private, log in first with a GitHub token that has `read:packages`: `docker login ghcr.io -u <github-user>`.
+The image is tagged with the linXiv-web version (`0.1.0`) and `latest`; pin the version to choose when you update. While the GitHub package is private, log in first with a GitHub token that has `read:packages`: `docker login ghcr.io -u <github-user>`.
 
 ## First-run setup
 

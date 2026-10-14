@@ -1,9 +1,12 @@
 name: Docker image
 
+# Releases come from the `release` branch: a push (merged PR from main) builds
+# ghcr.io/toledoem/linxiv-web:<version> + :latest, tags v<version> and creates a
+# GitHub Release. A version already tagged fails the run: bump it first.
 on:
   push:
     branches:
-      - main
+      - release
   workflow_dispatch:
     inputs:
       linxiv_ref:
@@ -29,19 +32,15 @@ jobs:
     runs-on: ubuntu-24.04
     permissions:
       contents: read
-      packages: read
     outputs:
       version: ${{ steps.meta.outputs.version }}
       publish: ${{ steps.meta.outputs.publish }}
+      release: ${{ steps.meta.outputs.release }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      # Push to main publishes only a version not yet in GHCR; manual runs always rebuild.
-      - name: Read server version, compare with GHCR
+      # The three version strings must agree; a push to release needs an untagged
+      # version. Manual runs rebuild the current version without tagging.
+      - name: Read version, check it is new
         id: meta
         env:
           EVENT: ${{ github.event_name }}
@@ -51,13 +50,22 @@ jobs:
             echo "::error::no version in server/pyproject.toml"
             exit 1
           fi
-          publish=true
-          if [ "$EVENT" = push ] && docker buildx imagetools inspect "$IMAGE:$version" >/dev/null 2>&1; then
-            echo "::notice::$IMAGE:$version already published; bump server/pyproject.toml to release"
-            publish=false
+          app=$(sed -n 's/^__version__ = "\(.*\)"/\1/p' server/app/main.py | head -n1)
+          web=$(jq -r .version web/package.json)
+          if [ "$app" != "$version" ] || [ "$web" != "$version" ]; then
+            echo "::error::versions differ: pyproject $version, main.py $app, package.json $web"
+            exit 1
           fi
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-          echo "publish=$publish" >> "$GITHUB_OUTPUT"
+          publish=true
+          if [ "$EVENT" = push ] && git ls-remote --exit-code --tags origin "refs/tags/v$version" >/dev/null; then
+            echo "::error::v$version is already released; bump the version on main, then merge to release"
+            exit 1
+          fi
+          {
+            echo "version=$version"
+            echo "publish=$publish"
+            echo "release=$([ "$EVENT" = push ] && echo true || echo false)"
+          } >> "$GITHUB_OUTPUT"
 
   build:
     name: Build ${{ matrix.arch }}
@@ -94,6 +102,10 @@ jobs:
           context: .
           platforms: ${{ matrix.platform }}
           build-args: LINXIV_REF=${{ inputs.linxiv_ref || 'v0.7.0' }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.version=${{ needs.version.outputs.version }}
+            org.opencontainers.image.revision=${{ github.sha }}
           provenance: false
           outputs: type=image,name=${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
           cache-from: type=gha,scope=docker-${{ matrix.arch }}
@@ -136,6 +148,34 @@ jobs:
         env:
           VERSION: ${{ needs.version.outputs.version }}
         run: |
-          docker buildx imagetools create -t "$IMAGE:$VERSION" \
+          docker buildx imagetools create -t "$IMAGE:$VERSION" -t "$IMAGE:latest" \
             $(printf "$IMAGE@sha256:%s " *)
           docker buildx imagetools inspect "$IMAGE:$VERSION"
+
+  release:
+    name: Tag and GitHub Release
+    needs: [version, merge]
+    if: needs.version.outputs.release == 'true'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # Notes = the CHANGELOG section of this version, else GitHub's generated notes.
+      - name: Create v<version> tag and release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ needs.version.outputs.version }}
+          SHA: ${{ github.sha }}
+        run: |
+          awk -v v="$VERSION" '
+            index($0, "## [" v "]") == 1 { on = 1; next }
+            on && /^## \[/ { exit }
+            on { print }
+          ' CHANGELOG.md > notes.md
+          if grep -q '[^[:space:]]' notes.md; then
+            notes=(--notes-file notes.md)
+          else
+            notes=(--generate-notes)
+          fi
+          gh release create "v$VERSION" --target "$SHA" --title "v$VERSION" "${notes[@]}"
