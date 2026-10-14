@@ -1,0 +1,66 @@
+name: Branch cleanup
+
+# Deletes head branches of pull requests merged more than 3 days ago. main and
+# release are never touched, nor branches from forks or still used by an open PR.
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Only list the branches that would be deleted"
+        required: false
+        default: true
+        type: boolean
+
+concurrency:
+  group: branch-cleanup
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  cleanup:
+    name: Delete merged branches
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      pull-requests: read
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      REPO: ${{ github.repository }}
+      DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+      KEEP_DAYS: "3"
+    steps:
+      - name: Delete branches merged more than 3 days ago
+        run: |
+          cutoff=$(date -u -d "-${KEEP_DAYS} days" +%Y-%m-%dT%H:%M:%SZ)
+          open=$(gh api --paginate "repos/$REPO/pulls?state=open&per_page=100" \
+            --jq '.[].head.ref' | sort -u)
+          # Latest merge per branch, so a reused branch waits for its newest PR.
+          gh api --paginate "repos/$REPO/pulls?state=closed&per_page=100" \
+            --jq ".[] | select(.merged_at != null and .head.repo.full_name == \"$REPO\")
+                 | \"\(.merged_at) \(.head.ref)\"" \
+            | sort -k2,2 -k1,1r | awk '!seen[$2]++ { print $1, $2 }' \
+            | while read -r at ref; do
+                if [[ "$at" < "$cutoff" ]]; then echo "$ref"; fi
+              done > merged
+          deleted=0
+          while IFS= read -r ref; do
+            case "$ref" in main|release|"") continue ;; esac
+            if printf '%s\n' "$open" | grep -qxF "$ref"; then
+              echo "keep $ref (open pull request)"
+              continue
+            fi
+            if ! gh api "repos/$REPO/branches/$ref" --silent 2>/dev/null; then
+              continue  # already gone
+            fi
+            if [ "$DRY_RUN" = true ]; then
+              echo "would delete $ref"
+            else
+              gh api -X DELETE "repos/$REPO/git/refs/heads/$ref"
+              echo "deleted $ref"
+            fi
+            deleted=$((deleted + 1))
+          done < merged
+          echo "::notice::$deleted branch(es) merged before $cutoff $([ "$DRY_RUN" = true ] && echo 'found (dry run)' || echo 'deleted')"
