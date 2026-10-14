@@ -29,7 +29,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from ..cli import CLIError
 from ..pdf_name import pdf_file, title_from_file, year_from_file
 from .common import ident, run, settings
-from .user_settings import ncbi_api_key
+from .user_settings import disabled_sources, ncbi_api_key
 
 router = APIRouter(prefix="/api", tags=["metadata"])
 
@@ -346,6 +346,17 @@ async def _biorxiv(doi: str) -> list[dict]:
     return []
 
 
+async def require_source(request: Request, source: str, stored: dict | None = None) -> None:
+    """400 when the lookup source is switched off in Settings."""
+    if stored is None:
+        try:
+            stored = await run(request, ["settings", "get"])
+        except CLIError:
+            stored = {}  # unreadable settings: nothing is switched off
+    if source in disabled_sources(stored):
+        raise HTTPException(status_code=400, detail=f"Lookup source {source} is switched off")
+
+
 async def _ncbi_key(request: Request) -> str:
     try:
         stored = await run(request, ["settings", "get"])
@@ -404,6 +415,7 @@ async def lookup(
     paper has one the source understands (DOI, arXiv id), otherwise by title.
     `by=filename` searches by the title in the PDF's file name instead."""
     sid = ident(source_id, "paper id")
+    await require_source(request, source)
     paper = await run(request, ["paper", "get", "--", sid])
     if by == "filename":
         return await _by_filename(request, source, paper)

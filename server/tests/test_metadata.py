@@ -80,6 +80,20 @@ def test_lookup_crossref_by_doi(client, fake):
     assert fake.calls[-1] == ["doi", "resolve", "--", "10.1038/nature14539"]
 
 
+def test_lookup_refuses_disabled_source(client, fake):
+    fake.on("settings", "get", result={"web_lookup_disabled": "crossref,pubmed"})
+    fake.on("paper", "get", result={"source_id": SID, "doi": "10.1038/nature14539", "title": "D"})
+    for params in ({"source": "crossref"}, {"source": "pubmed", "by": "filename"}):
+        r = client.get(f"/api/papers/{SID}/lookup", params=params)
+        assert r.status_code == 400, params
+        assert "switched off" in r.json()["detail"]
+    assert not any(c[:2] == ["paper", "get"] for c in fake.calls)
+    fake.on("doi", "resolve", result=fixture("doi-resolve.json"))
+    fake.on("search", result=fixture("search-crossref.json"))
+    r = client.get(f"/api/papers/{SID}/lookup", params={"source": "openalex"})
+    assert r.status_code == 200, r.text
+
+
 def test_lookup_title_search(client, fake):
     fake.on("paper", "get", result={"source_id": "local:x", "doi": None, "title": "AlphaFold"})
     fake.on("search", result=fixture("search-crossref.json"))
@@ -185,7 +199,7 @@ def test_lookup_route_not_swallowed_by_library(client, fake):
     fake.on("paper", "get", result={"source_id": "a/b", "doi": None, "title": ""})
     r = client.get("/api/papers/arxiv:hep-th/9901001/lookup", params={"source": "openalex"})
     assert r.status_code == 400  # no title: reached the lookup route, not paper get
-    assert fake.calls == [["paper", "get", "--", "arxiv:hep-th/9901001"]]
+    assert fake.calls[-1] == ["paper", "get", "--", "arxiv:hep-th/9901001"]
     assert json.loads(r.text)["detail"] == "paper has no title to search by"
 
 

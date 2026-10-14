@@ -37,6 +37,7 @@ SHOWN_SETTINGS = (
     "web_update_check",
     "web_log_level",
     "web_lookup_source",
+    "web_lookup_disabled",
     "pdf_save_limit_mb",
     "search_history_enabled",
 )

@@ -510,7 +510,7 @@ def test_tag_prompt_carries_schema_and_example(client, fake, monkeypatch, provid
         "anthropic": lambda: body["system"],
     }.get(provider, lambda: body["messages"][0]["content"])()
     assert '"maxItems": 8' in system
-    assert 'Example of a valid reply:\n{"tags": ["single-cell rna-seq"' in system
+    assert 'Example of a valid reply:\n{"tags": ["<tag 1>"' in system
 
 
 # ---- paper summary ----
@@ -726,6 +726,17 @@ def test_cleanup_returns_lookup_candidate(client, fake, monkeypatch):
     assert "Never invent" in body["messages"][0]["content"]
     # Preview only: nothing written.
     assert not any(c[:2] == ["paper", "repair"] for c in fake.calls)
+
+
+def test_cleanup_refused_when_ai_source_switched_off(client, fake, monkeypatch):
+    seen: list = []
+    _mock(monkeypatch, _summary_reply({}), seen)
+    fake.on("settings", "get", result={**_stored("openai"), "web_lookup_disabled": "ai"})
+    fake.on("paper", "get", result=MESSY)
+    r = client.post("/api/ai/cleanup/doi:10.3233/jad-2012-120397")
+    assert r.status_code == 400
+    assert "switched off" in r.json()["detail"]
+    assert seen == []
 
 
 def test_cleanup_keeps_authors_when_count_changes(client, fake, monkeypatch):

@@ -85,6 +85,7 @@ export interface UserSettings {
   web_pdf_folder_layout: PdfLayout
   /** Source preselected in Retrieve metadata; "auto" picks by paper id/DOI. */
   web_lookup_source: DefaultLookupSource
+  web_lookup_disabled: string
   /** App log level (Settings → Server & data → Logs). */
   web_log_level: LogLevel
   /** Automatic release check (Settings → About). */

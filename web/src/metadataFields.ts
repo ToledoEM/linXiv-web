@@ -1,6 +1,7 @@
 // Metadata form model shared by the single-paper editor (MetadataEditor) and
 // the Library batch edit panel (BatchMetadata).
 
+import type { LookupPrefs } from './lookupSource'
 import type { DefaultLookupSource, LookupSource, MetadataCandidate, MetadataInput, Paper } from './types'
 
 export type Form = {
@@ -36,24 +37,36 @@ export const SOURCES: { value: LookupSource; label: string }[] = [
 /** Sources that can search by the title in the PDF's file name (bioRxiv has no title search). */
 export const byFileNameOk = (s: LookupSource) => s !== 'biorxiv' && s !== 'ai'
 
-/** Lookup sources to offer: AI cleanup only while AI features are on; a fixed default
- * from Settings at the top ("auto" keeps the usual order). */
-export function sourcesFor(aiOn: boolean, first?: DefaultLookupSource | null) {
-  const list = SOURCES.filter((s) => aiOn || s.value !== 'ai')
+/** Lookup sources to offer: the ones not switched off in Settings, AI cleanup only
+ * while AI features are on; a fixed default from Settings at the top ("auto" keeps
+ * the usual order). */
+export function sourcesFor(aiOn: boolean, prefs?: LookupPrefs | null) {
+  const first = prefs?.source
+  const list = SOURCES.filter((s) => (aiOn || s.value !== 'ai') && !prefs?.disabled.has(s.value))
   return [...list.filter((s) => s.value === first), ...list.filter((s) => s.value !== first)]
 }
 
 /** "Auto": arXiv papers use arXiv, bioRxiv/medRxiv DOIs (10.1101/…, bioRxiv's newer
- * 10.64898/…) their own API, everything else (and a batch) Crossref. */
-export function autoSource(paper: Paper | null): Exclude<LookupSource, 'ai'> {
-  if (paper?.source_id.startsWith('arxiv:')) return 'arxiv'
-  if (/^10\.(1101|64898)\//.test(paper?.doi ?? '')) return 'biorxiv'
-  return 'crossref'
+ * 10.64898/…) their own API, everything else (and a batch) Crossref. A pick that is
+ * switched off falls back to the first source still on. */
+export function autoSource(
+  paper: Paper | null,
+  disabled: ReadonlySet<LookupSource> = new Set(),
+): Exclude<LookupSource, 'ai'> {
+  let pick: Exclude<LookupSource, 'ai'> = 'crossref'
+  if (paper?.source_id.startsWith('arxiv:')) pick = 'arxiv'
+  else if (/^10\.(1101|64898)\//.test(paper?.doi ?? '')) pick = 'biorxiv'
+  if (!disabled.has(pick)) return pick
+  const on = SOURCES.find((s) => s.value !== 'ai' && !disabled.has(s.value))
+  return (on?.value ?? pick) as Exclude<LookupSource, 'ai'>
 }
 
 /** Source preselected for `paper` (null = batch): the Settings default, or `autoSource`. */
-export const initialSource = (paper: Paper | null, def: DefaultLookupSource): LookupSource =>
-  def === 'auto' ? autoSource(paper) : def
+export function initialSource(paper: Paper | null, prefs: LookupPrefs | null): LookupSource {
+  const def: DefaultLookupSource = prefs?.source ?? 'auto'
+  const disabled = prefs?.disabled ?? new Set<LookupSource>()
+  return def === 'auto' || disabled.has(def) ? autoSource(paper, disabled) : def
+}
 
 export const MATCH_LABEL = {
   doi: 'by DOI',

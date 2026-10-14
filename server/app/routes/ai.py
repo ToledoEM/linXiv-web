@@ -17,6 +17,7 @@ from fastapi import APIRouter, HTTPException, Request
 from .. import ai
 from ..pdf_text import PdfTextError, extract_text_async
 from .common import ident, run
+from .metadata import require_source
 from .pdfs import managed_pdf_path
 
 router = APIRouter(prefix="/api/ai", tags=["ai"])
@@ -48,7 +49,8 @@ TAGS_SCHEMA = {
     "required": ["tags"],
     "additionalProperties": False,
 }
-TAGS_EXAMPLE = {"tags": ["single-cell rna-seq", "drug response", "perturbation atlas"]}
+# Examples show the reply's shape only: placeholders, so models don't copy content.
+TAGS_EXAMPLE = {"tags": ["<tag 1>", "<tag 2>", "<tag 3>"]}
 TAGS_SYSTEM = (
     "You tag research papers in a personal library. Suggest 3 to 6 short topical tags "
     "for the paper: lowercase, one to three words, no '#'. Reuse tags from the existing "
@@ -71,14 +73,8 @@ SUMMARY_SCHEMA = {
     "additionalProperties": False,
 }
 SUMMARY_EXAMPLE = {
-    "summary": (
-        "The authors build a single-cell atlas of drug responses across 50 cancer cell lines "
-        "and use it to map mechanisms of action and resistance programs."
-    ),
-    "key_points": [
-        "100 million transcriptomes from 1,100 drug-dose conditions",
-        "Signatures separate cytotoxic from cytostatic responses",
-    ],
+    "summary": "<summary, 120 to 200 words>",
+    "key_points": ["<key point 1>", "<key point 2>"],
 }
 SUMMARY_SYSTEM = (
     "You summarize research papers for a researcher's personal library. Write a faithful "
@@ -102,9 +98,9 @@ CLEANUP_SCHEMA = {
     "additionalProperties": False,
 }
 CLEANUP_EXAMPLE = {
-    "title": "Peroxisome Proliferators Reduce Spatial Memory Impairment in a Mouse Model",
-    "authors": ["Nibaldo C. Inestrosa", "Francisco J. Carvajal"],
-    "journal": "Journal of Alzheimer's Disease",
+    "title": "<title>",
+    "authors": ["<First Last>", "<First Last>"],
+    "journal": "<journal name>",
 }
 CLEANUP_SYSTEM = (
     "You clean up bibliographic metadata of one paper. Return the same title, authors and "
@@ -152,8 +148,9 @@ TASKS = [
 JSON_SCHEMA_DIALECT = "https://json-schema.org/draft/2020-12/schema"
 
 
-async def _config(request: Request) -> ai.AIConfig:
-    stored = await run(request, ["settings", "get"])
+async def _config(request: Request, stored: dict | None = None) -> ai.AIConfig:
+    if stored is None:
+        stored = await run(request, ["settings", "get"])
     try:
         return ai.config_from(stored if isinstance(stored, dict) else {})
     except ai.AIError as e:
@@ -327,7 +324,10 @@ async def cleanup(request: Request, source_id: str):
     """Formatting fixes for title, authors and journal, as one lookup candidate
     (same shape as `GET /papers/{id}/lookup`) so the editor's diff + approve
     flow applies. The other fields are the paper's current values."""
-    cfg = await _config(request)
+    stored = await run(request, ["settings", "get"])
+    stored = stored if isinstance(stored, dict) else {}
+    await require_source(request, "ai", stored)
+    cfg = await _config(request, stored)
     sid = ident(source_id)
     paper = await run(request, ["paper", "get", "--", sid])
     title = paper.get("title") or ""
