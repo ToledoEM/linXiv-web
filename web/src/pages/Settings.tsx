@@ -20,12 +20,19 @@ import PdfTextIndex from '../PdfTextIndex'
 import ThemePicker from '../ThemePicker'
 import VersionMonitor from '../VersionMonitor'
 import { CONTACTS } from '../contacts'
-import { setLookupSource } from '../lookupSource'
+import { parseDisabled, setLookupPrefs } from '../lookupSource'
 import { SOURCES } from '../metadataFields'
 import { clearHistory, historySize } from '../searchHistory'
 import { SHORTCUTS } from '../shortcuts'
 import { PAGE_OPTIONS, setSidebarPage, useSidebarPages } from '../sidebarPages'
-import type { AiKeyName, DefaultLookupSource, NcbiKeyStatus, SettingsResponse, UserSettings } from '../types'
+import type {
+  AiKeyName,
+  DefaultLookupSource,
+  LookupSource,
+  NcbiKeyStatus,
+  SettingsResponse,
+  UserSettings,
+} from '../types'
 import { setTexEnabled } from '../texStore'
 import { formSubmitOnCtrlEnter } from '../submitShortcut'
 
@@ -59,7 +66,7 @@ const SECTIONS: Record<SectionId, (keyof UserSettings)[]> = {
   feed: ['home_feed_url', 'rss_cache_retention_days'],
   display: ['tex_rendering_enabled'],
   search: ['search_history_enabled', 'search_history_max'],
-  lookup: ['web_lookup_source'],
+  lookup: ['web_lookup_source', 'web_lookup_disabled'],
   logs: ['web_log_level'],
 }
 
@@ -69,7 +76,7 @@ const GROUPS: { id: GroupId; label: string; icon: string }[] = [
   { id: 'appearance', label: 'Appearance', icon: '◐' },
   { id: 'library', label: 'Library', icon: '▤' },
   { id: 'server', label: 'Server & data', icon: '▥' },
-  { id: 'ai', label: 'AI & sources', icon: '✦' },
+  { id: 'ai', label: 'AI', icon: '✦' },
   { id: 'integrations', label: 'Integrations', icon: '⚇' },
   { id: 'shortcuts', label: 'Shortcuts', icon: '⌨' },
   { id: 'about', label: 'About', icon: 'ⓘ' },
@@ -128,6 +135,21 @@ export default function Settings() {
     setStatus({})
   }
 
+  const lookupOff = parseDisabled(draft.web_lookup_disabled)
+  const toggleSource = (source: LookupSource, on: boolean) => {
+    const next = new Set(lookupOff)
+    if (on) next.delete(source)
+    else next.add(source)
+    // Same order the server stores, so an unchanged set doesn't read as an edit.
+    set(
+      'web_lookup_disabled',
+      SOURCES.map((s) => s.value)
+        .filter((v) => next.has(v))
+        .join(','),
+    )
+    if (!on && draft.web_lookup_source === source) set('web_lookup_source', 'auto')
+  }
+
   const changed = (id: SectionId) => SECTIONS[id].filter((k) => draft[k] !== saved[k])
   const pick = (from: UserSettings, id: SectionId) => Object.fromEntries(SECTIONS[id].map((k) => [k, from[k]]))
 
@@ -140,7 +162,7 @@ export default function Settings() {
     setAiKeys(r.ai_keys)
     setAiEnabled(r.settings.ai_enabled)
     setTexEnabled(r.settings.tex_rendering_enabled)
-    setLookupSource(r.settings.web_lookup_source)
+    setLookupPrefs(r.settings.web_lookup_source, r.settings.web_lookup_disabled)
   }
 
   const run = async (id: SectionId, fn: () => Promise<SettingsResponse>, done: string) => {
@@ -324,6 +346,31 @@ export default function Settings() {
         <form onSubmit={save('lookup')} onKeyDown={formSubmitOnCtrlEnter}>
           <div className="card settings-section">
             <h3>Metadata lookup</h3>
+            <div className="field">
+              <span>Sources</span>
+              {SOURCES.filter((o) => o.value !== 'ai' || draft.ai_enabled || lookupOff.has('ai')).map((o) => {
+                const on = !lookupOff.has(o.value)
+                // The last non-AI source can't be switched off.
+                const lastOn =
+                  on &&
+                  o.value !== 'ai' &&
+                  SOURCES.every((s) => s.value === 'ai' || s.value === o.value || lookupOff.has(s.value))
+                return (
+                  <label key={o.value} className="check" title={lastOn ? 'At least one source stays on' : undefined}>
+                    <input
+                      type="checkbox"
+                      checked={on}
+                      disabled={lastOn}
+                      onChange={(e) => toggleSource(o.value, e.target.checked)}
+                    />
+                    {o.label}
+                  </label>
+                )
+              })}
+              <span className="muted small">
+                Switched-off sources are hidden in Retrieve metadata (paper page and Library batch edit).
+              </span>
+            </div>
             <label className="field">
               <span>Default source</span>
               <select
@@ -331,59 +378,20 @@ export default function Settings() {
                 onChange={(e) => set('web_lookup_source', e.target.value as DefaultLookupSource)}
               >
                 <option value="auto">Auto (arXiv papers → arXiv, bioRxiv/medRxiv DOIs → bioRxiv, else Crossref)</option>
-                {SOURCES.filter((o) => o.value !== 'ai').map((o) => (
+                {SOURCES.filter((o) => o.value !== 'ai' && !lookupOff.has(o.value)).map((o) => (
                   <option key={o.value} value={o.value}>
                     {o.label}
                   </option>
                 ))}
               </select>
               <span className="muted small">
-                Preselected and listed first in Retrieve metadata (paper page and Library batch edit).
+                Preselected and listed first in Retrieve metadata. Auto uses the first source still on when its pick
+                is switched off.
               </span>
             </label>
             {saveBar('lookup')}
           </div>
         </form>
-        <FullTextIndex />
-        <PdfTextIndex />
-        <VersionMonitor />
-        <PdfLayout />
-      </>
-    ),
-    server: (
-      <>
-        <form onSubmit={save('storage')} onKeyDown={formSubmitOnCtrlEnter}>
-          <div className="card settings-section">
-            <h3>Storage</h3>
-            <label className="field">
-              <span>Total PDF storage limit (MB)</span>
-              <input
-                type="number"
-                min={1}
-                step={1}
-                required
-                value={draft.pdf_save_limit_mb}
-                onChange={(e) => set('pdf_save_limit_mb', Math.trunc(Number(e.target.value)))}
-              />
-              <span className="muted small">
-                Downloads and imports stop once saved PDFs reach this total.
-                {storageMb !== null && ` Currently using ${storageMb.toFixed(1)} MB.`}
-              </span>
-            </label>
-            {saveBar('storage')}
-          </div>
-        </form>
-
-        <LoginSettings />
-        <Backup />
-        <form onSubmit={save('logs')} onKeyDown={formSubmitOnCtrlEnter}>
-          <AppLogs level={draft.web_log_level} onLevel={(v) => set('web_log_level', v)} footer={saveBar('logs')} />
-        </form>
-        <ActivityLog />
-      </>
-    ),
-    ai: (
-      <>
         <form onSubmit={save('contacts')} onKeyDown={formSubmitOnCtrlEnter}>
           <div className="card settings-section">
             <h3>Contacts &amp; API keys</h3>
@@ -444,7 +452,46 @@ export default function Settings() {
             {saveBar('contacts')}
           </div>
         </form>
+        <FullTextIndex />
+        <PdfTextIndex />
+        <VersionMonitor />
+        <PdfLayout />
+      </>
+    ),
+    server: (
+      <>
+        <form onSubmit={save('storage')} onKeyDown={formSubmitOnCtrlEnter}>
+          <div className="card settings-section">
+            <h3>Storage</h3>
+            <label className="field">
+              <span>Total PDF storage limit (MB)</span>
+              <input
+                type="number"
+                min={1}
+                step={1}
+                required
+                value={draft.pdf_save_limit_mb}
+                onChange={(e) => set('pdf_save_limit_mb', Math.trunc(Number(e.target.value)))}
+              />
+              <span className="muted small">
+                Downloads and imports stop once saved PDFs reach this total.
+                {storageMb !== null && ` Currently using ${storageMb.toFixed(1)} MB.`}
+              </span>
+            </label>
+            {saveBar('storage')}
+          </div>
+        </form>
 
+        <LoginSettings />
+        <Backup />
+        <form onSubmit={save('logs')} onKeyDown={formSubmitOnCtrlEnter}>
+          <AppLogs level={draft.web_log_level} onLevel={(v) => set('web_log_level', v)} footer={saveBar('logs')} />
+        </form>
+        <ActivityLog />
+      </>
+    ),
+    ai: (
+      <>
         <form onSubmit={save('ai')} onKeyDown={formSubmitOnCtrlEnter}>
           <AiSettings
             draft={draft}

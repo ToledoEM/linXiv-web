@@ -10,7 +10,7 @@ import json
 import os
 from typing import Literal
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field
 
 from .. import logs
@@ -37,6 +37,8 @@ DEFAULTS: dict[str, object] = {
     "web_pdf_folder_layout": "none",
     # Source preselected in Retrieve metadata (web-only key): "auto" picks by paper id/DOI.
     "web_lookup_source": "auto",
+    # Lookup sources switched off in Settings (web-only key): comma list, "" = all on.
+    "web_lookup_disabled": "",
     # App log level (web-only key); LINXIV_WEB_LOG_LEVEL applies until it is saved.
     "web_log_level": "",
     # Automatic release check (web-only key): off, daily, weekly or monthly.
@@ -52,6 +54,10 @@ DEFAULTS: dict[str, object] = {
 }
 # Same values as SettingsPatch.web_lookup_source.
 LOOKUP_SOURCES = ("auto", "crossref", "arxiv", "openalex", "pubmed", "biorxiv")
+# Sources that can be switched off; "ai" is the AI cleanup candidate.
+TOGGLE_SOURCES = (*LOOKUP_SOURCES[1:], "ai")
+_SOURCE = "|".join(TOGGLE_SOURCES)
+DISABLED_RE = rf"^$|^({_SOURCE})(,({_SOURCE}))*$"
 FEED_KEYS = ("home_feed_url", "rss_cache_retention_days")
 # NCBI E-utilities key for PubMed lookups (10 instead of 3 requests/s). A secret:
 # stored like any setting but never sent back; the env var of the same name wins.
@@ -72,6 +78,7 @@ QUOTED_KEYS = (
     "genai_base_url",
     "mcp_profile",
     "web_lookup_source",
+    "web_lookup_disabled",
     "web_log_level",
     "web_update_check",
 )
@@ -108,6 +115,7 @@ class SettingsPatch(BaseModel):
     web_lookup_source: (
         Literal["auto", "crossref", "arxiv", "openalex", "pubmed", "biorxiv"] | None
     ) = None
+    web_lookup_disabled: str | None = Field(None, max_length=128, pattern=DISABLED_RE)
     web_log_level: Literal["debug", "info", "warning", "error"] | None = None
     web_update_check: Literal["off", "daily", "weekly", "monthly"] | None = None
     GHCR_TOKEN: str | None = Field(None, pattern=AI_KEY_RE)
@@ -126,6 +134,9 @@ async def _current(request: Request) -> dict:
         values["web_update_check"] = "off"
     if values["web_lookup_source"] not in LOOKUP_SOURCES:
         values["web_lookup_source"] = "auto"
+    values["web_lookup_disabled"] = ",".join(
+        s for s in TOGGLE_SOURCES if s in disabled_sources(raw)
+    )
     env_overrides = [k for k in (*MAILTO_KEYS, *SECRET_KEYS) if os.environ.get(k)]
     return {
         # write-only: stored keys never leave the server
@@ -156,6 +167,36 @@ def ncbi_api_key(stored: dict) -> tuple[str, str | None]:
     return secret(stored, NCBI_KEY)
 
 
+def disabled_sources(stored: dict) -> set[str]:
+    """Lookup sources switched off in Settings; unknown names are ignored."""
+    raw = stored.get("web_lookup_disabled") if isinstance(stored, dict) else None
+    if not isinstance(raw, str):
+        return set()
+    return {s for s in raw.split(",") if s in TOGGLE_SOURCES}
+
+
+async def _check_lookup(request: Request, patch: dict) -> None:
+    """Keep at least one non-AI source on and the default source switched on.
+    Rewrites the disabled list in a fixed order."""
+    stored = await run(request, ["settings", "get"])
+    stored = stored if isinstance(stored, dict) else {}
+    if "web_lookup_disabled" in patch:
+        names = [s for s in patch["web_lookup_disabled"].split(",") if s]
+        if len(names) != len(set(names)):
+            raise HTTPException(status_code=400, detail="Lookup source listed twice")
+        off = set(names)
+        patch["web_lookup_disabled"] = ",".join(s for s in TOGGLE_SOURCES if s in off)
+    else:
+        off = disabled_sources(stored)
+    if all(s in off for s in LOOKUP_SOURCES[1:]):
+        raise HTTPException(status_code=400, detail="Keep at least one lookup source on")
+    default = patch.get("web_lookup_source", stored.get("web_lookup_source"))
+    if default in off:
+        raise HTTPException(
+            status_code=400, detail=f"Default lookup source {default} is switched off"
+        )
+
+
 @router.get("/settings")
 async def get_settings(request: Request):
     return await _current(request)
@@ -165,6 +206,8 @@ async def get_settings(request: Request):
 async def update_settings(request: Request, body: SettingsPatch):
     patch = body.model_dump(exclude_none=True)
     note_fields(request, patch)  # key names only, never values (API keys)
+    if "web_lookup_disabled" in patch or "web_lookup_source" in patch:
+        await _check_lookup(request, patch)
     for key, value in patch.items():
         # The CLI JSON-parses the value, so bools/ints go as JSON; an email is
         # never valid JSON and stays a string.

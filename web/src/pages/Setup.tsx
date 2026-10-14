@@ -97,7 +97,7 @@ export default function Setup({ onDone }: { onDone: () => void }) {
     body = (
       <form onSubmit={saveAndNext} className="card settings-section">
         <p className="muted small">
-          Email addresses linXiv sends to metadata services, and a PubMed key. All optional; Settings → AI &amp; sources
+          Email addresses linXiv sends to metadata services, and a PubMed key. All optional; Settings → Library
           has them too.
         </p>
         {CONTACTS.map((c) => (

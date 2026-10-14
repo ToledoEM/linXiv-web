@@ -25,6 +25,7 @@ def test_get_settings_hides_unlisted_keys(client, fake, monkeypatch):
         "full_text_worker_enabled": False,
         "web_pdf_folder_layout": "none",
         "web_lookup_source": "auto",
+        "web_lookup_disabled": "",
         "web_log_level": "info",
         "web_update_check": "off",
         "ai_enabled": False,
@@ -153,10 +154,69 @@ def test_patch_lookup_source_and_log_level(client, fake):
 
 
 def test_unknown_stored_lookup_source_reads_auto(client, fake):
-    fake.on("settings", "get", result={"web_lookup_source": "nope", "web_log_level": 3})
+    fake.on(
+        "settings",
+        "get",
+        result={
+            "web_lookup_source": "nope",
+            "web_log_level": 3,
+            "web_lookup_disabled": "scholar,pubmed,crossref",
+        },
+    )
     body = client.get("/api/settings").json()["settings"]
     assert body["web_lookup_source"] == "auto"
     assert body["web_log_level"] == "info"
+    assert body["web_lookup_disabled"] == "crossref,pubmed"
+
+
+def _settings_store(fake, stored: dict):
+    fake.on("settings", "get", result=lambda _: stored)
+    fake.on(
+        "settings", "update", result=lambda argv: stored.update({argv[-2]: json.loads(argv[-1])})
+    )
+
+
+def test_patch_lookup_disabled(client, fake):
+    stored: dict = {}
+    _settings_store(fake, stored)
+    r = client.patch("/api/settings", json={"web_lookup_disabled": "pubmed,ai,arxiv"})
+    assert r.status_code == 200, r.text
+    # Stored quoted, in a fixed order.
+    assert ["settings", "update", "--", "web_lookup_disabled", '"arxiv,pubmed,ai"'] in fake.calls
+    assert r.json()["settings"]["web_lookup_disabled"] == "arxiv,pubmed,ai"
+    assert client.patch("/api/settings", json={"web_lookup_disabled": ""}).status_code == 200
+    assert stored["web_lookup_disabled"] == ""
+
+
+def test_patch_lookup_disabled_rejects_bad_lists(client, fake):
+    stored: dict = {"web_lookup_source": "pubmed"}
+    _settings_store(fake, stored)
+    for value in ("scholar", "pubmed,", " arxiv", "PUBMED"):
+        r = client.patch("/api/settings", json={"web_lookup_disabled": value})
+        assert r.status_code == 422, value
+    every = "crossref,arxiv,openalex,pubmed,biorxiv"
+    for body, detail in (
+        ({"web_lookup_disabled": "arxiv,arxiv"}, "twice"),
+        ({"web_lookup_disabled": every}, "at least one"),
+        ({"web_lookup_disabled": "pubmed"}, "Default lookup source pubmed"),
+        (
+            {"web_lookup_disabled": "crossref", "web_lookup_source": "crossref"},
+            "Default lookup source crossref",
+        ),
+    ):
+        r = client.patch("/api/settings", json=body)
+        assert r.status_code == 400, body
+        assert detail in r.json()["detail"]
+    assert not any(c[:2] == ["settings", "update"] for c in fake.calls)
+    # Changing the default to a disabled source is refused too.
+    stored["web_lookup_disabled"] = "openalex"
+    r = client.patch("/api/settings", json={"web_lookup_source": "openalex"})
+    assert r.status_code == 400
+    # Switching off the default together with picking a new one is fine.
+    r = client.patch(
+        "/api/settings", json={"web_lookup_disabled": "pubmed", "web_lookup_source": "auto"}
+    )
+    assert r.status_code == 200, r.text
 
 
 def test_ncbi_api_key_is_write_only(client, fake, monkeypatch):

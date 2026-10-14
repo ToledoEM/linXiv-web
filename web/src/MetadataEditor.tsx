@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { useAiEnabled } from './aiEnabled'
 import { api } from './api'
 import { ErrorText } from './components'
-import { useLookupSource } from './lookupSource'
+import { useLookupPrefs } from './lookupSource'
 import { MathText } from './tex'
 import {
   defaultPicked,
@@ -116,9 +116,9 @@ export default function MetadataEditor({
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   // Settings default (or "auto" by id/DOI) until the user picks another source.
-  const defaultSource = useLookupSource()
+  const lookupPrefs = useLookupPrefs()
   const [picked, setSource] = useState<LookupSource | null>(null)
-  const source = picked ?? initialSource(paper, defaultSource ?? 'auto')
+  const source = picked ?? initialSource(paper, lookupPrefs)
   // Junk or mismatched titles read from the PDF: start with the file name's title.
   const [byFile, setByFile] = useState(Boolean(paper.title_suspect && paper.pdf_file))
   const fileOk = Boolean(paper.pdf_file) && byFileNameOk(source)
@@ -170,7 +170,7 @@ export default function MetadataEditor({
         <div className="toolbar">
           <strong>Retrieve metadata</strong>
           <select aria-label="Lookup source" value={source} onChange={(e) => setSource(e.target.value as LookupSource)}>
-            {sourcesFor(aiOn, defaultSource).map((s) => (
+            {sourcesFor(aiOn, lookupPrefs).map((s) => (
               <option key={s.value} value={s.value}>
                 {s.label}
               </option>
