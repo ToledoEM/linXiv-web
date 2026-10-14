@@ -49,7 +49,7 @@ The image builds `linxiv` and `linxiv-mcp` from upstream source at the `LINXIV_R
 
 ## Resource usage
 
-Measured on a home server (2017 laptop, Intel i7-7560U, 4 threads, 16 GB RAM, amd64) running one container for 19 hours, with a library of 6,099 papers, 6,099 PDFs and 1,976 tags:
+Measured on a home server (Intel i7-7560U, 4 threads, 16 GB RAM), with a library of ~6,000 papers, ~6,000 PDFs and ~2000 tags:
 
 | | |
 |---|---|

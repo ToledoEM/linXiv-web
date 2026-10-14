@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Settings: themes, zoom and density, sidebar pages, shortcuts, PDF folder layouts, full-text indexing (TeX and PDF text), backup and restore, app logs, update check, disk space and health.
 - Single-admin login (argon2), first-run setup, "Remember me", CSRF protection, login throttling, SSRF guards on outbound downloads.
 - `scripts/bulk-import.sh` for server-side PDF ingest (copy, move, in situ).
+- `scripts/bulk-ai-tags.sh` and `docs/BULK-AI-TAGS.md`: tag every untagged paper with the AI saved in Settings → AI, over loopback with the server running; `--max-tags`, `--jobs` (parallel AI requests; LM Studio Max Concurrent Predictions documented), `--dry-run`, one log line per paper (id, PDF file, tags, status).
 - `HEALTHCHECK` in the runtime image (probes `/api/health` on `LINXIV_WEB_PORT`), so it applies without the compose file.
 - Security workflow: `npm audit` (high severity and above) and `pip-audit` on the hash-locked server dependencies, on push, pull request and weekly.
 - CodeQL (Python, TypeScript, Actions) and OpenSSF Scorecard workflows. Both skip while the repository is private, because code scanning on private repositories needs GitHub Advanced Security.
