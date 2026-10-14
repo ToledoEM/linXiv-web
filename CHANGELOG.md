@@ -4,6 +4,12 @@ All notable changes to linXiv-web are documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The version is `server/pyproject.toml` `version`; images are published to `ghcr.io/toledoem/linxiv-web:<version>`.
 
+## [Unreleased]
+
+### Security
+- Add paper by PDF link: each download hop connects to the address that passed the public-host check, so a second DNS answer can't redirect it to a private address (DNS rebinding). Host header and TLS certificate checks still use the link's host name.
+- Settings → Logs: the Download link only takes a known time window and URL-encodes it.
+
 ## [0.1.0] - 2026-10-14
 
 ### Added
