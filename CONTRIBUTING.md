@@ -14,8 +14,16 @@ All development runs in Docker; see [README.md](README.md#development).
 
 ## Branches
 
-- **`main`** is the only long-lived branch. Branch from it and open your PR against it.
+- **`main`** is where work lands. Branch from it and open your PR against it.
+- **`release`** publishes. Only pull requests from `main` go into it (see [Releases](#releases)).
 - **Name your branch `<type>/<short-slug>`**, using the same types as commit messages: `feat/`, `fix/`, `refactor/`, `perf/`, `docs/`, `test/`, `chore/`, `build/`, `ci/`, `style/`, `revert/`.
+- Merged branches are deleted on GitHub 3 days after their pull request is merged (`branch-cleanup.yml`, daily).
+
+## Releases
+
+1. On a branch from `main`, set the new version in `server/pyproject.toml`, `server/app/main.py` (`__version__`) and `web/package.json` (plus `web/package-lock.json`), and give it a section in `CHANGELOG.md`. Merge to `main`.
+2. Open a pull request from `main` into `release` and merge it.
+3. `docker.yml` builds `ghcr.io/toledoem/linxiv-web:<version>` and `:latest` (amd64 + arm64), tags `v<version>` and creates a GitHub Release with the changelog section. It fails if the three versions differ or `v<version>` already exists.
 
 ## Commit messages
 

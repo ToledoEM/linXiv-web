@@ -4,11 +4,13 @@ on:
   push:
     branches:
       - main
+      - release
     tags:
       - "v*"
   pull_request:
     branches:
       - main
+      - release
 
 permissions:
   contents: read
@@ -25,7 +27,10 @@ jobs:
       - name: Branch name is <type>/<slug>
         env:
           BRANCH: ${{ github.head_ref }}
+          BASE_REF: ${{ github.base_ref }}
         run: |
+          # Releases are pull requests from main into release.
+          if [ "$BASE_REF" = release ] && [ "$BRANCH" = main ]; then exit 0; fi
           case "$BRANCH" in
             feat/?*|fix/?*|refactor/?*|perf/?*|docs/?*|test/?*|chore/?*|build/?*|ci/?*|style/?*|revert/?*) ;;
             *) echo "::error::branch '$BRANCH' should be <type>/<slug> (see CONTRIBUTING.md)"; exit 1 ;;
