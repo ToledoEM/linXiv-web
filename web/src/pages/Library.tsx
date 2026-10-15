@@ -152,29 +152,15 @@ export default function Library() {
     update({ size: String(n) })
   }
 
-  // Search box keeps its own text; the URL follows after a pause (replace, so
-  // typing adds no history entries). `pending` = last text written by the box,
-  // so only outside URL changes (Back, links) overwrite what is being typed.
+  // Search box keeps its own text; only the search button writes it to the URL.
+  // An outside URL change (Back, links) replaces the text in the box.
   const [draft, setDraft] = useState(q)
-  const [pending, setPending] = useState(q)
   const [seenQ, setSeenQ] = useState(q)
   if (q !== seenQ) {
     setSeenQ(q)
-    if (q !== pending) {
-      setDraft(q)
-      setPending(q)
-    }
+    setDraft(q)
   }
-  useEffect(() => {
-    const next = draft.trim()
-    if (next === q) return
-    const t = setTimeout(() => {
-      setPending(next)
-      update({ q: next || null }, true)
-    }, 250)
-    return () => clearTimeout(t)
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- `update` is rebuilt each render
-  }, [draft, q])
+  const search = () => update({ q: draft.trim() || null })
 
   const [deepError, setDeepError] = useState('')
   const [tags, setTags] = useState<string[]>([])
@@ -206,7 +192,7 @@ export default function Library() {
 
   useEffect(() => {
     let cancelled = false
-    const t = setTimeout(() => {
+    {
       const [by, dir] = column ? [column.key, column.dir] : (sort.split('_') as [string, 'asc' | 'desc'])
       api
         .papers(
@@ -234,10 +220,9 @@ export default function Library() {
           }
         })
         .catch((err) => !cancelled && setError((err as Error).message))
-    }, 250)
+    }
     return () => {
       cancelled = true
-      clearTimeout(t)
     }
   }, [q, tag, sort, column, pdf, page, size, reload])
 
@@ -327,14 +312,35 @@ export default function Library() {
         </select>
       </div>
       <div className="toolbar">
-        <input
-          className="grow"
-          type="search"
-          aria-label="Search library"
-          placeholder="Search by title, abstract, author, id, full text or notes…"
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-        />
+        <div className="search-box grow">
+          <span className="search-field">
+            <input
+              type="search"
+              aria-label="Search library"
+              placeholder="Search by title, abstract, author, id, full text or notes…"
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+            />
+            {/* Lucide "search" icon (ISC) */}
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <circle cx="11" cy="11" r="8" />
+              <path d="m21 21-4.34-4.34" />
+            </svg>
+          </span>
+          <button type="button" onClick={search}>
+            Search
+          </button>
+        </div>
         <select aria-label="Tag" value={tag} onChange={(e) => setTag(e.target.value)}>
           <option value="">All tags</option>
           <option value={UNTAGGED}>Untagged</option>

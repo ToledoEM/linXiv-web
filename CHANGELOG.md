@@ -7,7 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Changed
-- Library: page, search, tag, PDF filter, sort and page size are kept in the URL (`/library?page=2&tag=…`), so a page can be bookmarked, reloaded or shared, and Back from a paper returns to the same page. Typing in the search box adds no history entries. Sort and page size still default to the browser's last choice.
+- Library: page, search, tag, PDF filter, sort and page size are kept in the URL (`/library?page=2&tag=…`), so a page can be bookmarked, reloaded or shared, and Back from a paper returns to the same page. Search runs when the Search button next to the box is pressed, not while typing. Sort and page size still default to the browser's last choice.
 - Paper page links show `:` as typed (`/paper/doi:10.1111/…`) instead of `%3A`; old encoded links still open.
 
 ### Security
