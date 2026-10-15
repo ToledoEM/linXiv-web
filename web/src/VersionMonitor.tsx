@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { api, idPath } from './api'
+import { api, paperPath } from './api'
 import { ErrorText } from './components'
 import { MathText } from './tex'
 import type { NewVersion } from './types'
@@ -86,7 +86,7 @@ export default function VersionMonitor() {
           {pending.map((item) => (
             <li key={item.source_id}>
               <div>
-                <Link to={`/paper/${idPath(item.source_id)}`}>
+                <Link to={paperPath(item.source_id)}>
                   <MathText forceInline>{item.title}</MathText>
                 </Link>
                 <div className="muted small">New version available: v{item.version}</div>

@@ -62,6 +62,11 @@ export function idPath(sourceId: string): string {
   return sourceId.split('/').map(encodeURIComponent).join('/')
 }
 
+/** Browser route of a paper page; ':' is legal in a path, so `doi:10.x/y` reads as typed. */
+export function paperPath(sourceId: string): string {
+  return `/paper/${idPath(sourceId).replace(/%3A/gi, ':')}`
+}
+
 export function pdfUrl(sourceId: string): string {
   return `/api/papers/${idPath(sourceId)}/pdf`
 }

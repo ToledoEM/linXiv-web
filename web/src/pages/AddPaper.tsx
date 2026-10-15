@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { api, idPath } from '../api'
+import { api, paperPath } from '../api'
 import { ErrorText } from '../components'
 import { MathText } from '../tex'
 
@@ -91,7 +91,7 @@ export default function AddPaper() {
               {a.kind && <span className="pill">{KIND_LABEL[a.kind] ?? a.kind}</span>}
             </div>
             {a.source_id && (
-              <Link to={`/paper/${idPath(a.source_id)}`}>
+              <Link to={paperPath(a.source_id)}>
                 <MathText forceInline>{a.title || a.source_id}</MathText>
               </Link>
             )}
@@ -141,7 +141,7 @@ export default function AddPaper() {
                   </p>
                   <div className="tags">
                     {r.ids?.map((id) => (
-                      <Link key={id} className="pill mono" to={`/paper/${idPath(id)}`}>
+                      <Link key={id} className="pill mono" to={paperPath(id)}>
                         {id}
                       </Link>
                     ))}
