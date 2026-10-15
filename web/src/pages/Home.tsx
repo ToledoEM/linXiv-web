@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { api, idPath } from '../api'
+import { api, paperPath } from '../api'
 import type { Paper, SavedPdf, SavedPdfView, Stats } from '../types'
 import { Authors, ErrorText } from '../components'
 import { formatBytes } from '../format'
@@ -127,7 +127,7 @@ export default function Home() {
               {recent.map((p) => (
                 <li key={p.source_id} className="card">
                   <div className="result-head">
-                    <Link to={`/paper/${idPath(p.source_id)}`}>
+                    <Link to={paperPath(p.source_id)}>
                       <MathText forceInline>{p.title}</MathText>
                     </Link>
                     {p.has_pdf && <span className="pill">PDF</span>}
@@ -212,7 +212,7 @@ export default function Home() {
               {pdfs.map((p) => (
                 <tr key={p.source_id}>
                   <td>
-                    <Link to={`/paper/${idPath(p.source_id)}`}>
+                    <Link to={paperPath(p.source_id)}>
                       <MathText forceInline>{p.title}</MathText>
                     </Link>
                   </td>

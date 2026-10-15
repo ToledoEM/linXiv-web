@@ -1,6 +1,6 @@
 import { useState, type DragEvent, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { api, idPath } from '../api'
+import { api, paperPath } from '../api'
 import { ErrorText } from '../components'
 import { MathText } from '../tex'
 
@@ -118,7 +118,7 @@ export default function Upload() {
             <strong>{r.name}</strong>
             {r.source_id && (
               <div>
-                <Link to={`/paper/${idPath(r.source_id)}`}>
+                <Link to={paperPath(r.source_id)}>
                   <MathText forceInline>{r.title || r.source_id}</MathText>
                 </Link>
               </div>

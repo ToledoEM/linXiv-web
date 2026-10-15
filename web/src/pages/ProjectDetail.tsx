@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { api, idPath, projectExportUrl, type ExportFormat } from '../api'
+import { api, paperPath, projectExportUrl, type ExportFormat } from '../api'
 import { DoiLine, ErrorText, PaperColGroup, SortHeader, TagCell } from '../components'
 import { loadSort, nextSort, parsePaperSort, saveSort, sortPapers, type PaperSortKey } from '../paperSort'
 import { DeleteButton, ProjectForm, Swatch } from '../projectParts'
@@ -384,7 +384,7 @@ export default function ProjectDetail() {
                     />
                   </td>
                   <td>
-                    <Link to={`/paper/${idPath(p.source_id)}`} state={{ fromProjectId: projectId }}>
+                    <Link to={paperPath(p.source_id)} state={{ fromProjectId: projectId }}>
                       <MathText forceInline>{p.title}</MathText>
                     </Link>
                     <div className="muted small mono">{p.source_id}</div>
