@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { api, idPath, saveBlob } from '../api'
+import { api, paperPath, saveBlob } from '../api'
 import type { Paper } from '../types'
 import { useAiEnabled } from '../aiEnabled'
 import BatchMetadata from '../BatchMetadata'
@@ -94,15 +94,75 @@ function parseStored(raw: unknown): StoredSort {
   return { server, column: column && !SERVER_KEYS[column.key] ? column : null }
 }
 
+/** `col=<key>_<dir>` URL value: a column sort the dropdown has no entry for. */
+function parseCol(raw: string | null): PaperSort | null {
+  if (!raw) return null
+  const i = raw.lastIndexOf('_')
+  const col = parsePaperSort({ key: raw.slice(0, i), dir: raw.slice(i + 1) })
+  return col && !SERVER_KEYS[col.key] ? col : null
+}
+
 export default function Library() {
-  const [q, setQ] = useState('')
-  const [params] = useSearchParams()
-  const [tag, setTag] = useState(() => (params.get('untagged') ? UNTAGGED : (params.get('tag') ?? '')))
+  // List state lives in the URL (`?page=&q=&tag=|untagged=1&pdf=&sort=|col=&size=`)
+  // so pages can be bookmarked, reloaded and reached with Back. Sort and page
+  // size fall back to this browser's last choice when the URL has none.
+  const [params, setParams] = useSearchParams()
+  const [stored, setStored] = useState(() => loadSort(SORT_KEY, parseStored, { server: SORTS[0].value, column: null }))
+  const [storedSize, setStoredSize] = useState(loadPageSize)
+  const q = params.get('q')?.trim() ?? ''
+  const tag = params.get('untagged') ? UNTAGGED : (params.get('tag') ?? '')
+  const pdfParam = params.get('pdf')
+  const pdf: PdfFilter = pdfParam === 'has' || pdfParam === 'none' ? pdfParam : 'all'
+  const sortParam = params.get('sort')
+  const urlSort = SORTS.some((o) => o.value === sortParam) ? sortParam : null
+  const colParam = params.get('col')
+  // Memoized: a new object each render would re-run the fetch effect forever.
+  const urlCol = useMemo(() => parseCol(colParam), [colParam])
+  const sort = urlSort ?? stored.server
+  const column = urlSort || urlCol ? urlCol : stored.column
+  const sizeParam = Number(params.get('size'))
+  const size = PAGE_SIZES.includes(sizeParam) ? sizeParam : storedSize
+
+  /** Change URL params (null removes one); any change but `page` goes back to page 1. */
+  const update = (patch: Record<string, string | null>, replace = false) => {
+    // Live URL, not `params`: two quick changes before a re-render would drop the first.
+    const next = new URLSearchParams(window.location.search)
+    for (const [k, v] of Object.entries(patch)) {
+      if (v) next.set(k, v)
+      else next.delete(k)
+    }
+    if (!('page' in patch)) next.delete('page')
+    setParams(next, { replace })
+  }
+  const setTag = (v: string) => update({ tag: v && v !== UNTAGGED ? v : null, untagged: v === UNTAGGED ? '1' : null })
+  const setPdf = (v: PdfFilter) => update({ pdf: v === 'all' ? null : v })
+  const setSort = (v: string) => {
+    setStored({ server: v, column: null })
+    saveSort(SORT_KEY, { server: v, column: null })
+    update({ sort: v, col: null })
+  }
+  const setColumn = (c: PaperSort) => {
+    setStored({ server: sort, column: c })
+    saveSort(SORT_KEY, { server: sort, column: c })
+    update({ col: `${c.key}_${c.dir}` })
+  }
+  const setSize = (n: number) => {
+    setStoredSize(n)
+    savePageSize(n)
+    update({ size: String(n) })
+  }
+
+  // Search box keeps its own text; only the search button writes it to the URL.
+  // An outside URL change (Back, links) replaces the text in the box.
+  const [draft, setDraft] = useState(q)
+  const [seenQ, setSeenQ] = useState(q)
+  if (q !== seenQ) {
+    setSeenQ(q)
+    setDraft(q)
+  }
+  const search = () => update({ q: draft.trim() || null })
+
   const [deepError, setDeepError] = useState('')
-  const [stored] = useState(() => loadSort(SORT_KEY, parseStored, { server: SORTS[0].value, column: null }))
-  const [sort, setSort] = useState<string>(stored.server)
-  const [column, setColumn] = useState<PaperSort | null>(stored.column)
-  const [pdf, setPdf] = useState<PdfFilter>('all')
   const [tags, setTags] = useState<string[]>([])
   const [papers, setPapers] = useState<Paper[] | null>(null)
   const [error, setError] = useState('')
@@ -115,7 +175,6 @@ export default function Library() {
   const cols = useTableColumns()
   const mode = aiOn ? batchMode : 'metadata'
   const [reload, setReload] = useState(0)
-  const [size, setSize] = useState(loadPageSize)
   const [total, setTotal] = useState(NaN)
   const [seen, setSeen] = useState<Record<string, string>>({})
 
@@ -126,23 +185,19 @@ export default function Library() {
       .catch(() => setTags([]))
   }, [])
 
-  // Any filter or sort change goes back to page 1 (no extra fetch: the page is
-  // keyed to the query it belongs to).
-  const query = JSON.stringify([q.trim(), tag, sort, column, pdf, size])
-  const [paging, setPaging] = useState({ query, page: 1 })
   // Deleting or untagging papers can shrink the result below the current page.
   const lastPage = Number.isFinite(total) ? Math.max(1, Math.ceil(total / size)) : Infinity
-  const page = Math.min(paging.query === query ? paging.page : 1, lastPage)
-  const goTo = (n: number) => setPaging({ query, page: n })
+  const page = Math.min(Math.max(1, Math.floor(Number(params.get('page'))) || 1), lastPage)
+  const goTo = (n: number) => update({ page: n > 1 ? String(n) : null })
 
   useEffect(() => {
     let cancelled = false
-    const t = setTimeout(() => {
+    {
       const [by, dir] = column ? [column.key, column.dir] : (sort.split('_') as [string, 'asc' | 'desc'])
       api
         .papers(
           {
-            q: q.trim() || undefined,
+            q: q || undefined,
             tag: tag && tag !== UNTAGGED ? tag : undefined,
             untagged: tag === UNTAGGED || undefined,
             sort: by,
@@ -165,14 +220,11 @@ export default function Library() {
           }
         })
         .catch((err) => !cancelled && setError((err as Error).message))
-    }, 250)
+    }
     return () => {
       cancelled = true
-      clearTimeout(t)
     }
   }, [q, tag, sort, column, pdf, page, size, reload])
-
-  useEffect(() => saveSort(SORT_KEY, { server: sort, column }), [sort, column])
 
   const [serverBy, serverDir] = sort.split('_') as [string, 'asc' | 'desc']
   const headerDir = (key: PaperSortKey) =>
@@ -183,7 +235,6 @@ export default function Library() {
       key,
     )
     if (SERVER_KEYS[key]) {
-      setColumn(null)
       setSort(`${SERVER_KEYS[key]}_${next.dir}`)
     } else {
       setColumn(next)
@@ -250,7 +301,6 @@ export default function Library() {
           aria-label="Sort"
           value={sort}
           onChange={(e) => {
-            setColumn(null)
             setSort(e.target.value)
           }}
         >
@@ -262,14 +312,35 @@ export default function Library() {
         </select>
       </div>
       <div className="toolbar">
-        <input
-          className="grow"
-          type="search"
-          aria-label="Search library"
-          placeholder="Search by title, abstract, author, id, full text or notes…"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-        />
+        <div className="search-box grow">
+          <span className="search-field">
+            <input
+              type="search"
+              aria-label="Search library"
+              placeholder="Search by title, abstract, author, id, full text or notes…"
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+            />
+            {/* Lucide "search" icon (ISC) */}
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <circle cx="11" cy="11" r="8" />
+              <path d="m21 21-4.34-4.34" />
+            </svg>
+          </span>
+          <button type="button" onClick={search}>
+            Search
+          </button>
+        </div>
         <select aria-label="Tag" value={tag} onChange={(e) => setTag(e.target.value)}>
           <option value="">All tags</option>
           <option value={UNTAGGED}>Untagged</option>
@@ -335,7 +406,7 @@ export default function Library() {
                         />
                       </td>
                       <td>
-                        <Link to={`/paper/${idPath(p.source_id)}`}>
+                        <Link to={paperPath(p.source_id)}>
                           {p.title?.trim() ? (
                             <MathText forceInline>{p.title}</MathText>
                           ) : (
@@ -376,18 +447,7 @@ export default function Library() {
               </table>
             </div>
           )}
-          {papers && count > 0 && (
-            <Pager
-              page={page}
-              size={size}
-              total={count}
-              onPage={goTo}
-              onSize={(n) => {
-                setSize(n)
-                savePageSize(n)
-              }}
-            />
-          )}
+          {papers && count > 0 && <Pager page={page} size={size} total={count} onPage={goTo} onSize={setSize} />}
         </div>
         {batch && mode === 'tags' && (
           <BatchTags

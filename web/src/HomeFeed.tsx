@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { api, idPath } from './api'
+import { api, paperPath } from './api'
 import { Authors, ErrorText } from './components'
 import { MathText } from './tex'
 import type { FeedEntry, FeedResponse } from './types'
@@ -71,7 +71,7 @@ function FeedRow({ entry, saved, onDismissed }: { entry: FeedEntry; saved: boole
             </a>
           )}
           {saveState === 'saved' ? (
-            <Link className="small" to={`/paper/${idPath(`arxiv:${id}`)}`}>
+            <Link className="small" to={paperPath(`arxiv:${id}`)}>
               Saved
             </Link>
           ) : (

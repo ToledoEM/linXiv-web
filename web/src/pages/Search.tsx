@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { api, idPath } from '../api'
+import { api, paperPath } from '../api'
 import type { Paper, SearchResult, Source } from '../types'
 import { Authors, ErrorText } from '../components'
 import { addTerm, DEFAULT_HISTORY_MAX } from '../searchHistory'
@@ -210,7 +210,7 @@ export default function Search() {
               )}
               <div className="actions">
                 {row.paper ? (
-                  <Link to={`/paper/${idPath(row.paper.source_id)}`}>In library — open</Link>
+                  <Link to={paperPath(row.paper.source_id)}>In library — open</Link>
                 ) : (
                   <>
                     <button disabled={row.busy} onClick={() => add(r, false)}>

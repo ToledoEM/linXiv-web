@@ -125,6 +125,10 @@ button.link { background: none; border: none; color: var(--muted); padding: 0; }
 
 .toolbar { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; margin-bottom: 1rem; }
 .grow { flex: 1; min-width: 12rem; }
+.search-box { display: flex; gap: 0.5rem; align-items: center; }
+.search-field { position: relative; flex: 1; min-width: 0; display: flex; }
+.search-field input { flex: 1; min-width: 0; padding-right: 2rem; }
+.search-field svg { position: absolute; right: 0.6rem; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
 .check { display: flex; align-items: center; gap: 0.3rem; color: var(--muted); }
 
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 0.9rem 1rem; }

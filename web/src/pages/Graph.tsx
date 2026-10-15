@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { api, idPath } from '../api'
+import { api, paperPath } from '../api'
 import { ErrorText } from '../components'
 import { EMPTY_FILTER, joinTypes, matchGraph, noMatchCause, type GraphFilterState } from '../graph/filter'
 import GraphPanels from '../graph/GraphPanels'
@@ -132,7 +132,7 @@ export default function Graph() {
         return
       }
       const sid = index?.paperById.get(id)?.source_id
-      if (sid) void navigate(`/paper/${idPath(sid)}`)
+      if (sid) void navigate(paperPath(sid))
     },
     [index, navigate],
   )
