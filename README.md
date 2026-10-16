@@ -1,5 +1,12 @@
 # linXiv-web
 
+[![CI](https://github.com/ToledoEM/linXiv-web/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/ToledoEM/linXiv-web/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/ToledoEM/linXiv-web/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/ToledoEM/linXiv-web/actions/workflows/codeql.yml)
+[![Security](https://github.com/ToledoEM/linXiv-web/actions/workflows/security.yml/badge.svg?branch=main)](https://github.com/ToledoEM/linXiv-web/actions/workflows/security.yml)
+[![Release](https://img.shields.io/github/v/release/ToledoEM/linXiv-web)](https://github.com/ToledoEM/linXiv-web/releases)
+[![License](https://img.shields.io/github/license/ToledoEM/linXiv-web)](LICENSE)
+[![Image](https://img.shields.io/badge/ghcr.io-linxiv--web-blue?logo=docker)](https://github.com/ToledoEM/linXiv-web/pkgs/container/linxiv-web)
+
 linXiv-web is a browser UI for [linXiv](https://github.com/linxiv-dev/linXiv). You can search arXiv, OpenAlex and Crossref, add papers to a library, tag them, organize them into projects and reading lists, read and highlight their PDFs, and take notes.
 
 It is a separate project written to fit the [linxiv-dev](https://github.com/linxiv-dev) organization. The linXiv maintainers have not adopted it, so it is not an official linXiv component.
