@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+- Library → Batch AI tags: Approve all reloads the library once at the end instead of after every paper, which re-listed the whole library per save and kept the CPU busy (no comments).
+
 ## [0.1.1] - 2026-10-16
 
 ### Changed

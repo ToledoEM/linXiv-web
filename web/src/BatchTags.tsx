@@ -79,14 +79,14 @@ export default function BatchTags({
     setRunning(false)
   }
 
-  const approve = async (sid: string): Promise<boolean> => {
+  const approve = async (sid: string, notify = true): Promise<boolean> => {
     const it = item(sid)
     if (it.status !== 'ready' || !it.picked.size) return false
     patch(sid, { status: 'saving', error: undefined })
     try {
       await api.addTags(sid, [...it.picked])
       patch(sid, { status: 'saved' })
-      onSaved()
+      if (notify) onSaved()
       return true
     } catch (err) {
       patch(sid, { status: 'ready', error: (err as Error).message })
@@ -102,9 +102,10 @@ export default function BatchTags({
     let saved = 0
     let failed = 0
     for (const sid of ready) {
-      if (await approve(sid)) saved += 1
+      if (await approve(sid, false)) saved += 1
       else failed += 1
     }
+    if (saved) onSaved()
     setSummary(`${saved} saved${failed ? `, ${failed} failed` : ''}.`)
   }
 
