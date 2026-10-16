@@ -94,7 +94,7 @@ def test_fetch_tags_token_flow(monkeypatch):
         "_client",
         lambda: real(transport=httpx.MockTransport(lambda r: httpx.Response(401))),
     )
-    with pytest.raises(UpdateError, match="private"):
+    with pytest.raises(UpdateError, match="private .*GHCR_TOKEN"):
         asyncio.run(update_check.fetch_tags())
 
 
