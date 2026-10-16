@@ -1,8 +1,8 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { api } from '../api'
-import Upload from './Upload'
+import { api } from './api'
+import UploadPdfs from './UploadPdfs'
 
 const pdf = (name: string, size = 10) => new File(['x'.repeat(size)], name, { type: 'application/pdf' })
 const drop = (files: File[]) =>
@@ -11,11 +11,11 @@ const drop = (files: File[]) =>
 const view = () =>
   render(
     <MemoryRouter>
-      <Upload />
+      <UploadPdfs />
     </MemoryRouter>,
   )
 
-describe('Upload drop zone', () => {
+describe('UploadPdfs drop zone', () => {
   afterEach(() => vi.restoreAllMocks())
 
   it('keeps dropped PDFs, skips other files, ignores repeats', () => {
@@ -34,7 +34,7 @@ describe('Upload drop zone', () => {
       .mockRejectedValueOnce(new Error('not a PDF'))
     view()
     drop([pdf('a.pdf'), pdf('b.pdf')])
-    fireEvent.click(screen.getByRole('button', { name: 'Import' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Upload' }))
     await waitFor(() => expect(screen.getByText('not a PDF')).toBeTruthy())
     expect(spy).toHaveBeenCalledTimes(2)
     expect(screen.getByRole('link', { name: 'Paper A' })).toBeTruthy()

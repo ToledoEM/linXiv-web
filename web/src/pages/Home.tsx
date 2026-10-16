@@ -121,7 +121,7 @@ export default function Home() {
         <div>
           <h3>Recent papers</h3>
           {recent.length === 0 ? (
-            <p className="card muted center">No papers yet. Add some from the Search or Upload pages.</p>
+            <p className="card muted center">No papers yet. Add some from the Search or Add Paper pages.</p>
           ) : (
             <ul className="results">
               {recent.map((p) => (
