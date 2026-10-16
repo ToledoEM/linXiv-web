@@ -11,6 +11,8 @@ from __future__ import annotations
 import re
 import unicodedata
 
+from .doi import clean_doi
+
 _MATH = re.compile(r"(\$[^$]*\$)")
 _SPECIAL = re.compile(r"(?<!\\)([&%#_])")
 _STOP = {"a", "an", "the", "on", "of", "in", "for", "and", "to", "from", "with", "towards"}
@@ -72,15 +74,16 @@ def entry(paper: dict, key: str) -> str:
     year = str(paper.get("published") or "")[:4]
     if year.isdigit():
         fields.append(("year", year))
-    if paper.get("doi"):
-        fields.append(("doi", str(paper["doi"]).strip()))
+    doi = clean_doi(paper.get("doi"))
+    if doi:
+        fields.append(("doi", doi))
     if arxiv:
         fields += [("eprint", arxiv), ("archivePrefix", "arXiv")]
         if paper.get("category"):
             fields.append(("primaryClass", str(paper["category"])))
         fields.append(("url", f"https://arxiv.org/abs/{arxiv}"))
-    elif paper.get("doi"):
-        fields.append(("url", f"https://doi.org/{str(paper['doi']).strip()}"))
+    elif doi:
+        fields.append(("url", f"https://doi.org/{doi}"))
     elif str(paper.get("url") or "").startswith(("http://", "https://")):
         fields.append(("url", str(paper["url"])))
     kind = "misc" if arxiv and not journal else "article"
