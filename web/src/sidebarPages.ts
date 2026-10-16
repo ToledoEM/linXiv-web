@@ -4,7 +4,7 @@
 
 import { useEffect, useState } from 'react'
 
-export type PageKey = 'reading' | 'tags' | 'graph' | 'search' | 'add' | 'upload' | 'trash'
+export type PageKey = 'reading' | 'tags' | 'graph' | 'search' | 'add' | 'trash'
 export type SidebarPages = Record<PageKey, boolean>
 
 export const PAGE_OPTIONS: { key: PageKey; route: string; label: string; description: string }[] = [
@@ -12,8 +12,12 @@ export const PAGE_OPTIONS: { key: PageKey; route: string; label: string; descrip
   { key: 'tags', route: '/tags', label: 'Tags', description: 'Tags and how many papers carry each' },
   { key: 'graph', route: '/graph', label: 'Graph', description: 'Knowledge graph of papers, authors and tags' },
   { key: 'search', route: '/search', label: 'Search', description: 'arXiv / OpenAlex / Crossref search' },
-  { key: 'add', route: '/add', label: 'Add Paper', description: 'Add papers by link, DOI or arXiv ID' },
-  { key: 'upload', route: '/upload', label: 'Upload', description: 'Import PDF files' },
+  {
+    key: 'add',
+    route: '/add',
+    label: 'Add Paper',
+    description: 'Add papers by link, DOI or arXiv ID, upload PDFs, import metadata files',
+  },
   { key: 'trash', route: '/trash', label: 'Trash', description: 'Deleted papers and projects' },
 ]
 
@@ -23,7 +27,6 @@ export const DEFAULT_SIDEBAR_PAGES: SidebarPages = {
   graph: true,
   search: true,
   add: true,
-  upload: true,
   trash: true,
 }
 

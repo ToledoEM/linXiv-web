@@ -17,6 +17,7 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from ..cli import CLIError
+from ..doi import clean_doi
 from .common import ident, run, settings
 from .library import fetch
 
@@ -123,6 +124,7 @@ def classify(text: str) -> tuple[str, str]:
             doi = unquote(parts.path.lstrip("/"))
         else:
             return "pdf", text
+    doi = clean_doi(doi)
     if _DOI.match(doi):
         # arXiv-minted DOIs (10.48550/arXiv.<id>) go through the arXiv fetch.
         if (m := _ARXIV_DOI.match(doi)) and (a := _ARXIV_BARE.match(m.group(1))):

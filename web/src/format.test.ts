@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatBytes, paperJournal, paperLabel } from './format'
+import { cleanDoi, formatBytes, paperJournal, paperLabel } from './format'
 
 describe('paperLabel', () => {
   it('prefers title, then PDF file name, then id', () => {
@@ -26,5 +26,34 @@ describe('paperJournal', () => {
     expect(paperJournal({ source_id: 'doi:10.1/x', category: 'Nature', journal_ref: 'Nat. 1' })).toBe('Nature')
     expect(paperJournal({ source_id: 'local:x', category: ' ', journal_ref: 'J. Ref' })).toBe('J. Ref')
     expect(paperJournal({ source_id: 'local:x', category: null, journal_ref: null })).toBe('')
+  })
+})
+
+describe('cleanDoi', () => {
+  it.each([
+    ['10.1234/x', '10.1234/x'],
+    ['10.1234/x;', '10.1234/x'],
+    [' 10.1234/x ', '10.1234/x'],
+    ['; 10.1234/x ;', '10.1234/x'],
+    ['10.1234/x.,;:', '10.1234/x'],
+    ['doi: 10.1234/x.', '10.1234/x'],
+    ['DOI:10.1234/x', '10.1234/x'],
+    ['https://doi.org/10.1234/x;', '10.1234/x'],
+    ['(10.1234/x)', '10.1234/x'],
+    ['[10.1234/x]', '10.1234/x'],
+    ['"10.1234/x"', '10.1234/x'],
+    ['<10.1234/x>', '10.1234/x'],
+    ['10.1002/(SICI)1097-4636;2-x', '10.1002/(SICI)1097-4636;2-x'],
+    ['10.1002/(SICI)1097-4636(199)', '10.1002/(SICI)1097-4636(199)'],
+    ['10.1002/(SICI)1097-4636(199));', '10.1002/(SICI)1097-4636(199)'],
+    ['', ''],
+    [' ; ', ''],
+  ])('%j -> %j', (raw, doi) => {
+    expect(cleanDoi(raw)).toBe(doi)
+  })
+
+  it('treats a missing DOI as empty', () => {
+    expect(cleanDoi(null)).toBe('')
+    expect(cleanDoi(undefined)).toBe('')
   })
 })

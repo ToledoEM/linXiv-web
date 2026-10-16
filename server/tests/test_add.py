@@ -23,6 +23,8 @@ from .conftest import fixture
         ("https://export.arxiv.org/abs/math.AG/0101001", ("arxiv", "math.AG/0101001")),
         ("10.1038/nature14539", ("doi", "10.1038/nature14539")),
         ("doi: 10.1038/nature14539", ("doi", "10.1038/nature14539")),
+        ("10.1038/nature14539;", ("doi", "10.1038/nature14539")),
+        ("https://doi.org/10.1038/nature14539;", ("doi", "10.1038/nature14539")),
         ("https://doi.org/10.1038/nature14539", ("doi", "10.1038/nature14539")),
         ("https://dx.doi.org/10.1000/a%2Fb", ("doi", "10.1000/a/b")),
         ("10.48550/arXiv.1706.03762", ("arxiv", "1706.03762")),

@@ -1,6 +1,7 @@
 // Metadata form model shared by the single-paper editor (MetadataEditor) and
 // the Library batch edit panel (BatchMetadata).
 
+import { cleanDoi } from './format'
 import type { LookupPrefs } from './lookupSource'
 import type { DefaultLookupSource, LookupSource, MetadataCandidate, MetadataInput, Paper } from './types'
 
@@ -55,7 +56,7 @@ export function autoSource(
 ): Exclude<LookupSource, 'ai'> {
   let pick: Exclude<LookupSource, 'ai'> = 'crossref'
   if (paper?.source_id.startsWith('arxiv:')) pick = 'arxiv'
-  else if (/^10\.(1101|64898)\//.test(paper?.doi ?? '')) pick = 'biorxiv'
+  else if (/^10\.(1101|64898)\//.test(cleanDoi(paper?.doi))) pick = 'biorxiv'
   if (!disabled.has(pick)) return pick
   const on = SOURCES.find((s) => s.value !== 'ai' && !disabled.has(s.value))
   return (on?.value ?? pick) as Exclude<LookupSource, 'ai'>
@@ -126,7 +127,7 @@ export function toMetadataInput(form: Form): { input: MetadataInput } | { error:
       published: form.published,
       summary: form.summary,
       category: form.category.trim() || null,
-      doi: form.doi.trim() || null,
+      doi: cleanDoi(form.doi) || null,
       url: form.url.trim() || null,
     },
   }

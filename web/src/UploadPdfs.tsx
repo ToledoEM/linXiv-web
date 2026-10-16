@@ -1,14 +1,15 @@
 import { useState, type DragEvent, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { api, paperPath } from '../api'
-import { ErrorText } from '../components'
-import { MathText } from '../tex'
+import { api, paperPath } from './api'
+import { ErrorText } from './components'
+import { MathText } from './tex'
 
 type Result = { name: string; source_id?: string; title?: string; error?: string }
 
 const isPdf = (f: File) => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf')
 
-export default function Upload() {
+/** Add paper page section: upload PDF files from this computer. */
+export default function UploadPdfs() {
   const [files, setFiles] = useState<File[]>([])
   const [results, setResults] = useState<Result[]>([])
   const [busy, setBusy] = useState(false)
@@ -53,9 +54,12 @@ export default function Upload() {
   }
 
   return (
-    <section>
-      <h2>Upload PDFs</h2>
-      <p className="muted">linXiv extracts metadata from each PDF and adds it to the library.</p>
+    <>
+      <h3>Upload PDF files</h3>
+      <p className="muted">
+        PDF files from this computer. linXiv reads the metadata from each PDF and adds the paper with its PDF to the
+        library.
+      </p>
       <form onSubmit={submit}>
         <div
           className={`drop-zone${dragging ? ' dragging' : ''}`}
@@ -96,7 +100,7 @@ export default function Upload() {
           </div>
         )}
         <div className="actions">
-          <button disabled={busy || files.length === 0}>{busy ? 'Importing…' : 'Import'}</button>
+          <button disabled={busy || files.length === 0}>{busy ? 'Uploading…' : 'Upload'}</button>
           {files.length > 0 && !busy && (
             <button
               type="button"
@@ -127,6 +131,6 @@ export default function Upload() {
           </li>
         ))}
       </ul>
-    </section>
+    </>
   )
 }

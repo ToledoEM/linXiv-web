@@ -11,6 +11,27 @@ export function formatBytes(n: number): string {
   return `${(n / 1024 / 1024).toFixed(1)} MB`
 }
 
+const DOI_PREFIX = /^(?:doi:\s*|https?:\/\/(?:dx\.|www\.)?doi\.org\/)/i
+const DOI_LEAD = /^[\s"';,.:<>([{]+/
+const DOI_TRAIL = /[\s"';,.:>]$/
+const DOI_CLOSE: Record<string, string> = { ')': '(', ']': '[', '}': '{' }
+const count = (s: string, c: string) => s.split(c).length - 1
+
+/** A DOI without the whitespace, quotes and punctuation around it (PDF text often
+ * leaves `;` or spaces) and without a `doi:` / doi.org prefix; '' when none. Only the
+ * ends change: `;` and brackets inside a DOI stay. Same rule as server `app/doi.py`. */
+export function cleanDoi(value?: string | null): string {
+  let doi = (value ?? '').replace(DOI_LEAD, '').replace(DOI_PREFIX, '').replace(DOI_LEAD, '')
+  for (;;) {
+    const last = doi.slice(-1)
+    if (!last) break
+    if (DOI_TRAIL.test(last) || (last in DOI_CLOSE && count(doi, last) > count(doi, DOI_CLOSE[last]))) {
+      doi = doi.slice(0, -1)
+    } else break
+  }
+  return doi
+}
+
 // arXiv subject codes (cs.CL, hep-th, q-bio.GN): a subject, not a venue.
 const ARXIV_SUBJECT = /^[a-z-]+(\.[A-Za-z-]+)?$/
 
