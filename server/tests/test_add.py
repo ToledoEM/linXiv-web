@@ -23,6 +23,8 @@ from .conftest import fixture
         ("https://export.arxiv.org/abs/math.AG/0101001", ("arxiv", "math.AG/0101001")),
         ("10.1038/nature14539", ("doi", "10.1038/nature14539")),
         ("doi: 10.1038/nature14539", ("doi", "10.1038/nature14539")),
+        ("10.1038/nature14539;", ("doi", "10.1038/nature14539")),
+        ("https://doi.org/10.1038/nature14539;", ("doi", "10.1038/nature14539")),
         ("https://doi.org/10.1038/nature14539", ("doi", "10.1038/nature14539")),
         ("https://dx.doi.org/10.1000/a%2Fb", ("doi", "10.1000/a/b")),
         ("10.48550/arXiv.1706.03762", ("arxiv", "1706.03762")),
@@ -118,6 +120,42 @@ def test_add_pdf_redirect_to_private_host_is_refused(client, fake, monkeypatch):
     r = client.post("/api/add", json={"input": "https://example.org/a.pdf"})
     assert r.status_code == 400
     assert not fake.calls
+
+
+def test_add_pdf_link_connects_to_checked_address(client, fake, monkeypatch):
+    seen = []
+
+    def handler(req):
+        seen.append((str(req.url), req.headers["host"], req.extensions.get("sni_hostname")))
+        if req.url.path == "/go":
+            return httpx.Response(302, headers={"location": "https://cdn.example.net/p.pdf"})
+        return httpx.Response(200, content=b"%PDF-1.7")
+
+    dns = {"example.org": ["93.184.215.14"], "cdn.example.net": ["2606:2800:21f:cb07::1"]}
+    _serve(monkeypatch, handler, addrs=lambda host: dns[host])
+    fake.on("pdf", "import", result={"source_id": "local:x"})
+    r = client.post("/api/add", json={"input": "https://u:p@example.org:8443/go?x=1"})
+    assert r.status_code == 200, r.text
+    assert seen == [
+        ("https://93.184.215.14:8443/go?x=1", "example.org:8443", "example.org"),
+        ("https://[2606:2800:21f:cb07::1]/p.pdf", "cdn.example.net", "cdn.example.net"),
+    ]
+
+
+def test_add_pdf_link_resolves_once_per_hop(client, fake, monkeypatch):
+    """A rebinding DNS answer after the check is never used."""
+    answers = iter([["93.184.215.14"], ["127.0.0.1"]])
+    hosts = []
+
+    def handler(req):
+        hosts.append(req.url.host)
+        return httpx.Response(200, content=b"%PDF-1.7")
+
+    _serve(monkeypatch, handler, addrs=lambda host: next(answers))
+    fake.on("pdf", "import", result={"source_id": "local:x"})
+    r = client.post("/api/add", json={"input": "https://rebind.example/a.pdf"})
+    assert r.status_code == 200, r.text
+    assert hosts == ["93.184.215.14"]
 
 
 def test_add_pdf_link_not_pdf_or_too_big(client, fake, monkeypatch):

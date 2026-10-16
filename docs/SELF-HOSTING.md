@@ -65,7 +65,7 @@ docker compose logs -f linxiv-web
 
 Open http://127.0.0.1:8086.
 
-The image is tagged with the linXiv-web version (`0.1.0`) and `latest`; pin the version to choose when you update. While the GitHub package is private, log in first with a GitHub token that has `read:packages`: `docker login ghcr.io -u <github-user>`.
+The image is tagged with the linXiv-web version (`0.1.0`) and `latest`; pin the version to choose when you update. The image is public: no `docker login` needed.
 
 ## First-run setup
 
@@ -251,7 +251,7 @@ Instead of pulling from GHCR, compose can build from the git repository. Replace
     image: linxiv-web:local
 ```
 
-and run `docker compose build && docker compose up -d`. The first build compiles linXiv from source and takes several minutes. While the repository is private, clone it and use `context: ./linXiv-web` instead of the URL.
+and run `docker compose build && docker compose up -d`. The first build compiles linXiv from source and takes several minutes. To build local changes, clone the repository and use `context: ./linXiv-web` instead of the URL.
 
 ## Troubleshooting
 

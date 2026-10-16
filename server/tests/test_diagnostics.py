@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 
 from app import diagnostics
+from app.main import __version__
 
 SECRET = "sk-test-SECRET-0123456789"
 
@@ -38,7 +39,7 @@ def test_report_redacts_secrets_and_addresses(client, fake, monkeypatch):
     assert "- paper_count: 12" in text
     assert "recent_papers" not in text
     assert "- ghcr.io: DNS failed (gaierror)" in text
-    assert "- linXiv-web: 0.1.0" in text
+    assert f"- linXiv-web: {__version__}" in text
 
 
 def test_report_when_cli_down(client, fake, monkeypatch):

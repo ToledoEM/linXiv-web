@@ -27,6 +27,7 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from ..cli import CLIError
+from ..doi import clean_doi
 from ..pdf_name import pdf_file, title_from_file, year_from_file
 from .common import ident, run, settings
 from .user_settings import disabled_sources, ncbi_api_key
@@ -76,6 +77,11 @@ class MetadataIn(BaseModel):
     def _single_line(cls, v: str | None) -> str | None:
         return None if v is None else _no_ctrl(v.strip())
 
+    @field_validator("doi")
+    @classmethod
+    def _doi(cls, v: str | None) -> str | None:
+        return clean_doi(v) or None
+
     @field_validator("authors")
     @classmethod
     def _authors(cls, v: list[str]) -> list[str]:
@@ -117,7 +123,9 @@ async def save_metadata(request: Request, source_id: str, body: MetadataIn):
 
 def _candidate(**kw) -> dict:
     keys = ("source", "ref", "title", "authors", "published", "summary", "category", "doi", "url")
-    return {k: kw.get(k) for k in keys}
+    out = {k: kw.get(k) for k in keys}
+    out["doi"] = clean_doi(out["doi"]) or None
+    return out
 
 
 def _clean_abstract(text: str | None) -> str:
@@ -419,7 +427,7 @@ async def lookup(
     paper = await run(request, ["paper", "get", "--", sid])
     if by == "filename":
         return await _by_filename(request, source, paper)
-    doi = (paper.get("doi") or "").strip()
+    doi = clean_doi(paper.get("doi"))
     title = (paper.get("title") or "").strip()
     arxiv_id = sid.removeprefix("arxiv:") if sid.startswith("arxiv:") else None
 

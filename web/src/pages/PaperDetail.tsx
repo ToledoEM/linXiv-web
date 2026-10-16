@@ -3,7 +3,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { api, pdfUrl } from '../api'
 import type { Annotation, Paper, PaperVersions, TagSuggestion } from '../types'
 import { Authors, ErrorText } from '../components'
-import { paperJournal, paperLabel } from '../format'
+import { cleanDoi, paperJournal, paperLabel } from '../format'
 import { useAiEnabled } from '../aiEnabled'
 import AiSummary from '../AiSummary'
 import Highlights from '../Highlights'
@@ -167,10 +167,10 @@ export default function PaperDetail() {
                 </dd>
               </>
             ) : null}
-            {paper.doi && (
+            {cleanDoi(paper.doi) && (
               <>
                 <dt>DOI</dt>
-                <dd className="mono">{paper.doi}</dd>
+                <dd className="mono">{cleanDoi(paper.doi)}</dd>
               </>
             )}
             {paperJournal(paper) && (

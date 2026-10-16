@@ -1,8 +1,9 @@
 import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { api, idPath } from '../api'
+import { api, paperPath } from '../api'
 import { ErrorText } from '../components'
 import { MathText } from '../tex'
+import UploadPdfs from '../UploadPdfs'
 
 type ImportKind = 'bibtex' | 'zotero'
 type Imported = { name: string; kind: ImportKind; saved?: number; ids?: string[]; error?: string }
@@ -69,9 +70,12 @@ export default function AddPaper() {
   return (
     <section>
       <h2>Add paper</h2>
+      <p className="muted">Three ways in: a link or identifier, PDF files from this computer, or a metadata file.</p>
+
+      <h3>Add by link or identifier</h3>
       <p className="muted">
         Paste an arXiv link or id, a DOI or doi.org link, a publisher article link (Nature, Springer, Wiley, ACS, APS,
-        IOP, Science, PNAS and others), or a direct link to a PDF.
+        IOP, Science, PNAS and others), or a direct link to a PDF file on the web (the server downloads it).
       </p>
       <form className="toolbar" onSubmit={submit}>
         <input
@@ -91,7 +95,7 @@ export default function AddPaper() {
               {a.kind && <span className="pill">{KIND_LABEL[a.kind] ?? a.kind}</span>}
             </div>
             {a.source_id && (
-              <Link to={`/paper/${idPath(a.source_id)}`}>
+              <Link to={paperPath(a.source_id)}>
                 <MathText forceInline>{a.title || a.source_id}</MathText>
               </Link>
             )}
@@ -107,10 +111,13 @@ export default function AddPaper() {
         ))}
       </ul>
 
-      <h3>Import a file</h3>
+      <UploadPdfs />
+
+      <h3>Import a metadata file (no PDFs)</h3>
       <p className="muted">
         A BibTeX <span className="mono">.bib</span> file or a Zotero CSL JSON export (
-        <span className="mono">.json</span>). Entries already in the library are updated, not duplicated; papers in the trash are restored.
+        <span className="mono">.json</span>). Only the metadata is imported: no PDFs. Entries already in the library are
+        updated, not duplicated; papers in the trash are restored.
       </p>
       <form className="toolbar" onSubmit={importFiles}>
         <input
@@ -141,7 +148,7 @@ export default function AddPaper() {
                   </p>
                   <div className="tags">
                     {r.ids?.map((id) => (
-                      <Link key={id} className="pill mono" to={`/paper/${idPath(id)}`}>
+                      <Link key={id} className="pill mono" to={paperPath(id)}>
                         {id}
                       </Link>
                     ))}

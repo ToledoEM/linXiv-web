@@ -8,7 +8,6 @@ import Setup from './pages/Setup'
 import Search from './pages/Search'
 import Library from './pages/Library'
 import PaperDetail from './pages/PaperDetail'
-import Upload from './pages/Upload'
 import Home from './pages/Home'
 import Settings from './pages/Settings'
 import AddPaper from './pages/AddPaper'
@@ -33,7 +32,6 @@ const NAV: NavItem[] = [
   { to: '/graph', label: 'Graph', icon: '⋈', pageKey: 'graph' },
   { to: '/search', label: 'Search', icon: '⌕', pageKey: 'search' },
   { to: '/add', label: 'Add Paper', icon: '＋', pageKey: 'add' },
-  { to: '/upload', label: 'Upload', icon: '⇪', pageKey: 'upload' },
   { to: '/authors', label: 'Authors', icon: '◎' },
   { to: '/trash', label: 'Trash', icon: '⌫', pageKey: 'trash' },
   { to: '/settings', label: 'Settings', icon: '⚙' },
@@ -100,7 +98,7 @@ export default function App() {
           <Route path="/search" element={<Search />} />
           <Route path="/paper/*" element={<PaperDetail />} />
           <Route path="/add" element={<AddPaper />} />
-          <Route path="/upload" element={<Upload />} />
+          <Route path="/upload" element={<Navigate to="/add" replace />} />
           <Route path="/trash" element={<Trash />} />
           <Route path="/authors" element={<Authors />} />
           <Route path="/authors/:id" element={<AuthorDetail />} />

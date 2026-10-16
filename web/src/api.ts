@@ -62,6 +62,11 @@ export function idPath(sourceId: string): string {
   return sourceId.split('/').map(encodeURIComponent).join('/')
 }
 
+/** Browser route of a paper page; ':' is legal in a path, so `doi:10.x/y` reads as typed. */
+export function paperPath(sourceId: string): string {
+  return `/paper/${idPath(sourceId).replace(/%3A/gi, ':')}`
+}
+
 export function pdfUrl(sourceId: string): string {
   return `/api/papers/${idPath(sourceId)}/pdf`
 }
@@ -74,7 +79,8 @@ export function projectExportUrl(id: number, format: ExportFormat, pdfs = false)
 }
 
 /** App log export for a time window (GET; streamed with the session cookie). */
-export const logsExportUrl = (window: LogWindow) => `/api/logs/export?window=${window}`
+export const logsExportUrl = (window: LogWindow) =>
+  `/api/logs/export?window=${encodeURIComponent(window)}`
 export const ACTIVITY_EXPORT_URL = '/api/activity/export'
 export const DIAGNOSTICS_URL = '/api/system/diagnostics'
 

@@ -59,7 +59,7 @@ def reset_password(s: settings_mod.Settings) -> None:
         _fail(f"LINXIV_WEB_DATA_DIR={s.data_dir} does not exist or is not a directory")
     pw = os.environ.get("PASSWORD") or getpass.getpass("New password: ")
     if not PASSWORD_MIN <= len(pw) <= PASSWORD_MAX:
-        _fail(f"password must be {PASSWORD_MIN} to {PASSWORD_MAX} characters")
+        _fail("password must be 8 to 256 characters")
     replace_stored_hash(s.data_dir, PasswordHasher().hash(pw))
     ended = StateDB(s.data_dir).drop_all_sessions()
     print(f"linxiv-web: password stored; {ended} session(s) logged out.")

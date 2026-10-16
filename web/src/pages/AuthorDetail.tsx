@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { api, idPath } from '../api'
+import { api, paperPath } from '../api'
 import { ErrorText } from '../components'
 import { MathText } from '../tex'
 import type { Author, AuthorDetail as Detail, AuthorUpdate, MergeCandidates } from '../types'
@@ -232,7 +232,7 @@ export default function AuthorDetail() {
         <ul className="results">
           {author.papers.map((p) => (
             <li key={p.paper_id} className="card author-paper">
-              <Link to={`/paper/${idPath(p.source_id)}`}>
+              <Link to={paperPath(p.source_id)}>
                 <MathText forceInline>{p.title ?? p.source_id}</MathText>
               </Link>
               <span className="muted small mono">

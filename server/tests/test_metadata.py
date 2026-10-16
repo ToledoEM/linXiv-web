@@ -80,6 +80,26 @@ def test_lookup_crossref_by_doi(client, fake):
     assert fake.calls[-1] == ["doi", "resolve", "--", "10.1038/nature14539"]
 
 
+def test_lookup_cleans_pdf_doi(client, fake):
+    dirty = {"source_id": SID, "doi": " 10.1038/nature14539; ", "title": "D"}
+    fake.on("paper", "get", result=dirty)
+    resolved = {**fixture("doi-resolve.json"), "doi": "10.1038/nature14539."}
+    fake.on("doi", "resolve", result=resolved)
+    r = client.get(f"/api/papers/{SID}/lookup", params={"source": "crossref"}).json()
+    assert r["candidates"][0]["doi"] == "10.1038/nature14539"
+    assert fake.calls[-1] == ["doi", "resolve", "--", "10.1038/nature14539"]
+
+
+def test_save_cleans_doi(client, fake):
+    fake.on("paper", "get", result={"source_id": SID, "tags": []})
+    fake.on("paper", "repair", result={"source_id": SID})
+    r = client.put(f"/api/papers/{SID}/metadata", json={**BODY, "doi": "10.1038/nature14539;"})
+    assert r.status_code == 200, r.text
+    assert "--doi=10.1038/nature14539" in fake.calls[-1]
+    client.put(f"/api/papers/{SID}/metadata", json={**BODY, "doi": " ; "})
+    assert not any(a.startswith("--doi") for a in fake.calls[-1])
+
+
 def test_lookup_refuses_disabled_source(client, fake):
     fake.on("settings", "get", result={"web_lookup_disabled": "crossref,pubmed"})
     fake.on("paper", "get", result={"source_id": SID, "doi": "10.1038/nature14539", "title": "D"})

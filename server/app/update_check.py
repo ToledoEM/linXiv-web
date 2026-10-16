@@ -64,7 +64,10 @@ def _client() -> httpx.AsyncClient:
 async def _get_json(client: httpx.AsyncClient, url: str, **kw) -> dict:
     async with client.stream("GET", url, **kw) as r:
         if r.status_code in (401, 403):
-            raise UpdateError("image not readable: the ghcr.io package is private")
+            raise UpdateError(
+                "image not readable: the ghcr.io package is private"
+                " (make it public on GitHub, or set GHCR_TOKEN)"
+            )
         if r.status_code == 404:
             raise UpdateError("image not found on ghcr.io")
         if r.status_code != 200:
