@@ -6,9 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-10-16
+
 ### Changed
 - Library: page, search, tag, PDF filter, sort and page size are kept in the URL (`/library?page=2&tag=…`), so a page can be bookmarked, reloaded or shared, and Back from a paper returns to the same page. Search runs when the Search button next to the box is pressed, not while typing. Sort and page size still default to the browser's last choice.
 - Paper page links show `:` as typed (`/paper/doi:10.1111/…`) instead of `%3A`; old encoded links still open.
+- Add paper and Upload are one page (`/add`) with three sections: add by link or identifier (arXiv, DOI, publisher link, or direct PDF link), upload PDF files, and import a metadata file (BibTeX or Zotero CSL JSON, no PDFs). The Upload sidebar entry is gone; `/upload` opens `/add`.
+- README: CI, CodeQL, Security, release, license and image badges.
+- Self-hosting guide: the image and repository are public, so pulling needs no `docker login` and compose can build straight from the GitHub URL.
+
+### Fixed
+- DOIs with stray characters at either end (`;`, spaces, quotes, brackets, trailing punctuation, a `doi:` or doi.org prefix), as often read from PDFs, are cleaned before metadata lookup (Crossref, PubMed, bioRxiv/medRxiv), in Add paper, when saving metadata, in lookup candidates, BibTeX and notes exports, and in DOI links. Characters inside a DOI are kept.
+- Settings → About update check: a private image package now says to make it public or set `GHCR_TOKEN`.
 
 ### Security
 - Add paper by PDF link: each download hop connects to the address that passed the public-host check, so a second DNS answer can't redirect it to a private address (DNS rebinding). Host header and TLS certificate checks still use the link's host name.
