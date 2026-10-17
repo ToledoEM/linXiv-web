@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- `scripts/bulk-ai-tags.sh --all`: ask the AI about every paper, not only untagged ones; tagged papers keep their tags and gain new ones.
+
 ### Fixed
 - Library → Batch AI tags: Approve all reloads the library once at the end instead of after every paper, which re-listed the whole library per save and kept the CPU busy (no comments).
 

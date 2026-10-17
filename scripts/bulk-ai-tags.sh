@@ -2,7 +2,8 @@
 # Tag every untagged paper in linXiv-web with the AI set in Settings → AI.
 # Run it on the machine that hosts the linXiv-web container.
 #
-#   The list of papers with no tags is read once at the start. Each paper is
+#   The list of papers with no tags (every paper with --all) is read once at
+#   the start. Each paper is
 #   sent to POST /api/ai/tags/{id} (the same suggestions as "AI Tags" on the
 #   paper page), and the suggested tags are added with POST /api/papers/{id}/tags.
 #   Papers with neither a title nor an abstract are skipped: the model would
@@ -16,13 +17,16 @@ usage() {
 Usage: bulk-ai-tags.sh [options]
 
 Options:
+  --all                Also ask about papers that already have tags; the AI is told
+                       their current tags and only new ones are added
+                       (default: only papers with no tags)
   --max-tags N         Add at most N of the suggested tags per paper, 1 to 8
                        (default: all of them, as the web UI does)
   --jobs N             Ask the AI about N papers at a time, 1 to 4 (default 1).
                        A local model needs as many parallel slots (LM Studio:
                        Max Concurrent Predictions); see docs/BULK-AI-TAGS.md
   --log FILE           Log file (default ./bulk-ai-tags-<date>-<time>.log)
-  --dry-run            List the untagged papers, then stop (no AI calls, no changes)
+  --dry-run            List the papers it would tag, then stop (no AI calls, no changes)
   -h, --help           Show this help
 
 Needs curl and jq. AI must be on and working in Settings → AI.
@@ -40,6 +44,7 @@ MAX_TAGS=
 JOBS=1
 LOG=
 DRY_RUN=0
+ALL=0
 PW=
 PW_SET=
 PAGE=1000      # the most GET /api/papers returns per call
@@ -50,6 +55,7 @@ while [ $# -gt 0 ]; do
     --jobs) JOBS=${2:?--jobs needs a value}; shift 2 ;;
     --log) LOG=${2:?--log needs a value}; shift 2 ;;
     --dry-run) DRY_RUN=1; shift ;;
+    --all) ALL=1; shift ;;
     -h|--help) usage; exit 0 ;;
     *) die "unknown argument: $1 (see --help)" ;;
   esac
@@ -164,18 +170,24 @@ id_path() {
   jq -rn --arg s "$1" '$s | split("/") | map(@uri) | join("/")'
 }
 
-# --- untagged papers ----------------------------------------------------------
+# --- papers to tag ------------------------------------------------------------
 
 login
 write_cookie_config
 
-# One "source_id <US> pdf_file <US> title <US> has_text" line per untagged paper,
+if [ "$ALL" = 1 ]; then
+  FILTER=; WHAT=paper
+else
+  FILTER='untagged=true&'; WHAT='untagged paper'
+fi
+
+# One "source_id <US> pdf_file <US> title <US> has_text" line per paper,
 # read in full before any paper is tagged (tagging shrinks the untagged list).
 : > "$WORK/list"
 offset=0
 while :; do
-  call GET "/api/papers?untagged=true&limit=$PAGE&offset=$offset"
-  [ "$CODE" = 200 ] || die "could not list untagged papers $(reason)"
+  call GET "/api/papers?${FILTER}limit=$PAGE&offset=$offset"
+  [ "$CODE" = 200 ] || die "could not list ${WHAT}s $(reason)"
   jq -r '.[] | [
       .source_id,
       (if (.pdf_file // "") == "" then "-" else .pdf_file end),
@@ -193,10 +205,10 @@ if [ "$DRY_RUN" = 1 ]; then
     [ "$text" = 1 ] || title="(no title or abstract: would be skipped)"
     printf '%s  %s  %s\n' "$sid" "$file" "$title"
   done 3< "$WORK/list"
-  echo "$TOTAL untagged paper(s) on $URL; $EMPTY would be skipped (no title or abstract)"
+  echo "$TOTAL $WHAT(s) on $URL; $EMPTY would be skipped (no title or abstract)"
   exit 0
 fi
-[ "$TOTAL" -gt 0 ] || { echo "no untagged papers on $URL"; exit 0; }
+[ "$TOTAL" -gt 0 ] || { echo "no ${WHAT}s on $URL"; exit 0; }
 
 # --- tagging ------------------------------------------------------------------
 
@@ -211,7 +223,7 @@ call POST /api/ai/test
 jq -e '.ok == true' "$WORK/body" >/dev/null || die "AI check failed: the model did not answer as expected"
 model=$(jq -r '"\(.provider) / \(.model)"' "$WORK/body")
 
-log "started $(date '+%Y-%m-%d %H:%M:%S'): $TOTAL untagged paper(s) on $URL"
+log "started $(date '+%Y-%m-%d %H:%M:%S'): $TOTAL $WHAT(s) on $URL"
 log "AI $model, max tags per paper: ${MAX_TAGS:-all}, jobs: $JOBS"
 max=${MAX_TAGS:-8}
 
