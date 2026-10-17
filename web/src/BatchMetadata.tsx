@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { useAiEnabled } from './aiEnabled'
 import { api } from './api'
+import { useBatchGuard } from './batchGuard'
 import { ErrorText } from './components'
 import { paperLabel } from './format'
 import { useLookupPrefs } from './lookupSource'
@@ -63,6 +64,7 @@ export default function BatchMetadata({
   const [armedAll, setArmedAll] = useState(false)
   const [summary, setSummary] = useState('')
   const stopRef = useRef(false)
+  useBatchGuard(running)
 
   const item = (sid: string) => items[sid] ?? blank()
   const patch = (sid: string, p: Partial<Item>) =>
