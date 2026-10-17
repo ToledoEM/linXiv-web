@@ -67,6 +67,7 @@ Options:
 
 | Option | Effect |
 |---|---|
+| `--all` | Also ask about papers that already have tags, not only the untagged ones. The model is told each paper's current tags and the server drops any it repeats, so only new tags are added. See [Tagging papers that already have tags](#tagging-papers-that-already-have-tags) |
 | `--max-tags N` | Add only the first `N` suggestions per paper, 1 to 8. The default adds all of them (the model is asked for 3 to 6, the server keeps at most 8) |
 | `--jobs N` | Ask the AI about `N` papers at a time, 1 to 4 (default 1). See [Running papers in parallel](#running-papers-in-parallel) |
 | `--log FILE` | Log location (default `./bulk-ai-tags-<date>-<time>.log`) |
@@ -93,6 +94,17 @@ Parallel requests on a local model share the same GPU, so each answer comes back
 Tags that one worker adds don't reach a paper the other worker is tagging at the same moment, so two papers on a new topic can come back with two spellings of the same tag. Look through the `(new)` tags afterwards.
 
 With more than one job, a lost login (the container restarted mid-run) isn't renewed. The affected papers are logged as `FAIL ... (401)`, and a rerun picks them up. Ctrl+C stops all workers. A paper whose tags were already on their way to the server still gets them.
+
+## Tagging papers that already have tags
+
+```sh
+./bulk-ai-tags.sh --all --dry-run
+./bulk-ai-tags.sh --all
+```
+
+`--all` lists every paper in the library, not only the untagged ones. A tagged paper keeps its tags and gets the model's additional suggestions on top. It costs one AI call per paper in the whole library, so a large library means a long run, and many paid requests with a cloud provider. Use `--max-tags` to limit how many tags each paper gains. A `NONE` line for a tagged paper means the model had nothing new to add.
+
+Nothing remembers which papers a previous `--all` run already handled: running it again asks about every paper again.
 
 ## Running it again
 
