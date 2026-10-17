@@ -19,6 +19,7 @@ def test_get_settings_hides_unlisted_keys(client, fake, monkeypatch):
         "CROSSREF_MAILTO": "",
         "OPENALEX_MAILTO": "",
         "home_feed_url": "",
+        "web_feeds": "",
         "rss_cache_retention_days": 30,
         "search_history_enabled": True,
         "search_history_max": 200,
@@ -116,6 +117,44 @@ def test_patch_feed_settings(client, fake):
         ["rss_cache_retention_days", "7"],
     ]
     assert client.patch("/api/settings", json={"home_feed_url": ""}).status_code == 200
+
+
+def test_patch_web_feeds(client, fake):
+    stored: dict = {}
+    fake.on("settings", "get", result=lambda _: stored)
+    fake.on("settings", "update", result=lambda argv: stored.update({argv[-2]: argv[-1]}))
+    ok = json.dumps([{"name": "ML", "url": "https://rss.arxiv.org/rss/cs.LG", "enabled": True}])
+    r = client.patch("/api/settings", json={"web_feeds": ok})
+    assert r.status_code == 200, r.text
+    # Stored quoted (the CLI JSON-parses values), name and id filled in.
+    saved = json.loads(json.loads(stored["web_feeds"]))
+    assert saved == [
+        {
+            "id": "https://rss.arxiv.org/rss/cs.LG",
+            "name": "ML",
+            "url": "https://rss.arxiv.org/rss/cs.LG",
+            "enabled": True,
+        }
+    ]
+    assert client.patch("/api/settings", json={"web_feeds": ""}).status_code == 200
+
+
+def test_patch_web_feeds_rejects_bad_lists(client, fake):
+    fake.on("settings", "get", result={})
+    fake.on("settings", "update", result={})
+    dupe = "https://rss.arxiv.org/rss/cs.LG"
+    for raw in (
+        "not json",
+        json.dumps({"url": dupe}),
+        json.dumps([{"url": "file:///etc/passwd"}]),
+        json.dumps([{"url": ""}]),
+        json.dumps([{"url": dupe}, {"url": dupe}]),
+        json.dumps([{"url": dupe, "name": "x" * 81}]),
+        json.dumps([{"url": f"https://a.example/{i}"} for i in range(11)]),
+    ):
+        r = client.patch("/api/settings", json={"web_feeds": raw})
+        assert r.status_code == 400, raw
+    assert not [c for c in fake.calls if c[:2] == ["settings", "update"]]
 
 
 def test_patch_search_history_settings(client, fake):

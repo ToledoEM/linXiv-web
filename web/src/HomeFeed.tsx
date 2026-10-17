@@ -7,10 +7,55 @@ import type { FeedEntry, FeedResponse } from './types'
 
 // Rows shown from the (up to 200) filtered entries, as on linXiv desktop.
 const ENTRY_LIMIT = 25
+// Which feed the Home page shows, per browser.
+const PICK_KEY = 'lxw.homeFeed'
+const RANDOM = '__random__'
+const RANDOM_N = 10
 
 type Configured = Extract<FeedResponse, { configured: true }>
 
-function FeedRow({ entry, saved, onDismissed }: { entry: FeedEntry; saved: boolean; onDismissed: () => void }) {
+function loadPick(): string {
+  try {
+    return localStorage.getItem(PICK_KEY) || 'all'
+  } catch {
+    return 'all'
+  }
+}
+
+function savePick(value: string): void {
+  try {
+    localStorage.setItem(PICK_KEY, value)
+  } catch {
+    // storage unavailable: the choice lasts for this page view only
+  }
+}
+
+/** Entries carrying every comma-separated keyword, matched like the CLI rules
+ *  (title, summary, authors). An empty box keeps everything. */
+function matching(entries: FeedEntry[], keywords: string): FeedEntry[] {
+  const words = keywords
+    .split(',')
+    .map((w) => w.trim().toLowerCase())
+    .filter(Boolean)
+  if (!words.length) return entries
+  return entries.filter((e) => {
+    const hay = `${e.title} ${e.summary} ${e.authors.join(' ')}`.toLowerCase()
+    return words.some((w) => hay.includes(w))
+  })
+}
+
+function FeedRow({
+  entry,
+  saved,
+  showFeed,
+  onDismissed,
+}: {
+  entry: FeedEntry
+  saved: boolean
+  /** Several feeds are merged, so say which one this row came from. */
+  showFeed: boolean
+  onDismissed: () => void
+}) {
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>(saved ? 'saved' : 'idle')
   const [busy, setBusy] = useState(false)
   const [armed, setArmed] = useState(false)
@@ -60,7 +105,10 @@ function FeedRow({ entry, saved, onDismissed }: { entry: FeedEntry; saved: boole
             <MathText forceInline>{entry.summary}</MathText>
           </p>
         )}
-        {entry.published && <div className="muted small mono">{entry.published}</div>}
+        <div className="muted small">
+          {entry.published && <span className="mono">{entry.published}</span>}
+          {showFeed && entry.feed_name && <span className="pill">{entry.feed_name}</span>}
+        </div>
         <ErrorText error={error} />
       </div>
       {id && (
@@ -114,12 +162,14 @@ export default function HomeFeed() {
   const [configured, setConfigured] = useState(true)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [pick, setPick] = useState(loadPick)
+  const [keywords, setKeywords] = useState('')
 
   // `loading` starts set; Refresh sets it again before reloading.
   const load = useCallback(
-    (refresh = false) =>
+    (refresh = false, choice = pick) =>
       api
-        .feed(refresh)
+        .feed(refresh, choice === RANDOM ? 'all' : choice, choice === RANDOM ? RANDOM_N : undefined)
         .then(
           (r) => {
             if (r.configured) setFeed(r)
@@ -129,12 +179,20 @@ export default function HomeFeed() {
           (err: Error) => setError(err.message),
         )
         .finally(() => setLoading(false)),
-    [],
+    [pick],
   )
 
   useEffect(() => {
     void load()
   }, [load])
+
+  const choose = (next: string) => {
+    setPick(next)
+    savePick(next)
+    setLoading(true)
+    // Random re-rolls server-side, so it always refetches.
+    void load(next === RANDOM, next)
+  }
 
   if (!configured) return null
 
@@ -143,8 +201,10 @@ export default function HomeFeed() {
     setFeed((f) => (f ? { ...f, entries: f.entries.filter((e) => e !== entry) } : f))
 
   const saved = new Set(feed?.saved_arxiv_ids ?? [])
-  const entries = feed?.entries ?? []
+  const entries = matching(feed?.entries ?? [], keywords)
   const shown = entries.slice(0, ENTRY_LIMIT)
+  const sources = feed?.feeds ?? []
+  const failed = feed?.errors ?? []
 
   return (
     <div className="home-feed">
@@ -162,6 +222,29 @@ export default function HomeFeed() {
           {loading ? 'Loading…' : 'Refresh'}
         </button>
       </div>
+      <div className="feed-controls">
+        <select aria-label="Feed" value={pick} onChange={(e) => choose(e.target.value)} disabled={loading}>
+          <option value="all">All feeds</option>
+          <option value={RANDOM}>Random {RANDOM_N} from all</option>
+          {sources.map((f) => (
+            <option key={f.id} value={f.id}>
+              {f.name}
+            </option>
+          ))}
+        </select>
+        <input
+          className="grow"
+          placeholder="filter by keywords, comma separated"
+          value={keywords}
+          onChange={(e) => setKeywords(e.target.value)}
+          aria-label="Filter entries by keyword"
+        />
+      </div>
+      {failed.map((f) => (
+        <p key={f.id} className="error small">
+          {f.name}: {f.error}
+        </p>
+      ))}
       {error ? (
         <div className="card">
           <ErrorText error={error} />
@@ -172,7 +255,9 @@ export default function HomeFeed() {
       ) : !feed ? (
         <p className="card muted center">Loading feed…</p>
       ) : entries.length === 0 ? (
-        <p className="card muted center">The feed has no entries.</p>
+        <p className="card muted center">
+          {keywords.trim() ? 'No entries match those keywords.' : 'The feed has no entries.'}
+        </p>
       ) : (
         <>
           <ul className="card feed-list">
@@ -181,6 +266,7 @@ export default function HomeFeed() {
                 key={`${e.arxiv_id ?? e.link}-${e.version ?? i}`}
                 entry={e}
                 saved={!!e.arxiv_id && saved.has(e.arxiv_id)}
+                showFeed={sources.length > 1 && pick !== e.feed_id}
                 onDismissed={() => drop(e)}
               />
             ))}

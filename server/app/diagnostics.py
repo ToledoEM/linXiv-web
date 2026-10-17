@@ -41,7 +41,7 @@ SHOWN_SETTINGS = (
     "pdf_save_limit_mb",
     "search_history_enabled",
 )
-SET_ONLY = ("genai_base_url", "home_feed_url")
+SET_ONLY = ("genai_base_url", "home_feed_url", "web_feeds")
 
 
 async def reach(host: str, port: int = 443) -> str:

@@ -294,7 +294,11 @@ export const api = {
   updateAuthor: (id: number, body: AuthorUpdate) =>
     request<{ updated_author_id: number }>('PATCH', `/api/authors/${id}`, body),
   deleteAuthor: (id: number) => request('DELETE', `/api/authors/${id}`),
-  feed: (refresh = false) => request<FeedResponse>('GET', `/api/feed${qs({ refresh: refresh || undefined })}`),
+  feed: (refresh = false, feed?: string, sample?: number) =>
+    request<FeedResponse>(
+      'GET',
+      `/api/feed${qs({ refresh: refresh || undefined, feed: feed && feed !== 'all' ? feed : undefined, sample })}`,
+    ),
   dismissFeedEntry: (arxivId: string, version: number, permanent = false) =>
     request('POST', '/api/feed/dismiss', { arxiv_id: arxivId, version, permanent }),
   feedRules: () => request<{ rules: FeedRule[] }>('GET', '/api/feed/rules'),

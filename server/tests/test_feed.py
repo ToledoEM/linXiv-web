@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 from app.cli import CLIError
 
 from .conftest import fixture
@@ -65,6 +67,74 @@ def test_dismiss_prunes_cache(client, fake):
     assert len(_feed_calls(fake)) == 1
     assert "2610.03647" not in [e["arxiv_id"] for e in body["entries"]]
     assert len(body["entries"]) == 2
+
+
+URL2 = "https://rss.arxiv.org/rss/cs.AI"
+
+
+def _two_feeds() -> str:
+    return json.dumps(
+        [
+            {"id": URL, "name": "ML", "url": URL, "enabled": True},
+            {"id": URL2, "name": "AI", "url": URL2, "enabled": True},
+        ]
+    )
+
+
+def test_feed_merges_every_configured_feed(client, fake):
+    fake.on("settings", "get", result={"web_feeds": _two_feeds()})
+    fake.on("feed", "get", result=lambda _: fixture("feed-get.json"))
+    body = client.get("/api/feed").json()
+    # Both feeds fetched, and each entry says which one it came from.
+    assert len(_feed_calls(fake)) == 2
+    assert {f["name"] for f in body["feeds"]} == {"ML", "AI"}
+    # The two feeds serve the same fixture, so every entry de-duplicates away but one set.
+    assert len(body["entries"]) == 3
+    assert {e["feed_name"] for e in body["entries"]} == {"ML"}
+
+
+def test_feed_one_feed_only(client, fake):
+    fake.on("settings", "get", result={"web_feeds": _two_feeds()})
+    fake.on("feed", "get", result=lambda _: fixture("feed-get.json"))
+    body = client.get("/api/feed", params={"feed": URL2}).json()
+    assert _feed_calls(fake) == [["feed", "get", "--", URL2]]
+    assert {e["feed_name"] for e in body["entries"]} == {"AI"}
+
+
+def test_feed_sample_limits_entries(client, fake):
+    fake.on("settings", "get", result={"web_feeds": _two_feeds()})
+    fake.on("feed", "get", result=lambda _: fixture("feed-get.json"))
+    body = client.get("/api/feed", params={"sample": 2}).json()
+    assert len(body["entries"]) == 2
+
+
+def test_feed_one_dead_feed_still_renders(client, fake):
+    fake.on("settings", "get", result={"web_feeds": _two_feeds()})
+
+    def page(argv):
+        if argv[-1] == URL2:
+            raise CLIError(502, "feed URL resolves to a private address")
+        return fixture("feed-get.json")
+
+    fake.on("feed", "get", result=page)
+    body = client.get("/api/feed").json()
+    assert len(body["entries"]) == 3
+    assert [e["name"] for e in body["errors"]] == ["AI"]
+
+
+def test_feed_all_feeds_dead_is_an_error(client, fake):
+    fake.on("settings", "get", result={"web_feeds": _two_feeds()})
+    fake.on("feed", "get", result=CLIError(502, "nope"))
+    assert client.get("/api/feed").status_code == 502
+
+
+def test_feed_caches_each_url(client, fake):
+    """One cache slot per feed: a second feed must not evict the first."""
+    fake.on("settings", "get", result={"web_feeds": _two_feeds()})
+    fake.on("feed", "get", result=lambda _: fixture("feed-get.json"))
+    client.get("/api/feed")
+    client.get("/api/feed")
+    assert len(_feed_calls(fake)) == 2
 
 
 def test_rule_change_clears_cache(client, fake):
