@@ -8,7 +8,7 @@ export type PageKey = 'reading' | 'tags' | 'graph' | 'search' | 'add' | 'trash'
 export type SidebarPages = Record<PageKey, boolean>
 
 export const PAGE_OPTIONS: { key: PageKey; route: string; label: string; description: string }[] = [
-  { key: 'reading', route: '/reading', label: 'Reading', description: 'Reading lists' },
+  { key: 'reading', route: '/reading', label: 'Reading lists', description: 'Papers queued to read' },
   { key: 'tags', route: '/tags', label: 'Tags', description: 'Tags and how many papers carry each' },
   { key: 'graph', route: '/graph', label: 'Graph', description: 'Knowledge graph of papers, authors and tags' },
   { key: 'search', route: '/search', label: 'Search', description: 'arXiv / OpenAlex / Crossref search' },

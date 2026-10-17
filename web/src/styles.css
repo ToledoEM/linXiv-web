@@ -168,7 +168,24 @@ tr:last-child td { border-bottom: none; }
 .pdf-find { display: flex; align-items: center; gap: 0.45rem; }
 .pdf-find input { width: 12rem; padding: 0.25rem 0.45rem; }
 .pdf-find-count { min-width: 3.5rem; text-align: right; font-variant-numeric: tabular-nums; }
-.pdf-scroller { height: calc(85vh / var(--zoom, 1)); overflow: auto; background: var(--surface-2); padding: 0.5rem 0; outline: none; }
+/* overscroll-behavior stops the wheel chaining to the page when the PDF hits an end. */
+.pdf-scroller { height: calc(85vh / var(--zoom, 1)); overflow: auto; overscroll-behavior: contain; background: var(--surface-2); padding: 0.5rem 0; outline: none; }
+/* Paper page with the reader open: details left, PDF in a sticky full-height pane right. */
+.paper-split { display: grid; grid-template-columns: var(--paper-split, 55%) 0.6rem minmax(0, 1fr); align-items: start; gap: 0; }
+.paper-split > .paper-main { min-width: 0; }
+.paper-split-handle { align-self: stretch; justify-self: center; width: 0.25rem; min-height: 6rem; border-radius: 999px; background: var(--border); cursor: col-resize; position: sticky; top: 1.5rem; }
+.paper-split-handle:hover { background: var(--accent); }
+.paper-pdf-pane { min-width: 0; position: sticky; top: 1.5rem; }
+.paper-pdf-pane .pdf-reader { margin-top: 0; }
+.paper-pdf-pane .pdf-scroller { height: calc((100vh - 8rem) / var(--zoom, 1)); }
+/* The reader needs the room, so this page ignores the usual content width cap. */
+.content:has(.paper-split) { max-width: none; }
+@media (max-width: 1000px) {
+  .paper-split { grid-template-columns: 1fr; }
+  .paper-split-handle { display: none; }
+  .paper-pdf-pane { position: static; margin-top: 1rem; }
+  .paper-pdf-pane .pdf-scroller { height: calc(85vh / var(--zoom, 1)); }
+}
 .pdf-page-slot { margin: 0.5rem auto; width: fit-content; }
 .pdf-page-slot .react-pdf__Page { box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18); }
 .pdf-page-loading { background: #fff; }
@@ -269,10 +286,12 @@ textarea { resize: vertical; width: 100%; }
 .page-head h2 { margin: 0; }
 .page-head-action { margin-left: auto; }
 .project-grid { list-style: none; padding: 0; margin: 0 0 1rem; display: grid; grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr)); gap: 0.9rem; align-items: start; }
-.project-card { display: grid; gap: 0.5rem; position: relative; }
+/* Cards stretch to the tallest in the row (a missing description must not shorten one). */
+.project-grid > .project-card { align-self: stretch; }
+.project-card { display: flex; flex-direction: column; gap: 0.5rem; position: relative; }
 .project-card:hover { border-color: var(--accent); }
 .project-name a::after { content: ''; position: absolute; inset: 0; border-radius: inherit; }
-.project-card .actions { margin-top: 0.2rem; position: relative; z-index: 1; }
+.project-card .actions { margin-top: auto; padding-top: 0.2rem; position: relative; z-index: 1; }
 .project-name { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
 .project-name a { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
 .project-desc { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
@@ -304,6 +323,8 @@ textarea { resize: vertical; width: 100%; }
 .doi-line { margin-top: 0.15rem; text-decoration: none; }
 .doi-line:hover { text-decoration: underline; }
 .selection-bar { position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; background: var(--surface); border: 1px solid var(--accent); border-radius: var(--radius); padding: 0.5rem 0.8rem; margin-bottom: 0.75rem; }
+/* Paper page: the same picker, but in the page flow rather than a sticky bulk bar. */
+.selection-bar.inline-bar { position: static; border-color: var(--border); margin-bottom: 0; }
 .selection-bar .grow { min-width: 0; }
 .selection-bar-msg { flex-basis: 100%; margin: 0; }
 .success { color: var(--success); margin: 0.4rem 0; }
@@ -371,6 +392,12 @@ a.button:hover { filter: brightness(0.95); text-decoration: none; }
 .home-feed { margin-top: 1.75rem; }
 .home-feed .page-head { margin-bottom: 0.6rem; }
 .home-feed h3 { margin: 0; }
+.feed-edit-list { list-style: none; margin: 0 0 0.5rem; padding: 0; display: grid; gap: 0.45rem; }
+.feed-edit-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; }
+.feed-edit-row .grow { flex: 1; min-width: 14rem; }
+.inline-check { display: inline-flex; align-items: center; gap: 0.25rem; }
+.feed-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-bottom: 0.6rem; }
+.feed-controls .grow { flex: 1; min-width: 12rem; }
 .feed-list { list-style: none; margin: 0; padding: 0 1rem; }
 .feed-row { display: flex; gap: 1rem; justify-content: space-between; align-items: flex-start; padding: 0.75rem 0; border-bottom: 1px solid var(--border); }
 .feed-row:last-child { border-bottom: none; }

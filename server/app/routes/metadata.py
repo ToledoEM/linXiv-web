@@ -37,6 +37,9 @@ router = APIRouter(prefix="/api", tags=["metadata"])
 # One argv string is capped at 128 KiB on Linux.
 MAX_TEXT_BYTES = 100_000
 MAX_RESULTS = 5
+# `paper repair` declares --authors as required, so a paper saved without authors
+# is stored under this placeholder rather than rejected.
+UNKNOWN_AUTHOR = "Unknown"
 NCBI = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
 NCBI_MAX_BYTES = 5 * 1024 * 1024
 BIORXIV = "https://api.biorxiv.org"
@@ -65,7 +68,7 @@ class MetadataIn(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
 
     title: str = Field(min_length=1, max_length=2000)
-    authors: list[Author] = Field(min_length=1, max_length=2000)
+    authors: list[Author] = Field(default_factory=list, max_length=2000)
     published: str = Field(pattern=r"^\d{4}-\d{2}-\d{2}$")
     summary: str = ""
     category: str | None = Field(None, max_length=500)
@@ -101,13 +104,15 @@ class MetadataIn(BaseModel):
 
 @router.put("/papers/{source_id:path}/metadata")
 async def save_metadata(request: Request, source_id: str, body: MetadataIn):
+    """Papers may be saved without authors; `paper repair` requires the flag, so an
+    empty list is sent as a single `UNKNOWN_AUTHOR` placeholder."""
     sid = ident(source_id, "paper id")
     if not body.title:
         raise HTTPException(status_code=400, detail="title must not be blank")
     paper = await run(request, ["paper", "get", "--", sid])
     tags = (paper.get("tags") or []) if isinstance(paper, dict) else []
     args = ["paper", "repair", f"--title={body.title}"]
-    args += [f"--authors={a}" for a in body.authors]
+    args += [f"--authors={a}" for a in (body.authors or [UNKNOWN_AUTHOR])]
     args += [f"--published={body.published}", f"--summary={body.summary}"]
     # Blank optional fields are left out, which clears them (a blank DOI is an error).
     for flag, value in (("category", body.category), ("doi", body.doi), ("url", body.url)):

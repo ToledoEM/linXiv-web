@@ -1,4 +1,14 @@
-import { lazy, Suspense, useCallback, useEffect, useState, type FormEvent } from 'react'
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type CSSProperties,
+  type FormEvent,
+  type PointerEvent as ReactPointerEvent,
+} from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { api, pdfUrl } from '../api'
 import type { Annotation, Paper, PaperVersions, TagSuggestion } from '../types'
@@ -11,11 +21,35 @@ import MetadataEditor from '../MetadataEditor'
 import Notes from '../Notes'
 import TagSuggestions from '../TagSuggestions'
 import { toggled } from '../projects'
-import { UndoDeleteButton } from '../projectParts'
+import { AddToProjectBar, UndoDeleteButton } from '../projectParts'
 import { MathText } from '../tex'
 
 // pdf.js is large: load the reader only when a PDF is opened.
 const PdfReader = lazy(() => import('../PdfReader'))
+
+// Width of the details column when the PDF pane is open, per browser.
+const SPLIT_KEY = 'lxw.paperSplit'
+const SPLIT_DEFAULT = '55%'
+
+const clampSplit = (pct: number) => Math.min(75, Math.max(25, Math.round(pct)))
+
+function loadSplit(): string {
+  try {
+    const raw = localStorage.getItem(SPLIT_KEY)
+    const n = raw ? Number.parseFloat(raw) : NaN
+    return Number.isFinite(n) ? `${clampSplit(n)}%` : SPLIT_DEFAULT
+  } catch {
+    return SPLIT_DEFAULT
+  }
+}
+
+function saveSplit(value: string): void {
+  try {
+    localStorage.setItem(SPLIT_KEY, String(Number.parseFloat(value)))
+  } catch {
+    // storage unavailable: keep the dragged width for this page view only
+  }
+}
 
 export default function PaperDetail() {
   const id = useParams()['*'] ?? ''
@@ -37,6 +71,31 @@ export default function PaperDetail() {
   const [annotations, setAnnotations] = useState<Annotation[]>([])
   // Bumped after an AI summary is saved so the Notes panel reloads.
   const [notesTick, setNotesTick] = useState(0)
+  // The one paper, in the shape AddToProjectBar expects; stable so it keeps its picker state.
+  const selectedId = paper?.source_id ?? ''
+  const paperSelection = useMemo(() => new Set(selectedId ? [selectedId] : []), [selectedId])
+
+  const [initialSplit] = useState(loadSplit)
+
+  // Split width is written straight to the CSS variable while dragging: putting it in
+  // React state would re-render (and re-measure the reader) on every pointer move.
+  const startDrag = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
+    const section = e.currentTarget.parentElement
+    if (!section) return
+    e.preventDefault()
+    const move = (ev: PointerEvent) => {
+      const box = section.getBoundingClientRect()
+      const left = ((ev.clientX - box.left) / box.width) * 100
+      section.style.setProperty('--paper-split', `${clampSplit(left)}%`)
+    }
+    const up = () => {
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', up)
+      saveSplit(section.style.getPropertyValue('--paper-split'))
+    }
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
+  }, [])
 
   const loadAnnotations = useCallback(
     () =>
@@ -112,8 +171,14 @@ export default function PaperDetail() {
   if (!paper) return error ? <ErrorText error={error} /> : <p className="muted">Loading…</p>
   const sid = paper.source_id
 
+  const split = showPdf && paper.has_pdf
+
   return (
-    <section className="detail">
+    <section
+      className={split ? 'detail paper-split' : 'detail'}
+      style={split ? ({ '--paper-split': initialSplit } as CSSProperties) : undefined}
+    >
+      <div className="paper-main">
       <div className="page-head">
         <h2>
           {paper.title?.trim() ? (
@@ -252,6 +317,9 @@ export default function PaperDetail() {
         </div>
       )}
 
+      <h3>Projects</h3>
+      <AddToProjectBar inline selected={paperSelection} onSelect={() => {}} />
+
       {aiOn && (
         <AiSummary
           key={sid}
@@ -292,21 +360,6 @@ export default function PaperDetail() {
           </>
         )}
       </div>
-      {showPdf && paper.has_pdf && (
-        <Suspense fallback={<p className="muted">Loading viewer…</p>}>
-          <PdfReader
-            key={sid}
-            file={pdfUrl(sid)}
-            errorUrl={pdfUrl(sid)}
-            sourceId={sid}
-            version={paper.version}
-            projectId={fromProjectId}
-            annotations={annotations}
-            onAnnotationsChanged={loadAnnotations}
-          />
-        </Suspense>
-      )}
-
       {(paper.has_pdf || annotations.length > 0) && (
         <Highlights annotations={annotations} sourceId={sid} version={paper.version} onChanged={loadAnnotations} />
       )}
@@ -365,6 +418,27 @@ export default function PaperDetail() {
         <UndoDeleteButton label="Delete paper" busy={!!busy} onConfirm={deletePaper} />
         <span className="muted small">Moves the paper to the trash.</span>
       </div>
+      </div>
+
+      {split && (
+        <>
+          <div className="paper-split-handle" onPointerDown={startDrag} role="presentation" title="Drag to resize" />
+          <div className="paper-pdf-pane">
+            <Suspense fallback={<p className="muted">Loading viewer…</p>}>
+              <PdfReader
+                key={sid}
+                file={pdfUrl(sid)}
+                errorUrl={pdfUrl(sid)}
+                sourceId={sid}
+                version={paper.version}
+                projectId={fromProjectId}
+                annotations={annotations}
+                onAnnotationsChanged={loadAnnotations}
+              />
+            </Suspense>
+          </div>
+        </>
+      )}
     </section>
   )
 }

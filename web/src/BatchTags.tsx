@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { api } from './api'
+import { useBatchGuard } from './batchGuard'
 import { ErrorText } from './components'
 import { toggled } from './projects'
 import TagSuggestions from './TagSuggestions'
@@ -47,6 +48,7 @@ export default function BatchTags({
   const [armedAll, setArmedAll] = useState(false)
   const [summary, setSummary] = useState('')
   const stopRef = useRef(false)
+  useBatchGuard(running)
 
   const item = (sid: string) => items[sid] ?? blank()
   const patch = (sid: string, p: Partial<Item>) =>
