@@ -1,4 +1,4 @@
-# Configuration
+# Admin Server Configuration
 
 linXiv-web reads these environment variables, usually from the `.env` file next to `docker-compose.yml`.
 

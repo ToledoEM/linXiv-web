@@ -4,7 +4,7 @@ linXiv-web is a browser UI for [linXiv](https://github.com/linxiv-dev/linXiv). Y
 
 It is a separate project written to fit the [linxiv-dev](https://github.com/linxiv-dev) organization. The linXiv maintainers have not adopted it, so it is not an official linXiv component.
 
-![Library page](assets/screenshots/library.png)
+![Home page](assets/screenshots/home.png)
 
 ## Features
 
@@ -22,9 +22,14 @@ It is a separate project written to fit the [linxiv-dev](https://github.com/linx
 
 linXiv-web talks to linXiv through the `linxiv` CLI, which prints JSON for every command. A FastAPI server runs `linxiv <command>` as a subprocess, passing arguments as a list without a shell, and serves a React single-page app.
 
-```
-browser ──HTTP──▶ FastAPI (/api/*, static SPA) ──subprocess──▶ linxiv CLI ──▶ papers.db + pdfs/
-MCP client ──HTTP /mcp──▶ FastAPI ──stdio──▶ linxiv-mcp ──▶ papers.db + pdfs/
+```mermaid
+flowchart LR
+  browser[Browser] -- HTTP --> api["FastAPI<br>/api/*, static SPA"]
+  mcp[MCP client] -- "HTTP /mcp" --> api
+  api -- subprocess --> cli[linxiv CLI]
+  api -- stdio --> mcpsrv[linxiv-mcp]
+  cli --> data[("papers.db + pdfs/")]
+  mcpsrv --> data
 ```
 
 Library reads and writes go through the CLI, with two exceptions where the CLI has no command. PDF folder layouts move files and update their stored path in `papers.db` directly (under the CLI lock), and the AI summary reads text from a saved PDF.
@@ -45,6 +50,6 @@ Like `linxiv-headless`, the server refuses to start on a non-loopback address wi
 
 - To run it: [Self-hosting with Docker](self-hosting.md).
 - To learn the pages: start with the [Library](guide/library.md).
-- To change server settings: [Configuration](reference/configuration.md).
+- To change server settings: [Admin Server Configuration](reference/configuration.md).
 
 linXiv-web is open source under the Apache License 2.0.

@@ -6,8 +6,11 @@ Upstream linXiv ships `linxiv-mcp` as a local stdio server for the desktop app (
 
 ## How it works
 
-```
-MCP client ──HTTP /mcp──▶ FastAPI ──stdio──▶ linxiv-mcp ──▶ papers.db + pdfs/
+```mermaid
+flowchart LR
+  client[MCP client] -- "HTTP /mcp" --> api[FastAPI]
+  api -- stdio --> mcpsrv[linxiv-mcp]
+  mcpsrv --> data[("papers.db + pdfs/")]
 ```
 
 - Each MCP session (one `initialize`) gets its own `linxiv-mcp` process. At most 4 sessions run at once; a session closes after 30 minutes idle, and a restart of the container drops all sessions (clients re-initialize).

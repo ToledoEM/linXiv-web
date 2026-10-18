@@ -18,7 +18,7 @@ Every request carries a JSON Schema and a valid example reply; Settings → AI s
 
 Requests time out after 90 s, or 300 s for OpenAI-compatible servers, since local models read long prompts slowly.
 
-`LINXIV_WEB_AI_ALLOWED_HOSTS` limits which hosts the OpenAI-compatible base URL may use. Cloud metadata addresses are always refused. See [Configuration](reference/configuration.md).
+`LINXIV_WEB_AI_ALLOWED_HOSTS` limits which hosts the OpenAI-compatible base URL may use. Cloud metadata addresses are always refused. See [Admin Server Configuration](reference/configuration.md).
 
 ## Tagging the whole library
 

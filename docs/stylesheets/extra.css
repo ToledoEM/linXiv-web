@@ -1,0 +1,4 @@
+/* linXiv dark logo on the dark scheme */
+[data-md-color-scheme="slate"] .md-logo img {
+  content: url("../assets/logo-dark.svg");
+}

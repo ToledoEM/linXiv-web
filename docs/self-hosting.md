@@ -2,6 +2,8 @@
 
 This guide runs linXiv-web on your own machine or home server from the prebuilt container image. For development and building from source, see [Development](development.md).
 
+The current release is the `release` branch, published as the image tag used below. `main` may contain changes that are not released yet.
+
 ## Requirements
 
 - Docker with Docker Compose v2 (`docker compose`), on Linux, macOS or Windows.
@@ -28,7 +30,7 @@ Create `docker-compose.yml`:
 ```yaml
 services:
   linxiv-web:
-    image: ghcr.io/toledoem/linxiv-web:0.1.0
+    image: ghcr.io/toledoem/linxiv-web:0.1.1
     container_name: linxiv-web
     restart: unless-stopped
     env_file:
@@ -65,7 +67,7 @@ docker compose logs -f linxiv-web
 
 Open http://127.0.0.1:8086.
 
-The image is tagged with the linXiv-web version (`0.1.0`) and `latest`; pin the version to choose when you update. The image is public: no `docker login` needed.
+The image is tagged with the linXiv-web version (`0.1.1`) and `latest`; pin the version to choose when you update. The image is public: no `docker login` needed.
 
 ## First-run setup
 
@@ -94,7 +96,7 @@ A password from the environment always wins over the stored one, and setup never
 
 ```sh
 docker run --rm -e PASSWORD='your-password' --entrypoint python \
-  ghcr.io/toledoem/linxiv-web:0.1.0 -m app hash-password
+  ghcr.io/toledoem/linxiv-web:0.1.1 -m app hash-password
 ```
 
 Put it in `.env` next to `docker-compose.yml`, in single quotes (the hash contains `$`):
@@ -211,7 +213,7 @@ Settings changed in the web UI are stored in `data/`. Environment variables go i
 | `LINXIV_WEB_MAX_UPLOAD_MB` | `200` | Upload size cap |
 | `CROSSREF_MAILTO`, `NCBI_API_KEY`, `GEMINI_API_KEY`, … | none | Override the values entered in Settings |
 
-The full list is in [Configuration](reference/configuration.md).
+The full list is in [Admin Server Configuration](reference/configuration.md).
 
 ## Importing many PDFs
 
@@ -245,7 +247,7 @@ Instead of pulling from GHCR, compose can build from the git repository. Replace
 
 ```yaml
     build:
-      context: https://github.com/ToledoEM/linXiv-web.git#main
+      context: https://github.com/ToledoEM/linXiv-web.git#release
       args:
         LINXIV_REF: v0.7.0
     image: linxiv-web:local
