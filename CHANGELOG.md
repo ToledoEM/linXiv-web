@@ -11,11 +11,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Home feed: several RSS or Atom feeds instead of one. Settings → Library lists them (name, URL, on/off, up to 10); Home gains a feed picker (all feeds, a single feed, or a random 10 from all) and a keyword box that filters the entries on screen. Entries from the same paper in two feeds are shown once, and each row says which feed it came from. A feed that fails to load is reported on its own without hiding the others. Existing single-feed setups keep working and become the first feed in the list. Filter rules still apply to every feed.
 - Paper page: an "Add to project" picker, so a paper can be put in a project or reading list without going through the Library.
 - Leaving the Library while a batch metadata or AI tag run is going now asks first, in the app and when closing or reloading the tab; the run stops only if you confirm.
+- Documentation website built with [Zensical](https://zensical.org) and managed by uv (`pyproject.toml`, `zensical.toml` at the repository root). Pages live in `docs/`: the existing guides, a tour of every page with screenshots, AI features, configuration, HTTP API, compatibility and development. `uv run zensical serve` previews it; `uv run zensical build` renders it into `site/` (ignored by git).
 
 ### Changed
 - Paper page: opening a PDF puts it in a full-height pane beside the paper's details instead of inline below them, with a divider that can be dragged to resize the two columns (the width is remembered per browser). The two columns stack on narrow screens.
 - Sidebar: "Reading" is now "Reading lists", matching the page it opens.
 - Papers can be saved without an author; they are stored under "Unknown" rather than refused.
+- Docs file names are lowercase: `docs/self-hosting.md`, `docs/bulk-import.md`, `docs/bulk-ai-tags.md`, `docs/mcp.md`.
 
 ### Fixed
 - Library → Batch AI tags: Approve all reloads the library once at the end instead of after every paper, which re-listed the whole library per save and kept the CPU busy (no comments).

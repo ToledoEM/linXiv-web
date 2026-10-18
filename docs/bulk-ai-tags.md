@@ -85,9 +85,9 @@ The script talks to the server at `http://127.0.0.1:8086`, the port `docker-comp
 
 It only helps when the AI end can work on two requests at the same time:
 
-- **Cloud providers** (Gemini, OpenAI, Anthropic) answer parallel requests, but count each one against your rate limit. On a free tier, `--jobs 2` hits `429` twice as fast. Stay at 1 if the log fills with rate-limit failures.
-- **LM Studio** answers parallel requests from version 0.4.0, on its llama.cpp engine (GGUF models, runtime llama.cpp v2.0.0 or later). Each loaded model has a **Max Concurrent Predictions** setting, which defaults to 4. To check or change it: open the model loader, turn on **Manually choose model load parameters**, pick the model, turn on **Show advanced settings**, and set **Max Concurrent Predictions** to at least the `--jobs` value. Then load the model again. Requests beyond that number wait in LM Studio's queue rather than failing. **Unified KV Cache** (on by default) lets the parallel requests share the context memory instead of splitting it into fixed parts.
-- **Older LM Studio, or MLX models,** may handle one request at a time. The second request then waits for the first. The server gives each AI answer at most 300 seconds, and the wait counts toward that, so a slow model with `--jobs 2` can turn into `FAIL ... (502): ... request failed (ReadTimeout)` lines. Use `--jobs 1` there.
+- Cloud providers (Gemini, OpenAI, Anthropic) answer parallel requests, but count each one against your rate limit. On a free tier, `--jobs 2` hits `429` twice as fast. Stay at 1 if the log fills with rate-limit failures.
+- LM Studio answers parallel requests from version 0.4.0, on its llama.cpp engine (GGUF models, runtime llama.cpp v2.0.0 or later). Each loaded model has a **Max Concurrent Predictions** setting, which defaults to 4. To check or change it: open the model loader, turn on **Manually choose model load parameters**, pick the model, turn on **Show advanced settings**, and set **Max Concurrent Predictions** to at least the `--jobs` value. Then load the model again. Requests beyond that number wait in LM Studio's queue rather than failing. **Unified KV Cache** (on by default) lets the parallel requests share the context memory instead of splitting it into fixed parts.
+- Older LM Studio, or MLX models, may handle one request at a time. The second request then waits for the first. The server gives each AI answer at most 300 seconds, and the wait counts toward that, so a slow model with `--jobs 2` can turn into `FAIL ... (502): ... request failed (ReadTimeout)` lines. Use `--jobs 1` there.
 
 Parallel requests on a local model share the same GPU, so each answer comes back slower than alone. Total time still drops when the model runs well below the GPU's limits. Time the first lines of a run with `--jobs 1` and with `--jobs 2` and keep the faster one.
 
@@ -121,7 +121,7 @@ install -m 600 /dev/null ~/.linxiv-web-password
 printf '%s\n' 'your-password' > ~/.linxiv-web-password
 ```
 
-A crontab entry that tags whatever arrived during the day, after the nightly import from [BULK-IMPORT.md](BULK-IMPORT.md):
+A crontab entry that tags whatever arrived during the day, after the nightly import from [bulk-import.md](bulk-import.md):
 
 ```
 45 3 * * * cd $HOME/linxiv-web && LINXIV_WEB_PASSWORD_FILE=$HOME/.linxiv-web-password ./bulk-ai-tags.sh >> bulk-ai-tags-cron.log 2>&1
@@ -131,11 +131,11 @@ Five wrong passwords within five minutes lock out logins from that address for t
 
 ## What to expect
 
-- **Time.** One AI call per paper, one at a time unless you pass `--jobs`. A cloud model takes a few seconds per paper. A local model in LM Studio or Ollama can take much longer, and the server waits up to 300 seconds for each answer from an OpenAI-compatible endpoint. Try `--dry-run` for the count, then time the first few lines.
-- **Cost and rate limits.** With a cloud provider, every paper is one paid request. Free tiers often allow only a few requests per minute. When the provider answers with a rate-limit or overload error (429, 503 or 529), the script waits 30 seconds and tries that paper once more. If it fails again, the paper is logged as `FAIL` and picked up on the next run.
-- **Vocabulary.** The prompt lists up to 400 of the library's existing tags, and the model is told to reuse them. Tags added earlier in a run count as existing for the papers after them, so a library with no tags yet builds its vocabulary as the run goes. Look through the `(new)` tags in the log afterwards. The Tags page lists every tag with its paper count, which makes near-duplicates easy to spot.
-- **Thin records.** Papers imported from scans or PDFs without embedded metadata often have only a stray title and no abstract, and get poor tags. Fix those first: in the Library, tick papers marked `title?`, open batch edit, and look them up (with "By PDF file name" when the file names are titles). See [BULK-IMPORT.md](BULK-IMPORT.md#what-to-expect).
-- **Removing tags.** The script only adds tags. To undo part of a run, remove the tags on the paper pages. The log lists every tag the script added, by paper.
+- Time: one AI call per paper, one at a time unless you pass `--jobs`. A cloud model takes a few seconds per paper. A local model in LM Studio or Ollama can take much longer, and the server waits up to 300 seconds for each answer from an OpenAI-compatible endpoint. Try `--dry-run` for the count, then time the first few lines.
+- Cost and rate limits: with a cloud provider, every paper is one paid request. Free tiers often allow only a few requests per minute. When the provider answers with a rate-limit or overload error (429, 503 or 529), the script waits 30 seconds and tries that paper once more. If it fails again, the paper is logged as `FAIL` and picked up on the next run.
+- Vocabulary: the prompt lists up to 400 of the library's existing tags, and the model is told to reuse them. Tags added earlier in a run count as existing for the papers after them, so a library with no tags yet builds its vocabulary as the run goes. Look through the `(new)` tags in the log afterwards. The Tags page lists every tag with its paper count, which makes near-duplicates easy to spot.
+- Thin records: papers imported from scans or PDFs without embedded metadata often have only a stray title and no abstract, and get poor tags. Fix those first: in the Library, tick papers marked `title?`, open batch edit, and look them up (with "By PDF file name" when the file names are titles). See [bulk-import.md](bulk-import.md#what-to-expect).
+- Removing tags: the script only adds tags. To undo part of a run, remove the tags on the paper pages. The log lists every tag the script added, by paper.
 
 Before tagging a large library, take a backup in Settings → Server & data → Backup.
 

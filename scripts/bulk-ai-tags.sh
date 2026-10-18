@@ -9,7 +9,7 @@
 #   Papers with neither a title nor an abstract are skipped: the model would
 #   have nothing to read. --jobs N keeps N papers in flight at once.
 #
-# See docs/BULK-AI-TAGS.md.
+# See docs/bulk-ai-tags.md.
 set -eu
 
 usage() {
@@ -24,7 +24,7 @@ Options:
                        (default: all of them, as the web UI does)
   --jobs N             Ask the AI about N papers at a time, 1 to 4 (default 1).
                        A local model needs as many parallel slots (LM Studio:
-                       Max Concurrent Predictions); see docs/BULK-AI-TAGS.md
+                       Max Concurrent Predictions); see docs/bulk-ai-tags.md
   --log FILE           Log file (default ./bulk-ai-tags-<date>-<time>.log)
   --dry-run            List the papers it would tag, then stop (no AI calls, no changes)
   -h, --help           Show this help
