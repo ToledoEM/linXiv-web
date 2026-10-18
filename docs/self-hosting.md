@@ -1,6 +1,6 @@
 # Self-hosting linXiv-web with Docker
 
-This guide runs linXiv-web on your own machine or home server from the prebuilt container image. For development and building from source, see the [README](../README.md).
+This guide runs linXiv-web on your own machine or home server from the prebuilt container image. For development and building from source, see [Development](development.md).
 
 ## Requirements
 
@@ -167,7 +167,7 @@ LINXIV_WEB_HSTS=true   # optional: browsers stop using plain HTTP for this host
 
 The proxy must pass the original `Host` header: linXiv-web rejects writes whose `Origin` doesn't match the host it sees.
 
-Public clients: linXiv-web serves only loopback, private LAN and link-local addresses unless `LINXIV_WEB_ALLOW_EXTERNAL=true`. Behind a proxy it sees the proxy's address, so everyone passes as the proxy. To see real client addresses, list the proxy in `LINXIV_WEB_TRUSTED_PROXIES` (from inside the container it usually shows up as the Docker gateway, e.g. `172.17.0.1`, or the whole `172.16.0.0/12`) and make it send `X-Forwarded-For`; then internet clients need `LINXIV_WEB_ALLOW_EXTERNAL=true`.
+linXiv-web serves only loopback, private LAN and link-local addresses unless `LINXIV_WEB_ALLOW_EXTERNAL=true`. Behind a proxy it sees the proxy's address, so everyone passes as the proxy. To see real client addresses, list the proxy in `LINXIV_WEB_TRUSTED_PROXIES` (from inside the container it usually shows up as the Docker gateway, e.g. `172.17.0.1`, or the whole `172.16.0.0/12`) and make it send `X-Forwarded-For`; then internet clients need `LINXIV_WEB_ALLOW_EXTERNAL=true`.
 
 Caddy (passes `Host` by default, gets certificates itself):
 
@@ -211,16 +211,16 @@ Settings changed in the web UI are stored in `data/`. Environment variables go i
 | `LINXIV_WEB_MAX_UPLOAD_MB` | `200` | Upload size cap |
 | `CROSSREF_MAILTO`, `NCBI_API_KEY`, `GEMINI_API_KEY`, … | none | Override the values entered in Settings |
 
-The full list is in the README's [Configuration](../README.md#configuration) section.
+The full list is in [Configuration](reference/configuration.md).
 
 ## Importing many PDFs
 
-To import a folder of PDFs that is already on the server, without the web UI, use `scripts/bulk-import.sh`. See [BULK-IMPORT.md](BULK-IMPORT.md).
+To import a folder of PDFs that is already on the server, without the web UI, use `scripts/bulk-import.sh`. See [bulk-import.md](bulk-import.md).
 
 ## Backups
 
-- **Database:** Settings → Server & data → Backup downloads a copy of `papers.db` and can import or restore one. It does not include PDFs.
-- **Everything:** stop the container and copy both directories:
+- Database only: Settings → Server & data → Backup downloads a copy of `papers.db` and can import or restore one. It does not include PDFs.
+- Everything: stop the container and copy both directories:
 
   ```sh
   docker compose down

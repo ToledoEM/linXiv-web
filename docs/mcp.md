@@ -16,11 +16,13 @@ MCP client ──HTTP /mcp──▶ FastAPI ──stdio──▶ linxiv-mcp ─�
 
 ## Turning it on
 
-1. Open **Settings → MCP server**.
+1. Open **Settings → Integrations**.
 2. Tick **Serve linXiv's MCP tools at /mcp** and pick the tools the agent gets (see [Profiles](#profiles)). Save.
 3. Click **Create token**. The token is shown once; only its SHA-256 is stored. **Replace token** or **Revoke token** disconnects every open session.
 
 The card then shows the connect commands below with your server URL and token filled in.
+
+![MCP server card in Settings → Integrations](assets/screenshots/settings-integrations.png)
 
 ## Connecting a client
 
@@ -200,7 +202,7 @@ Descriptions come from `linxiv-mcp` (linXiv v0.7.0). Hints: read-only, edit (und
 - `/mcp` does not use the browser login or CSRF token. It needs `Authorization: Bearer <token>`; a missing or wrong token gets 401.
 - While the switch is off, `/mcp` answers 404.
 - A request carrying another site's `Origin` header is refused with 403, which blocks DNS-rebinding attacks from a browser.
-- Behind a reverse proxy, pass the `Host` header through (see [SELF-HOSTING.md](SELF-HOSTING.md#https-with-a-reverse-proxy)) so the `Origin` check compares against the public name.
+- Behind a reverse proxy, pass the `Host` header through (see [self-hosting.md](self-hosting.md#https-with-a-reverse-proxy)) so the `Origin` check compares against the public name.
 - Pick the smallest profile that does the job. Full lets an agent delete papers and projects permanently.
 
 ## Troubleshooting

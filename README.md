@@ -79,7 +79,7 @@ It should run there. The image is published for `arm64`, and the bundled `linxiv
 
 ## Run (Docker)
 
-To self-host from the prebuilt image (first-run setup, reverse proxy, backups, updates), see [docs/SELF-HOSTING.md](docs/SELF-HOSTING.md). To import a folder of PDFs already on the server without the web UI, see [docs/BULK-IMPORT.md](docs/BULK-IMPORT.md). The steps below build from this checkout.
+To self-host from the prebuilt image (first-run setup, reverse proxy, backups, updates), see [docs/self-hosting.md](docs/self-hosting.md). To import a folder of PDFs already on the server without the web UI, see [docs/bulk-import.md](docs/bulk-import.md). The steps below build from this checkout.
 
 ```sh
 cp .env.example .env
@@ -246,7 +246,7 @@ Never exposed: `get_settings` / `update_setting` (the settings store holds API k
 
 `/mcp` does not use the browser login: it needs the bearer token, answers 404 while switched off, and refuses requests that carry another site's `Origin`.
 
-Every listed tool carries MCP annotations (`readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint`, `title`) derived from its profile tier, so clients can auto-allow read-only tools and confirm destructive ones. Full guide with every tool, client setup and troubleshooting: [docs/MCP.md](docs/MCP.md).
+Every listed tool carries MCP annotations (`readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint`, `title`) derived from its profile tier, so clients can auto-allow read-only tools and confirm destructive ones. Full guide with every tool, client setup and troubleshooting: [docs/mcp.md](docs/mcp.md).
 
 ## API
 
