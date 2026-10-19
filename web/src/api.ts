@@ -82,6 +82,9 @@ export function projectExportUrl(id: number, format: ExportFormat, pdfs = false)
 export const logsExportUrl = (window: LogWindow) =>
   `/api/logs/export?window=${encodeURIComponent(window)}`
 export const ACTIVITY_EXPORT_URL = '/api/activity/export'
+/** Knowledge Graph as GraphML or a zip of nodes.csv + edges.csv (GET; streamed with the session cookie). */
+export const graphExportUrl = (format: 'graphml' | 'csv', excludeSingleAuthors: boolean) =>
+  `/api/graph/export${qs({ format, exclude_single_authors: excludeSingleAuthors || undefined })}`
 export const DIAGNOSTICS_URL = '/api/system/diagnostics'
 
 /** Tell the activity tray a background job just started (it polls slowly when idle). */

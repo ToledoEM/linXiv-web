@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- Knowledge Graph: **Export GraphML** and **Export CSV** (zip of `nodes.csv` and `edges.csv`) download the whole graph with node metadata, for Gephi, Cytoscape, igraph, NetworkX or pandas. Also available as `GET /api/graph/export`.
 - `scripts/bulk-ai-tags.sh --all`: ask the AI about every paper, not only untagged ones; tagged papers keep their tags and gain new ones.
 - Home feed: several RSS or Atom feeds instead of one. Settings → Library lists them (name, URL, on/off, up to 10); Home gains a feed picker (all feeds, a single feed, or a random 10 from all) and a keyword box that filters the entries on screen. Entries from the same paper in two feeds are shown once, and each row says which feed it came from. A feed that fails to load is reported on its own without hiding the others. Existing single-feed setups keep working and become the first feed in the list. Filter rules still apply to every feed.
 - Paper page: an "Add to project" picker, so a paper can be put in a project or reading list without going through the Library.
