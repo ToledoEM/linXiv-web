@@ -1,0 +1,38 @@
+# linXiv-web
+
+> linXiv-web is a self-hosted browser UI for the linXiv academic paper library. It searches arXiv, OpenAlex and Crossref, adds papers to a library, tags them, groups them into projects and reading lists, reads and highlights PDFs, and takes notes. It also exposes an HTTP API, opt-in AI features and linXiv's MCP tools over HTTP.
+
+linXiv-web is a community project, not an official linXiv component. A FastAPI server wraps the `linxiv` CLI (run as a subprocess, JSON output) and serves a React single-page app. It ships as the Docker image `ghcr.io/toledoem/linxiv-web` (amd64 and arm64), listening on port 8000 in the container. The HTTP API lives under `/api/*`; the MCP server is off by default and, when enabled in Settings → Integrations, is served at `/mcp` with a bearer token. Do not share a data directory with the linXiv desktop app or `linxiv-headless`.
+
+## Install
+
+- [Self-hosting with Docker](https://raw.githubusercontent.com/ToledoEM/linXiv-web/main/docs/self-hosting.md): Docker Compose setup, first-run password, reverse proxy, troubleshooting
+- [Compatibility and resources](https://raw.githubusercontent.com/ToledoEM/linXiv-web/main/docs/reference/compatibility.md): supported linXiv CLI/MCP versions and resource needs
+
+## Using linXiv-web
+
+- [Home feed](https://raw.githubusercontent.com/ToledoEM/linXiv-web/main/docs/guide/home-feed.md): library counts, RSS/Atom feeds and filter rules
+- [Library](https://raw.githubusercontent.com/ToledoEM/linXiv-web/main/docs/guide/library.md): paper table, search, filters and batch edits
+- [Paper page](https://raw.githubusercontent.com/ToledoEM/linXiv-web/main/docs/guide/papers.md): metadata, versions, tags, notes, PDF reader and highlights
+- [Projects and reading lists](https://raw.githubusercontent.com/ToledoEM/linXiv-web/main/docs/guide/projects.md): projects, exports (BibTeX, Obsidian, Zotero, .lxproj) and reading lists
+- [Search and add papers](https://raw.githubusercontent.com/ToledoEM/linXiv-web/main/docs/guide/search-and-add.md): arXiv, OpenAlex, Crossref and local search; add by arXiv id, DOI or PDF link
+- [Authors, graph and tags](https://raw.githubusercontent.com/ToledoEM/linXiv-web/main/docs/guide/authors-graph-tags.md): author pages, merging, ORCID backfill, knowledge graph, tags
+- [Settings](https://raw.githubusercontent.com/ToledoEM/linXiv-web/main/docs/guide/settings.md): settings groups, browser-stored versus server-stored options
+- [Trash and backups](https://raw.githubusercontent.com/ToledoEM/linXiv-web/main/docs/guide/trash-backup.md): trash, restore, database backup and import
+
+## AI and agents
+
+- [AI features](https://raw.githubusercontent.com/ToledoEM/linXiv-web/main/docs/ai.md): tag suggestions, summaries and metadata cleanup with Gemini, OpenAI, Anthropic or OpenAI-compatible servers
+- [MCP server](https://raw.githubusercontent.com/ToledoEM/linXiv-web/main/docs/mcp.md): enabling `/mcp`, tokens, tool profiles, connecting Claude Code, Codex and OpenCode
+
+## Reference
+
+- [Admin Server Configuration](https://raw.githubusercontent.com/ToledoEM/linXiv-web/main/docs/reference/configuration.md): environment variables read from `.env`
+- [HTTP API](https://raw.githubusercontent.com/ToledoEM/linXiv-web/main/docs/reference/api.md): routes, session and CSRF rules, mapping to `linxiv` CLI commands
+- [Functions not in the CLI](https://raw.githubusercontent.com/ToledoEM/linXiv-web/main/docs/functions-not-in-api.md): what the web server adds on top of the `linxiv` CLI
+
+## Optional
+
+- [Bulk PDF import](https://raw.githubusercontent.com/ToledoEM/linXiv-web/main/docs/bulk-import.md): `scripts/bulk-import.sh` for importing a server-side folder of PDFs
+- [Bulk AI tags](https://raw.githubusercontent.com/ToledoEM/linXiv-web/main/docs/bulk-ai-tags.md): `scripts/bulk-ai-tags.sh` for tagging every untagged paper
+- [Development](https://raw.githubusercontent.com/ToledoEM/linXiv-web/main/docs/development.md): containerised lint, tests and builds

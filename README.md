@@ -9,7 +9,7 @@
 
 linXiv-web is a browser UI for [linXiv](https://github.com/linxiv-dev/linXiv). You can search arXiv, OpenAlex and Crossref, add papers to a library, tag them, organize them into projects and reading lists, read and highlight their PDFs, and take notes.
 
-It is a separate project written to fit the [linxiv-dev](https://github.com/linxiv-dev) organization. The linXiv maintainers have not adopted it, so it is not an official linXiv component.
+It aligns with the [linxiv-dev](https://github.com/linxiv-dev) organization but has not been adopted by linXiv maintainers, and remains unofficial.
 
 ## Features
 
@@ -19,8 +19,8 @@ It is a separate project written to fit the [linxiv-dev](https://github.com/linx
 - **Discovery:** search tabs (arXiv, OpenAlex, Crossref, local) with an advanced arXiv query builder, add papers by arXiv id, DOI or PDF link, RSS/Atom home feed with filter rules, arXiv new-version monitor.
 - **Authors and graph:** author pages, edit and merge, ORCID backfill, knowledge graph of papers, authors and tags.
 - **Maintenance:** trash, backup / import / restore of the database, PDF folder layouts (by year and/or journal), background full-text indexer.
-- **AI (opt-in):** tag suggestions, paper summaries saved as notes, metadata cleanup, with Gemini, OpenAI, Anthropic or any OpenAI-compatible server (LM Studio, Ollama, vLLM, OpenRouter).
-- **MCP (opt-in):** linXiv's own MCP tools over HTTP at `/mcp`, for Claude Code and Codex.
+- **AI (opt-in):** tag suggestions, paper summaries saved as notes, metadata cleanup.
+- **MCP (opt-in):** linXiv's own MCP tools over HTTP at `/mcp`, for any AI tool that accept MCP protocol.
 - Themes (light/dark), zoom and density, keyboard shortcuts, sidebar page toggles.
 
 ## How it works
@@ -34,13 +34,13 @@ MCP client ──HTTP /mcp──▶ FastAPI ──stdio──▶ linxiv-mcp ─�
 
 Library reads and writes go through the CLI. Two exceptions, both where the CLI has no command: PDF folder layouts move files and update their stored path in `papers.db` directly (under the CLI lock), and the AI summary reads text from a saved PDF.
 
-The server contacts outside services itself only in these cases:
+The design is to be local-only, but linXiv-web reach out to external services itself **only** in these cases:
 
-- it downloads a PDF link pasted into Add Paper before importing it (public hosts only, size-capped);
-- metadata lookup queries PubMed through NCBI E-utilities (`eutils.ncbi.nlm.nih.gov`) and bioRxiv/medRxiv through `api.biorxiv.org`;
-- when AI features are switched on, AI actions send the paper's title, abstract (and, if you choose, PDF text) to the provider you configured. Nothing is sent until you click an AI button.
+- downloads a PDF link pasted into Add Paper before importing it (public hosts only, size-capped)
+- metadata lookup queries PubMed through NCBI E-utilities (`eutils.ncbi.nlm.nih.gov`), bioRxiv/medRxiv through `api.biorxiv.org` or others
+- when AI features are switched on, AI actions send the paper's title, abstract (and, if you choose, PDF text) to the provider you configured (Unless is local). Nothing is sent until you click an AI button.
 
-A linXiv library allows one writing process per data dir, so the server runs CLI calls one at a time behind a lock. Work that needs many calls, such as indexing the TeX source of every saved arXiv paper, runs as a background job that makes one call per paper, so other requests get the lock between them. Jobs live in memory: restarting the server stops a running job and forgets finished ones. Don't point linXiv-web at a data dir that the desktop app or `linxiv-headless` also uses.
+A linXiv library allows one writing process per data dir, so the server runs CLI calls one at a time behind a lock. Work that needs many calls, such as indexing the TeX source of every saved arXiv paper, runs as a background job that makes one call per paper, so other requests get the lock between them. Jobs live in memory: restarting the server stops a running job and forgets finished ones. 
 
 `linxiv` always writes PDFs to `<data dir>/pdfs`. The container turns that path into a symlink to `/pdfs`, which lets the database stay on local disk while the PDFs sit on other storage.
 
@@ -69,14 +69,6 @@ Measured on a home server (Intel i7-7560U, 4 threads, 16 GB RAM), with a library
 
 No CPU or memory limits were set.
 
-### Raspberry Pi 5
-
-It should run there. The image is published for `arm64`, and the bundled `linxiv` CLI and PDF library have arm64 builds. A peak of about 300 MiB fits on a 4 GB or 8 GB Pi 5. Nobody has tested it on a Pi yet. Three things to watch:
-
-- Pull the prebuilt image. Building on the Pi compiles the Rust CLI, which is slow and needs plenty of RAM or swap.
-- Keep the data dir on an SSD or NVMe drive, not the SD card. SQLite writes to `papers.db` often.
-- PDFs can sit on a USB or NVMe drive mounted at the PDF path.
-
 ## Run (Docker)
 
 To self-host from the prebuilt image (first-run setup, reverse proxy, backups, updates), see [docs/self-hosting.md](docs/self-hosting.md). To import a folder of PDFs already on the server without the web UI, see [docs/bulk-import.md](docs/bulk-import.md). The steps below build from this checkout.
@@ -98,7 +90,7 @@ To keep the library elsewhere, set `LINXIV_WEB_DATA_HOST` and `LINXIV_WEB_PDF_HO
 
 ### Run with your own docker-compose.yml and .env
 
-To run linXiv-web on another machine without cloning the repo, make a folder with two files. Compose builds the image straight from the git repository: replace `$PLACEHOLDERFUTUREURL` with the repository's git URL. The first build compiles linXiv from source and takes several minutes.
+To run linXiv-web on another machine without cloning the repo, make a folder with two files. Compose builds the image straight from the git repository: replace `$PLACEHOLDERFUTUREURL` with the repository's git URL. 
 
 ```sh
 mkdir -p linxiv-web/data linxiv-web/pdfs
@@ -180,7 +172,8 @@ docker compose run --rm --no-deps -e PASSWORD='your-password' linxiv-web python 
 docker compose up -d
 ```
 
-Open http://127.0.0.1:8086 (or `http://<machine-ip>:8086` with `LINXIV_WEB_BIND=0.0.0.0`). To update later: `docker compose build --no-cache && docker compose up -d`.
+Open http://127.0.0.1:8086 (or `http://<machine-ip>:8086` with `LINXIV_WEB_BIND=0.0.0.0`). 
+To update later: `docker compose build --no-cache && docker compose up -d`.
 
 ### Configuration
 
@@ -207,9 +200,9 @@ Open http://127.0.0.1:8086 (or `http://<machine-ip>:8086` with `LINXIV_WEB_BIND=
 
 Keys entered in Settings are stored in the linXiv settings store and are never sent back to the browser (only their last 4 characters).
 
-## AI features
+## AI features (Off by default)
 
-Off by default. In **Settings → AI**: tick the switch, pick a provider (Gemini, OpenAI, Anthropic, or an OpenAI-compatible base URL such as `http://localhost:1234/v1` for LM Studio), paste a key (optional for local servers), Save, then **Load models**, pick one, Save, and **Test connection**.
+In **Settings → AI**: turn on, pick a API provider (Gemini, OpenAI, Anthropic, OpenRouter, or an OpenAI-compatible base URL such as `http://localhost:1234/v1` for LM Studio), paste a key (optional for local servers), Save, then **Load models**, pick one, Save, and **Test connection**.
 
 | Action | Where | What the model gets | Result |
 |---|---|---|---|
@@ -219,9 +212,11 @@ Off by default. In **Settings → AI**: tick the switch, pick a provider (Gemini
 
 Every request carries a JSON Schema and a valid example reply (shown in Settings → AI). OpenAI and OpenAI-compatible servers get structured output (`response_format: json_schema`), which also keeps "thinking" models such as Qwen from spending the whole token budget on reasoning; a server that rejects it is retried with the schema in the prompt only. Anthropic uses a forced tool call. Requests time out after 90 s (300 s for OpenAI-compatible servers, since local models read long prompts slowly).
 
-## MCP server (Claude Code / Codex / OpenCode)
+*Computing time*: On Mac Book M2 16GB Ram, Tag generation with LM-studio gemma-4-e2b and thinking disabled, takes ~2 seconds per request.
 
-Off by default. linXiv-web builds upstream's `linxiv-mcp` and serves its tools over MCP Streamable HTTP at `/mcp`. Each MCP session gets its own `linxiv-mcp` process (at most 4 sessions, closed after 30 minutes idle).
+## MCP server (Off by default)
+
+Also is provided an MCP server that any agent to expose its tools locally. linXiv-web builds upstream's `linxiv-mcp` and serves its tools over MCP Streamable HTTP at `/mcp`. Each MCP session gets its own `linxiv-mcp` process (at most 4 sessions, closed after 30 minutes idle).
 
 In **Settings → MCP server**: tick the switch, choose which tools the agent gets, Save, then **Create token**. The token is shown once (only its SHA-256 is stored); replacing or revoking it disconnects open sessions. The card shows the commands with the token filled in:
 
@@ -244,9 +239,9 @@ OpenCode takes a remote server entry in `opencode.json` with `"headers": { "Auth
 
 Never exposed: `get_settings` / `update_setting` (the settings store holds API keys), backup and restore, and the import/export tools that read or write server file paths. `download_pdf` with a caller-chosen `url` is refused; the paper's stored link is used. Tools added upstream stay hidden until they are classified.
 
-`/mcp` does not use the browser login: it needs the bearer token, answers 404 while switched off, and refuses requests that carry another site's `Origin`.
+`/mcp` needs the bearer token, answers 404 while switched off, and refuses requests that carry another site's `Origin`.
 
-Every listed tool carries MCP annotations (`readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint`, `title`) derived from its profile tier, so clients can auto-allow read-only tools and confirm destructive ones. Full guide with every tool, client setup and troubleshooting: [docs/mcp.md](docs/mcp.md).
+Every tool carries MCP annotations (`readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint`, `title`) derived from its profile tier, so clients can auto-allow read-only tools and confirm destructive ones. Full guide with every tool, client setup and troubleshooting: [docs/mcp.md](docs/mcp.md).
 
 ## API
 
@@ -308,7 +303,7 @@ Paper ids are linXiv source ids such as `arxiv:1706.03762`. Old-style arXiv ids 
 
 ## Development
 
-Everything runs in containers.
+Everything runs in containers. Although bare metal install is not supported, it is feasible to do without code change. 
 
 ```sh
 # Server: ruff + pytest, including tests against the real linxiv and linxiv-mcp binaries
@@ -335,7 +330,14 @@ Branch and commit conventions match linXiv's; see [CONTRIBUTING.md](CONTRIBUTING
 ## Roadmap
 
 - Bring the Peer-to-peer project sharing into the web-app
+- Enable multi user for a shared server, individual db, but also shared files across users
+- Re-design UI for individual paper view
 
+## Use of AI
+
+The frontend was refactored by Claude from a project [CatalogueCanvas](https://github.com/CatalogueCanvas/CatalogueCanvas). All code has been reviewed/audited for safety and logic using Codacy, GitHub CodeQL, and GitHub Advanced Security. Most of the documentation files were written by Claude.
+
+Feel free to vibe code suggestions, improvements, etc... but you will be held accountable :-) 
 
 ## License
 
