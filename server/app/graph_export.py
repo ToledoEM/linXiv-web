@@ -8,10 +8,13 @@ from __future__ import annotations
 
 import csv
 import io
+import re
 import xml.etree.ElementTree as ET  # noqa: S405 - builds XML, never parses it
 import zipfile
 
 SEP = "; "
+# Characters XML 1.0 forbids; ElementTree writes them as-is, which breaks importers.
+_XML_ILLEGAL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\ufffe\uffff]")
 
 # (column, GraphML attr.type), in CSV column order.
 NODE_FIELDS = [
@@ -102,10 +105,14 @@ def to_csv_zip(view: dict) -> bytes:
     return buf.getvalue()
 
 
+def _xml_safe(text: str) -> str:
+    return _XML_ILLEGAL.sub("", text)
+
+
 def _graphml_value(value: object, kind: str) -> str:
     if kind == "boolean":
         return "true" if value else "false"
-    return str(value)
+    return _xml_safe(str(value))
 
 
 def to_graphml(view: dict) -> bytes:
@@ -121,14 +128,20 @@ def to_graphml(view: dict) -> bytes:
         )
     graph = ET.SubElement(root, "graph", id="linxiv", edgedefault="undirected")
     for row in node_rows(view):
-        node = ET.SubElement(graph, "node", id=row["id"])
+        node = ET.SubElement(graph, "node", id=_xml_safe(row["id"]))
         for name, kind in NODE_FIELDS[1:]:
             value = row.get(name)
             if value is None or value == "":
                 continue
             ET.SubElement(node, "data", key=f"n_{name}").text = _graphml_value(value, kind)
     for i, row in enumerate(edge_rows(view)):
-        edge = ET.SubElement(graph, "edge", id=f"e{i}", source=row["source"], target=row["target"])
-        ET.SubElement(edge, "data", key="e_type").text = row["type"]
+        edge = ET.SubElement(
+            graph,
+            "edge",
+            id=f"e{i}",
+            source=_xml_safe(row["source"]),
+            target=_xml_safe(row["target"]),
+        )
+        ET.SubElement(edge, "data", key="e_type").text = _xml_safe(row["type"])
     ET.indent(root)
     return ET.tostring(root, encoding="utf-8", xml_declaration=True)

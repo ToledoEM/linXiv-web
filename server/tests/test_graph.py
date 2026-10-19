@@ -178,3 +178,16 @@ def test_export_exclude_single_authors(client, fake):
 def test_export_bad_format(client, fake):
     _setup(fake)
     assert client.get("/api/graph/export", params={"format": "xml"}).status_code == 422
+
+
+def test_export_graphml_strips_xml_illegal_chars(client, fake):
+    _setup(fake)
+    dirty = [dict(PAPERS[0], title="Two\x01", summary="line\x1fone\n\ttwo\x0b"), PAPERS[1]]
+    fake.on("list", result=dirty)
+    r = client.get("/api/graph/export", params={"format": "graphml"})
+    assert r.status_code == 200, r.text
+    graph = ET.fromstring(r.content).find(f"{GML}graph")
+    two = graph.find(f"{GML}node[@id='2']")
+    data = {d.get("key"): d.text for d in two.findall(f"{GML}data")}
+    assert data["n_label"] == "Two"
+    assert data["n_summary"] == "lineone\n\ttwo"
