@@ -18,6 +18,8 @@ The graph shows papers, authors and tags as nodes. Click a node to open it, and 
 
 With thousands of papers the graph gets dense. Tick **Hide single-paper authors** or use the tag filter to thin it out.
 
+**Export GraphML** and **Export CSV** download the whole graph to rebuild it in another tool. GraphML opens in Gephi, Cytoscape, yEd, igraph and NetworkX. CSV is a zip with `nodes.csv` (id, type, label and metadata such as DOI, tags and projects) and `edges.csv` (source, target, type). The side-panel filters are not applied; **Hide single-paper authors** is.
+
 ## Tags
 
 The Tags page lists every tag with the number of papers that carry it, plus an Untagged row. Click a tag to open the Library filtered to it.

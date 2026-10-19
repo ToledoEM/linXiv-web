@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { api, paperPath } from '../api'
+import { api, graphExportUrl, paperPath } from '../api'
 import { ErrorText } from '../components'
 import { EMPTY_FILTER, joinTypes, matchGraph, noMatchCause, type GraphFilterState } from '../graph/filter'
 import GraphPanels from '../graph/GraphPanels'
@@ -179,6 +179,20 @@ export default function Graph() {
           >
             {loading ? 'Loading…' : 'Refresh'}
           </button>
+          <a
+            href={graphExportUrl('graphml', hideSingle)}
+            download
+            title="Whole graph (filters not applied) for Gephi, Cytoscape, yEd, igraph or NetworkX"
+          >
+            Export GraphML
+          </a>
+          <a
+            href={graphExportUrl('csv', hideSingle)}
+            download
+            title="Whole graph (filters not applied) as nodes.csv and edges.csv in a zip"
+          >
+            Export CSV
+          </a>
         </span>
       </div>
       {selectedSourceIds.size > 0 && <AddToProjectBar selected={selectedSourceIds} onSelect={selectBySourceIds} />}

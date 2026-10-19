@@ -40,6 +40,7 @@ Most routes map to one `linxiv` CLI command. The right column names the command 
 | `GET /api/notes?paper=&project=`, `POST /api/notes`, `PATCH /api/notes/{id}`, `DELETE /api/notes/{id}` | `note list`, `note create [--project-id]`, `note update`, `note delete` (permanent); title/content capped at 100 kB |
 | `GET /api/annotations?paper=&project=`, `POST /api/annotations`, `PATCH /api/annotations/{id}`, `DELETE /api/annotations/{id}` | `annotation list/create/update/delete` (PDF highlights; anchors validated server-side) |
 | `GET /api/graph` | Knowledge graph of papers, authors and tags, built from `list` and `author list` |
+| `GET /api/graph/export` | The same graph as a file: `format=graphml` (default) or `format=csv` (zip of `nodes.csv` and `edges.csv`); `exclude_single_authors=true` drops single-paper authors |
 | `GET /api/feed`, `POST /api/feed/dismiss` | `feed get` for the stored home feed URL (cached 5 minutes), `feed dismiss` |
 | `GET /api/feed/rules`, `POST /api/feed/rules`, `DELETE /api/feed/rules/{id}` | `feed rules list/add/delete` |
 | `GET /api/versions/new`, `POST /api/versions/check` `{limit?}`, `POST /api/versions/{id}/ack` | `versions new`, `versions check --limit` (1 to 100, default 20; stores new versions it finds), `versions ack` (a second ack still returns ok) |
