@@ -16,7 +16,7 @@ The graph shows papers, authors and tags as nodes. Click a node to open it, and 
 
 ![Knowledge graph](../assets/screenshots/graph.png)
 
-With thousands of papers the graph gets dense. Tick **Hide single-paper authors** or use the tag filter to thin it out.
+With thousands of papers the graph gets dense and slow. Use filters to thin it out.
 
 ## Tags
 

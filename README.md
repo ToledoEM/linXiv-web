@@ -332,6 +332,7 @@ Branch and commit conventions match linXiv's; see [CONTRIBUTING.md](CONTRIBUTING
 - Bring the Peer-to-peer project sharing into the web-app
 - Enable multi user for a shared server, individual db, but also shared files across users
 - Re-design UI for individual paper view
+- Deployment of Home Assistant Addon
 
 ## Use of AI
 
