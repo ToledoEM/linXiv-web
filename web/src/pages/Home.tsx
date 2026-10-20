@@ -85,7 +85,7 @@ export default function Home() {
     { label: 'Papers', value: stats.paper_count, hint: 'in library', to: '/library' },
     { label: 'PDFs', value: stats.pdf_count, hint: 'downloaded', to: '/library' },
     { label: 'Coverage', value: coverage, hint: 'pdf per paper' },
-    { label: 'Categories', value: stats.category_count, hint: 'distinct' },
+    { label: 'Categories / Journals', value: stats.category_count, hint: 'distinct' },
     { label: 'Tags', value: stats.tag_count, hint: 'applied' },
   ]
   const recent = (stats.recent_papers ?? []).slice(0, 10)

@@ -181,11 +181,14 @@ export default function Notes({
   sourceId,
   defaultProjectId,
   paper,
+  onCount,
 }: {
   sourceId: string
   defaultProjectId: number | null
   /** For the Markdown export's frontmatter. */
   paper?: Paper
+  /** Told the note count after each load (paper page tab label). */
+  onCount?: (n: number) => void
 }) {
   const [notes, setNotes] = useState<Note[] | null>(null)
   const [projects, setProjects] = useState<Project[]>([])
@@ -209,6 +212,10 @@ export default function Notes({
   useEffect(() => {
     void load()
   }, [load])
+
+  useEffect(() => {
+    if (notes) onCount?.(notes.length)
+  }, [notes, onCount])
 
   const saved = async () => {
     setEditing(null)

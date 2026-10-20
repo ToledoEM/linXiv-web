@@ -6,6 +6,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-10-20
+
+### Added
+- Knowledge Graph: **Export GraphML** and **Export CSV** (zip of `nodes.csv` and `edges.csv`) download the whole graph with node metadata, for Gephi, Cytoscape, igraph, NetworkX or pandas. Also available as `GET /api/graph/export`.
+- `scripts/bulk-ai-tags.sh --all`: ask the AI about every paper, not only untagged ones; tagged papers keep their tags and gain new ones.
+- Home feed: several RSS or Atom feeds instead of one. Settings → Library lists them (name, URL, on/off, up to 10); Home gains a feed picker (all feeds, a single feed, or a random 10 from all) and a keyword box that filters the entries on screen. Entries from the same paper in two feeds are shown once, and each row says which feed it came from. A feed that fails to load is reported on its own without hiding the others. Existing single-feed setups keep working and become the first feed in the list. Filter rules still apply to every feed.
+- Project and reading list pages: **batch edit**, as in the Library. Tick papers, then look up metadata for all of them from one source or ask the AI for tags (when AI is on), and approve or skip each paper.
+- Paper page: an "Add to project" picker, so a paper can be put in a project or reading list without going through the Library.
+- Leaving the Library while a batch metadata or AI tag run is going now asks first, in the app and when closing or reloading the tab; the run stops only if you confirm.
+- Documentation website built with [Zensical](https://zensical.org) and managed by uv (`pyproject.toml`, `zensical.toml` at the repository root). Pages live in `docs/`: the existing guides, a tour of every page with screenshots, AI features, configuration, HTTP API, compatibility and development. `uv run zensical serve` previews it; `uv run zensical build` renders it into `site/` (ignored by git).
+
+### Changed
+- Paper page redesigned: the PDF fills the left pane and opens with the page, and the paper's details sit in a rail on the right. Drag the divider or use the arrow keys to resize; the width is remembered per browser. The rail shows the title, authors, dates, categories, version and tags, then Details, Notes and Annotations tabs; Projects, AI summary, PDF, Full text and Danger zone are collapsible sections in Details. Papers without a PDF, or whose PDF file is missing, show a card with Download PDF in the left pane. The PDF toolbar gains ‹ › page buttons. The panes stack on narrow screens.
+- Sidebar: "Reading" is now "Reading lists", matching the page it opens.
+- Home: the "Categories" tile is now "Categories / Journals"; it already counted journal names for papers that are not on arXiv.
+- Papers can be saved without an author; they are stored under "Unknown" rather than refused.
+- Docs file names are lowercase: `docs/self-hosting.md`, `docs/bulk-import.md`, `docs/bulk-ai-tags.md`, `docs/mcp.md`.
+
+### Fixed
+- Library → Batch AI tags: Approve all reloads the library once at the end instead of after every paper, which re-listed the whole library per save and kept the CPU busy (no comments).
+- Scrolling inside the PDF reader no longer carries on into the page behind it when the PDF reaches its first or last page.
+- Projects and Reading lists: cards in the same row are the same height whether or not a project has a description, and their buttons line up along the bottom.
+
 ## [0.1.1] - 2026-10-16
 
 ### Changed

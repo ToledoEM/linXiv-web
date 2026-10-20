@@ -43,10 +43,18 @@ def test_save_sends_full_record_and_keeps_tags(client, fake):
     ]
 
 
+def test_save_without_authors_sends_placeholder(client, fake):
+    """`paper repair` requires --authors, so an empty list saves as "Unknown"."""
+    fake.on("paper", "get", result={"source_id": SID, "tags": []})
+    fake.on("paper", "repair", result={"source_id": SID})
+    r = client.put(f"/api/papers/{SID}/metadata", json={**BODY, "authors": []})
+    assert r.status_code == 200, r.text
+    assert [a for a in fake.calls[-1] if a.startswith("--authors=")] == ["--authors=Unknown"]
+
+
 def test_save_validation(client, fake):
     bad = [
         {**BODY, "title": "  "},
-        {**BODY, "authors": []},
         {**BODY, "authors": [" "]},
         {**BODY, "authors": ["a\nb"]},
         {**BODY, "published": "2015-5-1"},

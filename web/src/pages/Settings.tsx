@@ -10,6 +10,8 @@ import { api } from '../api'
 import Backup from '../Backup'
 import DisplayControls from '../DisplayControls'
 import { ErrorText } from '../components'
+import FeedList from '../FeedList'
+import { serializeFeeds } from '../feeds'
 import FeedRules from '../FeedRules'
 import LoginSettings from '../LoginSettings'
 import FullTextIndex from '../FullTextIndex'
@@ -63,7 +65,7 @@ const SECTIONS: Record<SectionId, (keyof UserSettings)[]> = {
   ],
   mcp: ['mcp_enabled', 'mcp_profile'],
   storage: ['pdf_save_limit_mb'],
-  feed: ['home_feed_url', 'rss_cache_retention_days'],
+  feed: ['home_feed_url', 'web_feeds', 'rss_cache_retention_days'],
   display: ['tex_rendering_enabled'],
   search: ['search_history_enabled', 'search_history_max'],
   lookup: ['web_lookup_source', 'web_lookup_disabled'],
@@ -265,20 +267,17 @@ export default function Settings() {
         <form onSubmit={save('feed')} onKeyDown={formSubmitOnCtrlEnter}>
           <div className="card settings-section">
             <h3>Home feed</h3>
-            <label className="field">
-              <span>Feed URL</span>
-              <input
-                type="url"
-                pattern="https?://.+"
-                maxLength={512}
-                value={draft.home_feed_url}
-                placeholder="https://rss.arxiv.org/rss/cs.LG"
-                onChange={(e) => set('home_feed_url', e.target.value.trim())}
-              />
-              <span className="muted small">
-                RSS or Atom feed shown on Home, e.g. https://rss.arxiv.org/rss/cs.LG. Leave empty for no feed.
-              </span>
-            </label>
+            <FeedList
+              // Remount on save/revert so the rows match what is stored.
+              key={`${saved.web_feeds}|${saved.home_feed_url}`}
+              stored={saved?.web_feeds ?? ''}
+              legacy={saved?.home_feed_url ?? ''}
+              onChange={(next) => {
+                // The list supersedes the single legacy URL once it is saved.
+                set('web_feeds', serializeFeeds(next))
+                set('home_feed_url', '')
+              }}
+            />
             <label className="field">
               <span>Cache retention (days)</span>
               <input

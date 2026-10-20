@@ -13,9 +13,13 @@ author's papers; only those authors cost a CLI call.
 from __future__ import annotations
 
 from collections import defaultdict
+from datetime import UTC, datetime
+from typing import Literal
 
 from fastapi import APIRouter, Request
+from fastapi.responses import Response
 
+from .. import graph_export as graph_export_mod
 from .common import run
 
 router = APIRouter(prefix="/api", tags=["graph"])
@@ -79,6 +83,29 @@ async def _author_links(request: Request, papers: list[dict], authors: list[dict
 
 @router.get("/graph")
 async def graph_view(request: Request, exclude_single_authors: bool = False):
+    return await build_graph(request, exclude_single_authors)
+
+
+@router.get("/graph/export")
+async def graph_export(
+    request: Request,
+    format: Literal["graphml", "csv"] = "graphml",
+    exclude_single_authors: bool = False,
+):
+    view = await build_graph(request, exclude_single_authors)
+    stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+    if format == "csv":
+        body, media, ext = graph_export_mod.to_csv_zip(view), "application/zip", "zip"
+    else:
+        body, media, ext = graph_export_mod.to_graphml(view), "application/graphml+xml", "graphml"
+    return Response(
+        body,
+        media_type=media,
+        headers={"Content-Disposition": f'attachment; filename="linxiv-graph-{stamp}.{ext}"'},
+    )
+
+
+async def build_graph(request: Request, exclude_single_authors: bool) -> dict:
     papers = [p for p in (await run(request, ["list"]) or []) if isinstance(p, dict)]
     authors = [a for a in (await run(request, ["author", "list"]) or []) if isinstance(a, dict)]
     projects = await run(request, ["project", "list", "--status", "active"]) or []

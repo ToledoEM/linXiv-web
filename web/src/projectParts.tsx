@@ -200,11 +200,14 @@ export function AddToProjectBar({
   selected,
   onSelect,
   extra,
+  inline = false,
 }: {
   selected: Set<string>
   onSelect: (ids: Set<string>) => void
   /** More selection actions (Library: Export .bib), shown before Clear. */
   extra?: ReactNode
+  /** Paper page: one fixed paper, so drop the sticky bar, the count and Clear. */
+  inline?: boolean
 }) {
   const [projects, setProjects] = useState<Project[] | null>(null)
   const [target, setTarget] = useState('')
@@ -228,7 +231,8 @@ export function AddToProjectBar({
       onSelect(new Set(r.failed))
       setError(created ? `Project created, but ${failedMessage(r.failed.length, ids.length)}` : failedMessage(r.failed.length, ids.length))
     } else {
-      onSelect(new Set())
+      // Inline (paper page) keeps its one paper selected so the picker stays usable.
+      if (!inline) onSelect(new Set())
       setDone(`Added ${ids.length} paper${ids.length === 1 ? '' : 's'} to ${label}.`)
     }
   }
@@ -265,8 +269,8 @@ export function AddToProjectBar({
   if (!selected.size) return done ? <p className="success small">{done}</p> : null
 
   return (
-    <div className="selection-bar">
-      <span>{selected.size} selected</span>
+    <div className={inline ? 'selection-bar inline-bar' : 'selection-bar'}>
+      {!inline && <span>{selected.size} selected</span>}
       <select aria-label="Project" value={target} onChange={(e) => setTarget(e.target.value)} disabled={busy}>
         <option value="">Choose project…</option>
         {(
@@ -303,10 +307,13 @@ export function AddToProjectBar({
       </button>
       {extra}
       <span className="grow" />
-      <button className="link" onClick={() => onSelect(new Set())} disabled={busy}>
-        Clear
-      </button>
+      {!inline && (
+        <button className="link" onClick={() => onSelect(new Set())} disabled={busy}>
+          Clear
+        </button>
+      )}
       {error && <p className="error selection-bar-msg">{error}</p>}
+      {inline && done && <p className="success small selection-bar-msg">{done}</p>}
     </div>
   )
 }

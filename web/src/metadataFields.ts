@@ -118,7 +118,7 @@ export function toMetadataInput(form: Form): { input: MetadataInput } | { error:
     .map((a) => a.trim())
     .filter(Boolean)
   if (!form.title.trim()) return { error: 'Title is required.' }
-  if (!authors.length) return { error: 'At least one author is required.' }
+  // Authors may be empty: the server fills in a placeholder, since `paper repair` requires the flag.
   if (!/^\d{4}-\d{2}-\d{2}$/.test(form.published)) return { error: 'Published must be a date (YYYY-MM-DD).' }
   return {
     input: {

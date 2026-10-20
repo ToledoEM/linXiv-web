@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { parseDisabled } from './lookupSource'
-import { autoSource, initialSource, sourcesFor } from './metadataFields'
+import { autoSource, initialSource, sourcesFor, toMetadataInput } from './metadataFields'
 import type { Paper } from './types'
 
 const arxiv = { source_id: 'arxiv:2401.00001' } as Paper
@@ -26,6 +26,28 @@ describe('autoSource', () => {
   it('falls back to the first source still on', () => {
     expect(autoSource(arxiv, parseDisabled('arxiv'))).toBe('crossref')
     expect(autoSource(other, parseDisabled('crossref,arxiv'))).toBe('openalex')
+  })
+})
+
+describe('toMetadataInput', () => {
+  const form = {
+    title: 'A paper',
+    authors: '',
+    published: '2024-01-02',
+    summary: '',
+    category: '',
+    doi: '',
+    url: '',
+  }
+
+  it('accepts a paper with no authors (the server fills in a placeholder)', () => {
+    const r = toMetadataInput(form)
+    expect(r).toEqual({ input: expect.objectContaining({ authors: [] }) })
+  })
+
+  it('still requires a title and a date', () => {
+    expect(toMetadataInput({ ...form, title: '  ' })).toHaveProperty('error')
+    expect(toMetadataInput({ ...form, published: '2024-1-2' })).toHaveProperty('error')
   })
 })
 

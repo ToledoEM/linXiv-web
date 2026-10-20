@@ -27,3 +27,7 @@ CLAUDE.md
  *.pem
  *.key
  credentials*
+
+# Docs site build output
+site/
+.cache/

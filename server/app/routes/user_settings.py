@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Request
@@ -29,6 +30,9 @@ DEFAULTS: dict[str, object] = {
     "tex_rendering_enabled": True,
     **{k: "" for k in MAILTO_KEYS},
     "home_feed_url": "",
+    # Extra Home feeds (web-only key): JSON list of {id, name, url, enabled}.
+    # Empty means the single `home_feed_url` above is the only feed.
+    "web_feeds": "",
     "rss_cache_retention_days": 30,
     "search_history_enabled": True,
     "search_history_max": 200,
@@ -58,7 +62,10 @@ LOOKUP_SOURCES = ("auto", "crossref", "arxiv", "openalex", "pubmed", "biorxiv")
 TOGGLE_SOURCES = (*LOOKUP_SOURCES[1:], "ai")
 _SOURCE = "|".join(TOGGLE_SOURCES)
 DISABLED_RE = rf"^$|^({_SOURCE})(,({_SOURCE}))*$"
-FEED_KEYS = ("home_feed_url", "rss_cache_retention_days")
+FEED_KEYS = ("home_feed_url", "web_feeds", "rss_cache_retention_days")
+# Feeds the Home page may fetch, and how long a name may be.
+MAX_FEEDS = 10
+MAX_FEED_NAME = 80
 # NCBI E-utilities key for PubMed lookups (10 instead of 3 requests/s). A secret:
 # stored like any setting but never sent back; the env var of the same name wins.
 NCBI_KEY = "NCBI_API_KEY"
@@ -81,6 +88,7 @@ QUOTED_KEYS = (
     "web_lookup_disabled",
     "web_log_level",
     "web_update_check",
+    "web_feeds",
 )
 MODEL_RE = r"^[A-Za-z0-9._:/@+-]{0,128}$"
 BASE_URL = r"^$|^[Hh][Tt][Tt][Pp][Ss]?://[^\s/?#]+[^\s?#]*$"
@@ -97,6 +105,7 @@ class SettingsPatch(BaseModel):
     CROSSREF_MAILTO: str | None = Field(None, max_length=254, pattern=EMAIL)
     OPENALEX_MAILTO: str | None = Field(None, max_length=254, pattern=EMAIL)
     home_feed_url: str | None = Field(None, max_length=512, pattern=FEED_URL)
+    web_feeds: str | None = Field(None, max_length=8192)
     rss_cache_retention_days: int | None = Field(None, ge=1, le=3650)
     search_history_enabled: bool | None = None
     search_history_max: int | None = Field(None, ge=1, le=10_000)
@@ -175,6 +184,83 @@ def disabled_sources(stored: dict) -> set[str]:
     return {s for s in raw.split(",") if s in TOGGLE_SOURCES}
 
 
+def parse_feeds(stored: dict) -> list[dict]:
+    """Configured Home feeds, newest format first.
+
+    Falls back to the single `home_feed_url` so existing installs keep their feed
+    until they save the list. Anything malformed is dropped rather than raised:
+    this reads back what was already stored.
+    """
+    feeds: list[dict] = []
+    raw = stored.get("web_feeds") if isinstance(stored, dict) else None
+    if isinstance(raw, str) and raw.strip():
+        try:
+            parsed = json.loads(raw)
+        except ValueError:
+            parsed = []
+        if isinstance(parsed, list):
+            for item in parsed[:MAX_FEEDS]:
+                if not isinstance(item, dict):
+                    continue
+                url = str(item.get("url") or "").strip()
+                if not re.fullmatch(FEED_URL, url) or not url:
+                    continue
+                feeds.append(
+                    {
+                        "id": str(item.get("id") or url)[:64],
+                        "name": str(item.get("name") or "").strip()[:MAX_FEED_NAME] or url,
+                        "url": url,
+                        "enabled": item.get("enabled") is not False,
+                    }
+                )
+    if feeds:
+        return feeds
+    legacy = str(stored.get("home_feed_url") or "").strip() if isinstance(stored, dict) else ""
+    if legacy:
+        return [{"id": legacy, "name": "Home feed", "url": legacy, "enabled": True}]
+    return []
+
+
+def _check_feeds(patch: dict) -> None:
+    """Validate the feed list the user is saving (these URLs get fetched)."""
+    raw = patch["web_feeds"].strip()
+    if not raw:
+        patch["web_feeds"] = ""
+        return
+    try:
+        parsed = json.loads(raw)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail="Feeds must be a JSON list") from e
+    if not isinstance(parsed, list):
+        raise HTTPException(status_code=400, detail="Feeds must be a JSON list")
+    if len(parsed) > MAX_FEEDS:
+        raise HTTPException(status_code=400, detail=f"At most {MAX_FEEDS} feeds")
+    clean, seen = [], set()
+    for item in parsed:
+        if not isinstance(item, dict):
+            raise HTTPException(status_code=400, detail="Each feed must be an object")
+        url = str(item.get("url") or "").strip()
+        if not url or not re.fullmatch(FEED_URL, url):
+            raise HTTPException(
+                status_code=400, detail=f"Feed URL must be http(s): {url or '(empty)'}"
+            )
+        if url in seen:
+            raise HTTPException(status_code=400, detail=f"Feed listed twice: {url}")
+        seen.add(url)
+        name = str(item.get("name") or "").strip()
+        if len(name) > MAX_FEED_NAME:
+            raise HTTPException(status_code=400, detail="Feed name is too long")
+        clean.append(
+            {
+                "id": url,
+                "name": name or url,
+                "url": url,
+                "enabled": item.get("enabled") is not False,
+            }
+        )
+    patch["web_feeds"] = json.dumps(clean)
+
+
 async def _check_lookup(request: Request, patch: dict) -> None:
     """Keep at least one non-AI source on and the default source switched on.
     Rewrites the disabled list in a fixed order."""
@@ -208,6 +294,8 @@ async def update_settings(request: Request, body: SettingsPatch):
     note_fields(request, patch)  # key names only, never values (API keys)
     if "web_lookup_disabled" in patch or "web_lookup_source" in patch:
         await _check_lookup(request, patch)
+    if "web_feeds" in patch:
+        _check_feeds(patch)
     for key, value in patch.items():
         # The CLI JSON-parses the value, so bools/ints go as JSON; an email is
         # never valid JSON and stays a string.

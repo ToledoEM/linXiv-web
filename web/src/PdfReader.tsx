@@ -58,6 +58,8 @@ interface Props {
   projectId?: number | null
   annotations: Annotation[]
   onAnnotationsChanged: () => Promise<unknown> | void
+  /** The PDF could not be fetched or parsed (e.g. file missing on disk). */
+  onLoadError?: () => void
 }
 
 /** In-page PDF reader (desktop PdfReader): fit-width pages, a page indicator, a
@@ -70,6 +72,7 @@ export default function PdfReader({
   projectId = null,
   annotations,
   onAnnotationsChanged,
+  onLoadError,
 }: Props) {
   const [numPages, setNumPages] = useState(0)
   const [page, setPage] = useState(1)
@@ -429,6 +432,15 @@ export default function PdfReader({
             goToPage(Number(pageInput) || page)
           }}
         >
+          <button
+            type="button"
+            className="link"
+            aria-label="Previous page"
+            disabled={page <= 1}
+            onClick={() => goToPage(page - 1)}
+          >
+            ‹
+          </button>
           <span className="muted small">Page</span>
           <input
             aria-label="Page number"
@@ -438,6 +450,15 @@ export default function PdfReader({
             onBlur={() => setPageInput(String(page))}
           />
           <span className="muted small">/ {numPages || '–'}</span>
+          <button
+            type="button"
+            className="link"
+            aria-label="Next page"
+            disabled={page >= numPages}
+            onClick={() => goToPage(page + 1)}
+          >
+            ›
+          </button>
         </form>
         {findOpen ? (
           <div
@@ -501,6 +522,7 @@ export default function PdfReader({
           file={file}
           options={pdfDocumentOptions}
           onLoadSuccess={onLoad}
+          onLoadError={onLoadError}
           loading={<p className="muted center pdf-status">Loading PDF…</p>}
           error={
             <p className="center pdf-status">

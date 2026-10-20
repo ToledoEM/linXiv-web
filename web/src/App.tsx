@@ -28,7 +28,7 @@ const NAV: NavItem[] = [
   { to: '/library', label: 'Library', icon: '▤' },
   { to: '/projects', label: 'Projects', icon: '◫' },
   { to: '/tags', label: 'Tags', icon: '#', pageKey: 'tags' },
-  { to: '/reading', label: 'Reading', icon: '☰', pageKey: 'reading' },
+  { to: '/reading', label: 'Reading lists', icon: '☰', pageKey: 'reading' },
   { to: '/graph', label: 'Graph', icon: '⋈', pageKey: 'graph' },
   { to: '/search', label: 'Search', icon: '⌕', pageKey: 'search' },
   { to: '/add', label: 'Add Paper', icon: '＋', pageKey: 'add' },

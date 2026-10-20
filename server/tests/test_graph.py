@@ -1,5 +1,11 @@
 from __future__ import annotations
 
+import csv
+import io
+import zipfile
+
+import defusedxml.ElementTree as ET
+
 PAPERS = [
     {
         "source_fk": 2,
@@ -114,3 +120,74 @@ def test_empty_library(client, fake):
         "categories": [],
         "projects": [],
     }
+
+
+GML = "{http://graphml.graphdrawing.org/xmlns}"
+
+
+def _counts(client) -> tuple[int, int]:
+    v = client.get("/api/graph").json()
+    return len(v["papers"]) + len(v["authors"]) + len(v["tags"]), len(v["edges"])
+
+
+def test_export_graphml(client, fake):
+    _setup(fake)
+    nodes, edges = _counts(client)
+    r = client.get("/api/graph/export", params={"format": "graphml"})
+    assert r.status_code == 200, r.text
+    assert r.headers["content-type"].startswith("application/graphml+xml")
+    assert 'filename="linxiv-graph-' in r.headers["content-disposition"]
+    assert r.headers["content-disposition"].endswith('.graphml"')
+    graph = ET.fromstring(r.content).find(f"{GML}graph")
+    assert len(graph.findall(f"{GML}node")) == nodes
+    assert len(graph.findall(f"{GML}edge")) == edges
+    two = graph.find(f"{GML}node[@id='2']")
+    data = {d.get("key"): d.text for d in two.findall(f"{GML}data")}
+    assert data["n_type"] == "paper"
+    assert data["n_doi"] == "10.1/x"
+    assert data["n_projects"] == "P"
+    assert data["n_has_pdf"] == "true"
+    assert data["n_tags"] == "ml; Reading-List"
+
+
+def test_export_csv(client, fake):
+    _setup(fake)
+    nodes, edges = _counts(client)
+    r = client.get("/api/graph/export", params={"format": "csv"})
+    assert r.status_code == 200, r.text
+    assert r.headers["content-type"] == "application/zip"
+    assert r.headers["content-disposition"].endswith('.zip"')
+    with zipfile.ZipFile(io.BytesIO(r.content)) as z:
+        assert sorted(z.namelist()) == ["edges.csv", "nodes.csv"]
+        node_rows = list(csv.DictReader(io.StringIO(z.read("nodes.csv").decode())))
+        edge_rows = list(csv.DictReader(io.StringIO(z.read("edges.csv").decode())))
+    assert len(node_rows) == nodes and len(edge_rows) == edges
+    assert {"source": "2", "target": "author::11", "type": "author"} in edge_rows
+    author = next(n for n in node_rows if n["id"] == "author::10")
+    assert author["type"] == "author" and author["paper_count"] == "2"
+
+
+def test_export_exclude_single_authors(client, fake):
+    _setup(fake)
+    r = client.get("/api/graph/export", params={"format": "csv", "exclude_single_authors": "true"})
+    with zipfile.ZipFile(io.BytesIO(r.content)) as z:
+        rows = list(csv.DictReader(io.StringIO(z.read("nodes.csv").decode())))
+    assert [n["id"] for n in rows if n["type"] == "author"] == ["author::10"]
+
+
+def test_export_bad_format(client, fake):
+    _setup(fake)
+    assert client.get("/api/graph/export", params={"format": "xml"}).status_code == 422
+
+
+def test_export_graphml_strips_xml_illegal_chars(client, fake):
+    _setup(fake)
+    dirty = [dict(PAPERS[0], title="Two\x01", summary="line\x1fone\n\ttwo\x0b"), PAPERS[1]]
+    fake.on("list", result=dirty)
+    r = client.get("/api/graph/export", params={"format": "graphml"})
+    assert r.status_code == 200, r.text
+    graph = ET.fromstring(r.content).find(f"{GML}graph")
+    two = graph.find(f"{GML}node[@id='2']")
+    data = {d.get("key"): d.text for d in two.findall(f"{GML}data")}
+    assert data["n_label"] == "Two"
+    assert data["n_summary"] == "lineone\n\ttwo"

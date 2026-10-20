@@ -82,6 +82,9 @@ export function projectExportUrl(id: number, format: ExportFormat, pdfs = false)
 export const logsExportUrl = (window: LogWindow) =>
   `/api/logs/export?window=${encodeURIComponent(window)}`
 export const ACTIVITY_EXPORT_URL = '/api/activity/export'
+/** Knowledge Graph as GraphML or a zip of nodes.csv + edges.csv (GET; streamed with the session cookie). */
+export const graphExportUrl = (format: 'graphml' | 'csv', excludeSingleAuthors: boolean) =>
+  `/api/graph/export${qs({ format, exclude_single_authors: excludeSingleAuthors || undefined })}`
 export const DIAGNOSTICS_URL = '/api/system/diagnostics'
 
 /** Tell the activity tray a background job just started (it polls slowly when idle). */
@@ -294,7 +297,11 @@ export const api = {
   updateAuthor: (id: number, body: AuthorUpdate) =>
     request<{ updated_author_id: number }>('PATCH', `/api/authors/${id}`, body),
   deleteAuthor: (id: number) => request('DELETE', `/api/authors/${id}`),
-  feed: (refresh = false) => request<FeedResponse>('GET', `/api/feed${qs({ refresh: refresh || undefined })}`),
+  feed: (refresh = false, feed?: string, sample?: number) =>
+    request<FeedResponse>(
+      'GET',
+      `/api/feed${qs({ refresh: refresh || undefined, feed: feed && feed !== 'all' ? feed : undefined, sample })}`,
+    ),
   dismissFeedEntry: (arxivId: string, version: number, permanent = false) =>
     request('POST', '/api/feed/dismiss', { arxiv_id: arxivId, version, permanent }),
   feedRules: () => request<{ rules: FeedRule[] }>('GET', '/api/feed/rules'),

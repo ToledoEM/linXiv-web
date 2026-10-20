@@ -75,6 +75,8 @@ export interface UserSettings {
   OPENALEX_MAILTO: string
   /** RSS/Atom URL shown on Home; empty = no feed. */
   home_feed_url: string
+  /** Extra Home feeds as JSON: [{id, name, url, enabled}]; empty = just home_feed_url. */
+  web_feeds: string
   rss_cache_retention_days: number
   /** Record search terms for autocomplete (kept in this browser). */
   search_history_enabled: boolean
@@ -180,11 +182,31 @@ export interface FeedEntry {
   published: string
   arxiv_id: string | null
   version: number | null
+  /** Which configured feed the entry came from (merged pages). */
+  feed_id?: string
+  feed_name?: string
+}
+
+/** A feed configured in Settings; `url` is only sent back for the editor. */
+export interface FeedSource {
+  id: string
+  name: string
+  url?: string
+  enabled?: boolean
 }
 
 export type FeedResponse =
   | { configured: false }
-  | { configured: true; url: string; title: string; entries: FeedEntry[]; saved_arxiv_ids: string[] }
+  | {
+      configured: true
+      url: string
+      title: string
+      entries: FeedEntry[]
+      saved_arxiv_ids: string[]
+      feeds: FeedSource[]
+      /** Feeds that failed this load; the rest still render. */
+      errors: { id: string; name: string; error: string }[]
+    }
 
 export interface FeedRule {
   rule_id: number

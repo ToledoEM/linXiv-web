@@ -12,7 +12,7 @@
 #   --place in-situ (offline only, folder inside the PDF folder): each paper
 #     points at the file where it is; linXiv's copy is removed.
 #
-# See docs/BULK-IMPORT.md.
+# See docs/bulk-import.md.
 set -eu
 
 usage() {
