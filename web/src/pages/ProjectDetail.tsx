@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api, paperPath, projectExportUrl, type ExportFormat } from '../api'
+import { useAiEnabled } from '../aiEnabled'
+import BatchMetadata from '../BatchMetadata'
+import BatchTags from '../BatchTags'
 import { DoiLine, ErrorText, PaperColGroup, SortHeader, TagCell } from '../components'
+import { paperLabel } from '../format'
 import { loadSort, nextSort, parsePaperSort, saveSort, sortPapers, type PaperSortKey } from '../paperSort'
 import { DeleteButton, ProjectForm, Swatch } from '../projectParts'
 import { failedMessage, isReadingList, READING_LIST_TAG, toggled } from '../projects'
@@ -158,9 +162,23 @@ export default function ProjectDetail() {
   const [busy, setBusy] = useState(false)
   const [sort, setSort] = useState(() => loadSort(SORT_KEY, parsePaperSort, null))
   const cols = useTableColumns()
+  // Batch edit, as in the Library: panel beside the table, driven by the row selection.
+  const [batch, setBatch] = useState(false)
+  const [batchMode, setBatchMode] = useState<'metadata' | 'tags'>('metadata')
+  const aiOn = useAiEnabled()
+  const mode = aiOn ? batchMode : 'metadata'
 
   useEffect(() => saveSort(SORT_KEY, sort), [sort])
   const shown = useMemo(() => (papers ? sortPapers(papers, sort) : null), [papers, sort])
+  // Batch cards follow table order.
+  const batchIds = useMemo(
+    () => (shown ?? []).map((p) => p.source_id).filter((sid) => selected.has(sid)),
+    [shown, selected],
+  )
+  const titles = useMemo(
+    () => Object.fromEntries((papers ?? []).map((p) => [p.source_id, paperLabel(p)])),
+    [papers],
+  )
 
   const load = useCallback(async () => {
     if (Number.isNaN(projectId)) return
@@ -309,7 +327,39 @@ export default function ProjectDetail() {
 
       <div className="section-head">
         <h3>Papers in this project</h3>
-        {!adding && <button onClick={() => setAdding(true)}>Add papers</button>}
+        <div className="toolbar">
+          {papers.length > 0 && (
+            <button
+              type="button"
+              className={batch ? 'batch-toggle active' : 'batch-toggle'}
+              aria-pressed={batch}
+              onClick={() => setBatch((b) => !b)}
+            >
+              batch edit
+            </button>
+          )}
+          {batch && aiOn && papers.length > 0 && (
+            <div className="chips" role="group" aria-label="Batch mode">
+              {(
+                [
+                  ['metadata', 'Metadata'],
+                  ['tags', 'AI tags'],
+                ] as const
+              ).map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  className={mode === value ? 'chip active' : 'chip'}
+                  aria-pressed={mode === value}
+                  onClick={() => setBatchMode(value)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+          {!adding && <button onClick={() => setAdding(true)}>Add papers</button>}
+        </div>
       </div>
       {adding && (
         <AddPapers
@@ -338,72 +388,92 @@ export default function ProjectDetail() {
       {papers.length === 0 ? (
         <p className="muted">No papers in this project. Add papers from your library to start organizing it.</p>
       ) : (
-        <div className="table-wrap">
-          <table className="paper-table" style={{ minWidth: tableMinWidth(cols) }}>
-            <PaperColGroup cols={cols} />
-            <thead>
-              <tr>
-                <th className="check-col">
-                  <input
-                    type="checkbox"
-                    aria-label="Select all"
-                    checked={allSelected}
-                    onChange={() => setSelected(allSelected ? new Set() : new Set(papers.map((p) => p.source_id)))}
-                  />
-                </th>
-                {(
-                  [
-                    ['title', 'Title'],
-                    ['authors', 'Authors'],
-                    ['published', 'Published'],
-                    ['category', 'Category'],
-                    ['tags', 'Tags'],
-                    ['pdf', 'PDF'],
-                  ] as [PaperSortKey, string][]
-                )
-                  .filter(([key]) => key === 'title' || cols.show[key as ColumnKey])
-                  .map(([key, label]) => (
-                  <SortHeader
-                    key={key}
-                    label={label}
-                    dir={sort?.key === key ? sort.dir : null}
-                    onClick={() => setSort((s) => nextSort(s, key))}
-                  />
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {shown.map((p) => (
-                <tr key={p.source_id}>
-                  <td className="check-col">
-                    <input
-                      type="checkbox"
-                      aria-label={`Select ${p.source_id}`}
-                      checked={selected.has(p.source_id)}
-                      onChange={() => setSelected((s) => toggled(s, p.source_id))}
-                    />
-                  </td>
-                  <td>
-                    <Link to={paperPath(p.source_id)} state={{ fromProjectId: projectId }}>
-                      <MathText forceInline>{p.title}</MathText>
-                    </Link>
-                    <div className="muted small mono">{p.source_id}</div>
-                    {(isReadingList(project) ? cols.doi.reading : cols.doi.projects) && <DoiLine doi={p.doi} />}
-                  </td>
-                  {cols.show.authors && (
-                    <td className="small">
-                      {p.authors?.slice(0, 3).join(', ')}
-                      {p.authors?.length > 3 && ' et al.'}
-                    </td>
-                  )}
-                  {cols.show.published && <td className="nowrap">{p.published}</td>}
-                  {cols.show.category && <td>{p.category}</td>}
-                  {cols.show.tags && <TagCell tags={p.tags} />}
-                  {cols.show.pdf && <td>{p.has_pdf ? '✓' : ''}</td>}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className={batch ? 'library-batch' : undefined}>
+          <div className="library-main">
+            <div className="table-wrap">
+              <table className="paper-table" style={{ minWidth: tableMinWidth(cols) }}>
+                <PaperColGroup cols={cols} />
+                <thead>
+                  <tr>
+                    <th className="check-col">
+                      <input
+                        type="checkbox"
+                        aria-label="Select all"
+                        checked={allSelected}
+                        onChange={() => setSelected(allSelected ? new Set() : new Set(papers.map((p) => p.source_id)))}
+                      />
+                    </th>
+                    {(
+                      [
+                        ['title', 'Title'],
+                        ['authors', 'Authors'],
+                        ['published', 'Published'],
+                        ['category', 'Category'],
+                        ['tags', 'Tags'],
+                        ['pdf', 'PDF'],
+                      ] as [PaperSortKey, string][]
+                    )
+                      .filter(([key]) => key === 'title' || cols.show[key as ColumnKey])
+                      .map(([key, label]) => (
+                      <SortHeader
+                        key={key}
+                        label={label}
+                        dir={sort?.key === key ? sort.dir : null}
+                        onClick={() => setSort((s) => nextSort(s, key))}
+                      />
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {shown.map((p) => (
+                    <tr key={p.source_id}>
+                      <td className="check-col">
+                        <input
+                          type="checkbox"
+                          aria-label={`Select ${p.source_id}`}
+                          checked={selected.has(p.source_id)}
+                          onChange={() => setSelected((s) => toggled(s, p.source_id))}
+                        />
+                      </td>
+                      <td>
+                        <Link to={paperPath(p.source_id)} state={{ fromProjectId: projectId }}>
+                          <MathText forceInline>{p.title}</MathText>
+                        </Link>
+                        <div className="muted small mono">{p.source_id}</div>
+                        {(isReadingList(project) ? cols.doi.reading : cols.doi.projects) && <DoiLine doi={p.doi} />}
+                      </td>
+                      {cols.show.authors && (
+                        <td className="small">
+                          {p.authors?.slice(0, 3).join(', ')}
+                          {p.authors?.length > 3 && ' et al.'}
+                        </td>
+                      )}
+                      {cols.show.published && <td className="nowrap">{p.published}</td>}
+                      {cols.show.category && <td>{p.category}</td>}
+                      {cols.show.tags && <TagCell tags={p.tags} />}
+                      {cols.show.pdf && <td>{p.has_pdf ? '✓' : ''}</td>}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          {batch && mode === 'tags' && (
+            <BatchTags
+              selected={batchIds}
+              titles={titles}
+              onSaved={() => void load()}
+              onSkip={(sid) => setSelected((s) => toggled(s, sid))}
+            />
+          )}
+          {batch && mode === 'metadata' && (
+            <BatchMetadata
+              selected={batchIds}
+              titles={titles}
+              onSaved={() => void load()}
+              onSkip={(sid) => setSelected((s) => toggled(s, sid))}
+            />
+          )}
         </div>
       )}
     </section>
