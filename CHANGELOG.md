@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Changed
 - Paper page: opening a PDF puts it in a full-height pane beside the paper's details instead of inline below them, with a divider that can be dragged to resize the two columns (the width is remembered per browser). The two columns stack on narrow screens.
 - Sidebar: "Reading" is now "Reading lists", matching the page it opens.
+- Home: the "Categories" tile is now "Categories / Journals"; it already counted journal names for papers that are not on arXiv.
 - Papers can be saved without an author; they are stored under "Unknown" rather than refused.
 - Docs file names are lowercase: `docs/self-hosting.md`, `docs/bulk-import.md`, `docs/bulk-ai-tags.md`, `docs/mcp.md`.
 
