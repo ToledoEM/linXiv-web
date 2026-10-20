@@ -8,6 +8,7 @@ repo_url = "https://github.com/ToledoEM/linXiv-web"
 repo_name = "ToledoEM/linXiv-web"
 
 extra_css = ["stylesheets/extra.css"]
+exclude_docs = "overrides/"
 
 nav = [
   { "Home" = "index.md" },
@@ -46,6 +47,7 @@ generator = false
 
 [project.theme]
 language = "en"
+custom_dir = "docs/overrides"
 logo = "assets/logo.svg"
 favicon = "assets/favicon.ico"
 icon.repo = "fontawesome/brands/github"
