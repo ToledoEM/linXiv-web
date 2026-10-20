@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-10-20
+
 ### Added
 - Knowledge Graph: **Export GraphML** and **Export CSV** (zip of `nodes.csv` and `edges.csv`) download the whole graph with node metadata, for Gephi, Cytoscape, igraph, NetworkX or pandas. Also available as `GET /api/graph/export`.
 - `scripts/bulk-ai-tags.sh --all`: ask the AI about every paper, not only untagged ones; tagged papers keep their tags and gain new ones.
@@ -16,7 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Documentation website built with [Zensical](https://zensical.org) and managed by uv (`pyproject.toml`, `zensical.toml` at the repository root). Pages live in `docs/`: the existing guides, a tour of every page with screenshots, AI features, configuration, HTTP API, compatibility and development. `uv run zensical serve` previews it; `uv run zensical build` renders it into `site/` (ignored by git).
 
 ### Changed
-- Paper page: opening a PDF puts it in a full-height pane beside the paper's details instead of inline below them, with a divider that can be dragged to resize the two columns (the width is remembered per browser). The two columns stack on narrow screens.
+- Paper page redesigned: the PDF fills the left pane and opens with the page, and the paper's details sit in a rail on the right. Drag the divider or use the arrow keys to resize; the width is remembered per browser. The rail shows the title, authors, dates, categories, version and tags, then Details, Notes and Annotations tabs; Projects, AI summary, PDF, Full text and Danger zone are collapsible sections in Details. Papers without a PDF, or whose PDF file is missing, show a card with Download PDF in the left pane. The PDF toolbar gains ‹ › page buttons. The panes stack on narrow screens.
 - Sidebar: "Reading" is now "Reading lists", matching the page it opens.
 - Home: the "Categories" tile is now "Categories / Journals"; it already counted journal names for papers that are not on arXiv.
 - Papers can be saved without an author; they are stored under "Unknown" rather than refused.
