@@ -20,6 +20,7 @@ from .auth import Auth, require_auth
 from .cli import CLIError, LinxivCLI, Runner
 from .fulltext_worker import FullTextWorker
 from .jobs import Jobs
+from .libraries import Libraries
 from .mcp_bridge import McpBridge
 from .netguard import ClientGuard, parse_networks
 from .routes import activity as activity_routes
@@ -139,6 +140,7 @@ def create_app(
             for t in (task, update_task):
                 if t:
                     t.cancel()
+            app.state.libraries.close()
             await app.state.mcp.close_all()
             log.info("linxiv-web stopped")
 
@@ -153,6 +155,20 @@ def create_app(
     )
     app.state.fulltext_worker = FullTextWorker(
         app.state.cli, app.state.jobs, settings.timeout_short, settings.timeout_long
+    )
+
+    def _runner(_key: str, data_dir: Path) -> Runner:
+        # Tests pass one fake runner, which then answers for every library.
+        return runner or LinxivCLI(settings.linxiv_bin, env={"LINXIV_DATA_DIR": str(data_dir)})
+
+    # `app.state.cli` / `fulltext_worker` stay the root library's (MCP, update check).
+    app.state.libraries = Libraries(
+        settings,
+        app.state.jobs,
+        _runner,
+        app.state.cli,
+        app.state.fulltext_worker,
+        start_workers=runner is None,
     )
     app.state.update_checker = UpdateChecker(app.state.cli, __version__, settings.timeout_short)
     app.state.mcp = McpBridge(

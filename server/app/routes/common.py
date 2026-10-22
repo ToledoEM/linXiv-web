@@ -8,11 +8,15 @@ from typing import Any
 from fastapi import HTTPException, Request, UploadFile
 
 from ..cli import Runner
+from ..libraries import library
 from ..settings import Settings
+
+__all__ = ["ident", "library", "run", "runner", "save_upload", "settings"]
 
 
 def runner(request: Request) -> Runner:
-    return request.app.state.cli
+    """The CLI of the library this request works on (app/libraries.py)."""
+    return library(request).cli
 
 
 def settings(request: Request) -> Settings:

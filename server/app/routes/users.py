@@ -47,7 +47,7 @@ def _role(value: str) -> str:
 
 
 def _library_dir(request: Request, key: str) -> str:
-    return str(request.app.state.settings.data_dir / "libraries" / key)
+    return str(request.app.state.libraries.dir_for(key))
 
 
 # --- multi-user switch ---

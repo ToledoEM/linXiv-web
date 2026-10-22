@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 
 from ..cli import CLIError
 from ..pdf_name import pdf_file, title_from_file, title_suspect
-from .common import ident, run, settings
+from .common import ident, library, run
 
 router = APIRouter(prefix="/api", tags=["library"])
 
@@ -40,8 +40,8 @@ DEEP_SEARCH_LIMIT = 200
 def _annotate(request: Request, papers):
     """Add `pdf_file` (the PDF's path inside the PDF folder) and `title_suspect`
     (the title looks like junk read from the PDF, or unlike the file name)."""
-    s = settings(request)
-    bases = [str(s.data_dir / "pdfs"), str(s.pdf_dir)]
+    lib = library(request)
+    bases = [str(lib.data_dir / "pdfs"), str(lib.pdf_dir)]
     for p in papers if isinstance(papers, list) else [papers]:
         if isinstance(p, dict):
             rel = pdf_file(p.get("pdf_path"), bases)
@@ -70,7 +70,7 @@ def _matches(paper: dict, terms: list[str]) -> bool:
 
 def _db_stamp(request: Request) -> tuple:
     """Changes whenever papers.db is written, by the CLI, linxiv-mcp or this server."""
-    db = settings(request).data_dir / "papers.db"
+    db = library(request).data_dir / "papers.db"
     stamp = []
     for f in (db, db.with_name(db.name + "-wal")):
         try:
@@ -84,9 +84,11 @@ def _db_stamp(request: Request) -> tuple:
 async def _full_list(request: Request, args: list[str]):
     """Unpaged `linxiv list`, annotated, reused until papers.db changes. Callers
     must not mutate the returned papers."""
-    cache = getattr(request.app.state, "list_cache", None)
-    if cache is None:
-        cache = request.app.state.list_cache = {}
+    caches = getattr(request.app.state, "list_cache", None)
+    if caches is None:
+        caches = request.app.state.list_cache = {}
+    # One cache per library, each stamped by its own papers.db.
+    cache = caches.setdefault(library(request).key, {})
     stamp = _db_stamp(request)
     for k in [k for k, (s, _) in cache.items() if s != stamp]:
         del cache[k]

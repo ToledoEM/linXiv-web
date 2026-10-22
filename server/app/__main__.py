@@ -31,6 +31,12 @@ def check(s: settings_mod.Settings) -> None:
             f"linxiv stores PDFs in {managed}, which does not point at "
             f"LINXIV_WEB_PDF_DIR={s.pdf_dir} (entrypoint.sh links them)"
         )
+    lib_pdfs = s.libraries_pdf_dir
+    if lib_pdfs is not None and (not lib_pdfs.is_dir() or not os.access(lib_pdfs, os.W_OK)):
+        _fail(f"LINXIV_WEB_LIBRARIES_PDF_DIR={lib_pdfs} is not a writable directory")
+    if lib_pdfs is not None and lib_pdfs.resolve().is_relative_to(s.pdf_dir.resolve()):
+        # The root library counts and tidies its PDF folder recursively.
+        _fail(f"LINXIV_WEB_LIBRARIES_PDF_DIR={lib_pdfs} must not be inside LINXIV_WEB_PDF_DIR")
     try:
         parse_networks(s.trusted_proxies)
     except ValueError as exc:

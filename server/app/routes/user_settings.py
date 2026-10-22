@@ -16,7 +16,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from .. import logs
 from ..activity import note_fields
-from .common import run
+from .common import library, run
 from .feed import clear_feed_cache
 from .mcp import settings_changed as mcp_settings_changed
 
@@ -311,7 +311,7 @@ async def update_settings(request: Request, body: SettingsPatch):
         logs.set_level(patch["web_log_level"])
     if "full_text_worker_enabled" in patch:
         # Start or stop the background indexer now, not at its next poll.
-        request.app.state.fulltext_worker.wake()
+        library(request).worker.wake()
     if "web_update_check" in patch or GHCR_KEY in patch:
         request.app.state.update_checker.wake()
     return await _current(request)

@@ -29,7 +29,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from ..cli import CLIError
 from ..doi import clean_doi
 from ..pdf_name import pdf_file, title_from_file, year_from_file
-from .common import ident, run, settings
+from .common import ident, library, run
 from .user_settings import disabled_sources, ncbi_api_key
 
 router = APIRouter(prefix="/api", tags=["metadata"])
@@ -383,8 +383,8 @@ async def _by_filename(request: Request, source: str, paper: dict) -> dict:
     """Search by the title in the PDF's file name, ignoring the stored DOI (it may
     belong to another paper). The last candidate is the file name itself: its
     title, and its year folder as the date, for papers no source can find."""
-    s = settings(request)
-    rel = pdf_file(paper.get("pdf_path"), [str(s.data_dir / "pdfs"), str(s.pdf_dir)])
+    lib = library(request)
+    rel = pdf_file(paper.get("pdf_path"), [str(lib.data_dir / "pdfs"), str(lib.pdf_dir)])
     title = title_from_file(rel)
     if not title:
         raise HTTPException(status_code=400, detail="the PDF file name has no title to search by")

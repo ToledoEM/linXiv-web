@@ -505,3 +505,23 @@ def test_real_cli_ncbi_api_key_setting(settings, monkeypatch):
     assert (
         c.patch("/api/settings", json={"NCBI_API_KEY": ""}).json()["ncbi_api_key"]["set"] is False
     )
+
+
+def test_real_cli_libraries_kept_apart(settings, tmp_path):
+    """Multi-user: the shared library is its own data dir; root stays untouched."""
+    c = TestClient(create_app(replace(settings, linxiv_bin=BIN, password="owner-password")))
+    assert c.post("/api/login", json={"password": "owner-password"}).status_code == 200
+    csrf = {"X-CSRF-Token": c.cookies.get("lxw_csrf")}
+    r = c.post("/api/admin/multi-user", json={"enabled": True, "username": "boss"}, headers=csrf)
+    assert r.status_code == 200, r.text
+    shared = {**csrf, "X-Linxiv-Library": "shared"}
+    bib = tmp_path / "one.bib"
+    bib.write_text("@misc{sharedone, title={Shared One}, author={Doe, Jane}, year={2020}}\n")
+    with bib.open("rb") as f:
+        r = c.post("/api/import/bibtex", files={"file": ("one.bib", f)}, headers=shared)
+    assert r.status_code == 200, r.text
+    ids = [p["source_id"] for p in c.get("/api/papers", headers=shared).json()]
+    assert ids == ["local:sharedone"]
+    assert c.get("/api/papers").json() == []
+    lib = settings.data_dir / "libraries" / "shared"
+    assert (lib / "papers.db").is_file() and (lib / "pdfs").is_dir()
