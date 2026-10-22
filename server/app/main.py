@@ -16,10 +16,11 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from . import logs
 from . import settings as settings_mod
 from .activity import ActivityLog
-from .auth import Auth, require_auth
+from .auth import Auth, require_admin, require_auth
 from .cli import CLIError, LinxivCLI, Runner
 from .fulltext_worker import FullTextWorker
 from .jobs import Jobs
+from .libraries import Libraries
 from .mcp_bridge import McpBridge
 from .netguard import ClientGuard, parse_networks
 from .routes import activity as activity_routes
@@ -39,10 +40,12 @@ from .routes import (
     notes,
     pdfs,
     projects,
+    shared,
     sources,
     system,
     trash,
     user_settings,
+    users,
     versions,
 )
 from .routes import auth as auth_routes
@@ -138,6 +141,7 @@ def create_app(
             for t in (task, update_task):
                 if t:
                     t.cancel()
+            app.state.libraries.close()
             await app.state.mcp.close_all()
             log.info("linxiv-web stopped")
 
@@ -152,6 +156,20 @@ def create_app(
     )
     app.state.fulltext_worker = FullTextWorker(
         app.state.cli, app.state.jobs, settings.timeout_short, settings.timeout_long
+    )
+
+    def _runner(_key: str, data_dir: Path) -> Runner:
+        # Tests pass one fake runner, which then answers for every library.
+        return runner or LinxivCLI(settings.linxiv_bin, env={"LINXIV_DATA_DIR": str(data_dir)})
+
+    # `app.state.cli` / `fulltext_worker` stay the root library's (MCP, update check).
+    app.state.libraries = Libraries(
+        settings,
+        app.state.jobs,
+        _runner,
+        app.state.cli,
+        app.state.fulltext_worker,
+        start_workers=runner is None,
     )
     app.state.update_checker = UpdateChecker(app.state.cli, __version__, settings.timeout_short)
     app.state.mcp = McpBridge(
@@ -192,10 +210,16 @@ def create_app(
         return {"ok": True, "version": __version__}
 
     app.include_router(auth_routes.router)
+    # Admin only; its own dependency runs the session check first.
+    app.include_router(users.router)
     # /mcp has its own bearer-token auth (MCP clients have no browser session).
     app.include_router(mcp.endpoint)
-    app.include_router(mcp.router, dependencies=[Depends(require_auth)])
     guarded = [Depends(require_auth)]
+    # Server-wide (logs, activity, updates, system, MCP): admins only. Every login
+    # is admin in single-user mode.
+    admin_only = [Depends(require_admin)]
+    app.include_router(mcp.router, dependencies=admin_only)
+    app.include_router(shared.router, dependencies=guarded)
     # pdfs first: its /papers/{id:path}/pdf routes must win over library's bare
     # /papers/{id:path}.
     app.include_router(pdfs.router, dependencies=guarded)
@@ -205,7 +229,7 @@ def create_app(
     app.include_router(trash.router, dependencies=guarded)
     app.include_router(imports.router, dependencies=guarded)
     app.include_router(exports.router, dependencies=guarded)
-    app.include_router(system.router, dependencies=guarded)
+    app.include_router(system.router, dependencies=admin_only)
     app.include_router(authors.router, dependencies=guarded)
     app.include_router(feed.router, dependencies=guarded)
     app.include_router(backup.router, dependencies=guarded)
@@ -215,8 +239,8 @@ def create_app(
     app.include_router(notes.router, dependencies=guarded)
     app.include_router(versions.router, dependencies=guarded)
     app.include_router(sources.router, dependencies=guarded)
-    app.include_router(log_routes.router, dependencies=guarded)
-    app.include_router(activity_routes.router, dependencies=guarded)
+    app.include_router(log_routes.router, dependencies=admin_only)
+    app.include_router(activity_routes.router, dependencies=admin_only)
     # Before library: its GET /papers/{id:path} would swallow .../lookup.
     app.include_router(metadata.router, dependencies=guarded)
     app.include_router(library.router, dependencies=guarded)

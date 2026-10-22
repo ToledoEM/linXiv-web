@@ -11,6 +11,7 @@ from ..auth import (
     PASSWORD_MIN,
     SESSION_COOKIE,
     SESSION_MAX_AGE,
+    current_user,
     require_auth,
 )
 
@@ -19,8 +20,18 @@ router = APIRouter(prefix="/api", tags=["auth"])
 
 class LoginRequest(BaseModel):
     password: str
+    # Required in multi-user mode, ignored otherwise.
+    username: str | None = Field(default=None, max_length=64)
     # Ticked: persistent cookies for remember_days. Unticked: browser-session cookies.
     remember: bool = False
+
+
+def _scope(request: Request, username: str | None) -> str:
+    # Real client address behind trusted proxies (app/netguard.py) + attempted
+    # username: one noisy address can't lock others out, a guess at one account
+    # stays bounded (CatalogueCanvas rule).
+    client = getattr(request.state, "client_ip", None) or "unknown"
+    return f"{client}|{(username or '').strip().lower()}"
 
 
 @router.post("/login")
@@ -28,24 +39,27 @@ def login(body: LoginRequest, request: Request, response: Response):
     auth = request.app.state.auth
     if not auth.enabled:
         return {"ok": True}
-    # Real client address behind trusted proxies (app/netguard.py).
-    client = getattr(request.state, "client_ip", None) or "unknown"
-    if auth.throttled(client):
+    multi = auth.multi_user()
+    scope = _scope(request, body.username if multi else None)
+    if auth.throttled(scope):
         raise HTTPException(status_code=429, detail="too many login attempts, try again later")
-    if not auth.verify_password(body.password):
-        auth.record_failure(client)
-        raise HTTPException(status_code=401, detail="invalid password")
-    auth.clear_failures(client)
-    _start_session(auth, response, body.remember)
-    return {"ok": True}
+    user = auth.verify_login(body.username, body.password)
+    if user is None:
+        auth.record_failure(scope)
+        detail = "invalid username or password" if multi else "invalid password"
+        raise HTTPException(status_code=401, detail=detail)
+    auth.clear_failures(scope)
+    _start_session(auth, response, body.remember, user["id"])
+    return {"ok": True, "username": user["username"], "role": user["role"]}
 
 
-def _start_session(auth, response: Response, remember: bool) -> None:
+def _start_session(auth, response: Response, remember: bool, user_id: int | None = None) -> None:
     max_age = auth.remember_max_age if remember else SESSION_MAX_AGE
     cookie = {"samesite": "strict", "secure": auth.cookie_secure}
     if remember:
         cookie["max_age"] = max_age
-    response.set_cookie(SESSION_COOKIE, auth.create_session(max_age), httponly=True, **cookie)
+    token = auth.create_session(max_age, user_id)
+    response.set_cookie(SESSION_COOKIE, token, httponly=True, **cookie)
     # Readable by JS so the client can echo it in the X-CSRF-Token header.
     response.set_cookie(CSRF_COOKIE, secrets.token_urlsafe(24), httponly=False, **cookie)
 
@@ -77,11 +91,19 @@ def logout(request: Request, response: Response):
 @router.get("/me")
 def me(request: Request):
     auth = request.app.state.auth
+    user = auth.identity(request.cookies.get(SESSION_COOKIE)) if auth.enabled else None
+    if not auth.enabled and not auth.setup_required:
+        user = {"username": None, "role": "admin"}
     return {
         "auth_enabled": auth.enabled,
         "setup_required": auth.setup_required,
-        "authenticated": (not auth.enabled) or auth.is_valid(request.cookies.get(SESSION_COOKIE)),
+        "authenticated": user is not None,
         "password_source": auth.login_from,
+        "multi_user": auth.multi_user(),
+        "username": user["username"] if user else None,
+        "role": user["role"] if user else None,
+        # The owner logs in with the server password; others with their own.
+        "owner": bool(user) and user.get("library", "root") == "root",
     }
 
 
@@ -94,8 +116,11 @@ class PasswordChange(BaseModel):
 
 @router.post("/password", dependencies=[Depends(require_auth)])
 def change_password(body: PasswordChange, request: Request, response: Response):
-    """Change the stored admin password; every other browser is logged out."""
+    """Change the caller's own password; their other browsers are logged out."""
     auth = request.app.state.auth
+    user = current_user(request)
+    if user.get("library", "root") != "root":
+        return _change_own(auth, user, body, request, response)
     if auth.login_from == "env":
         raise HTTPException(
             status_code=409,
@@ -103,14 +128,30 @@ def change_password(body: PasswordChange, request: Request, response: Response):
         )
     if auth.login_from != "stored":
         raise HTTPException(status_code=409, detail="no password is set")
-    client = getattr(request.state, "client_ip", None) or "unknown"
-    if auth.throttled(client):
+    scope = _scope(request, user["username"])
+    if auth.throttled(scope):
         raise HTTPException(status_code=429, detail="too many attempts, try again later")
     if not auth.verify_password(body.current):
-        auth.record_failure(client)
+        auth.record_failure(scope)
         raise HTTPException(status_code=403, detail="current password is wrong")
+    if auth.multi_user() and auth.password_collides(body.new, user["id"]):
+        raise HTTPException(status_code=400, detail="password must differ from other users")
     auth.change_password(body.new)
-    _start_session(auth, response, body.remember)
+    _start_session(auth, response, body.remember, user["id"])
+    return {"ok": True}
+
+
+def _change_own(auth, user: dict, body: PasswordChange, request: Request, response: Response):
+    scope = _scope(request, user["username"])
+    if auth.throttled(scope):
+        raise HTTPException(status_code=429, detail="too many attempts, try again later")
+    if auth.verify_login(user["username"], body.current) is None:
+        auth.record_failure(scope)
+        raise HTTPException(status_code=403, detail="current password is wrong")
+    if auth.password_collides(body.new, user["id"]):
+        raise HTTPException(status_code=400, detail="password must differ from other users")
+    auth.set_user_password(user["id"], body.new)
+    _start_session(auth, response, body.remember, user["id"])
     return {"ok": True}
 
 

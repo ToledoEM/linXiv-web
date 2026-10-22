@@ -14,6 +14,9 @@ the CLI lock is free between papers. Desktop's pacing and retry rules apply:
 The setting is re-read at least every OFF_POLL; `wake()` (called when the
 setting changes) cuts any wait short. It yields while a manual `index-sources`
 job runs. State is in memory: a restart forgets parked papers.
+
+There is one worker per library (app/libraries.py); a process-wide lock keeps
+their arXiv fetches from running at the same time.
 """
 
 from __future__ import annotations
@@ -64,9 +67,14 @@ class FullTextWorker:
         timeout_short: float,
         timeout_long: float,
         clock=time.monotonic,
+        library: str = "root",
+        fetch_lock: asyncio.Lock | None = None,
     ) -> None:
         self.cli = cli
         self.jobs = jobs
+        self.library = library
+        # Shared by every library's worker: arXiv sees one fetch at a time.
+        self.fetch_lock = fetch_lock or asyncio.Lock()
         self.timeout_short = timeout_short
         self.timeout_long = timeout_long
         self.clock = clock
@@ -133,7 +141,7 @@ class FullTextWorker:
         if not await self._enabled():
             self.status.current = None
             return OFF_POLL
-        if self.jobs.running(MANUAL_JOB_KIND):
+        if self.jobs.running(MANUAL_JOB_KIND, self.library):
             return OFF_POLL
         try:
             queue = await self._queue()
@@ -146,7 +154,8 @@ class FullTextWorker:
         sid = queue[0]
         self.status.current = sid
         try:
-            out = await self.cli(["paper", "fetch-source", "--", sid], self.timeout_long)
+            async with self.fetch_lock:
+                out = await self.cli(["paper", "fetch-source", "--", sid], self.timeout_long)
             if isinstance(out, dict) and out.get("indexed"):
                 self.status.indexed += 1
                 log.info("full-text worker: indexed %s", sid)

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { BACKUP_URL, api } from './api'
+import { api, backupUrl } from './api'
 import ConfirmDialog from './ConfirmDialog'
 
 type Msg = { ok: boolean; text: string } | null
@@ -71,7 +71,7 @@ export default function Backup() {
       <div className="field">
         <span>Back up database</span>
         <div className="actions">
-          <a className="button" href={BACKUP_URL} download>
+          <a className="button" href={backupUrl()} download>
             Download backup
           </a>
         </div>

@@ -505,3 +505,74 @@ def test_real_cli_ncbi_api_key_setting(settings, monkeypatch):
     assert (
         c.patch("/api/settings", json={"NCBI_API_KEY": ""}).json()["ncbi_api_key"]["set"] is False
     )
+
+
+def test_real_cli_libraries_kept_apart(settings, tmp_path):
+    """Multi-user: the shared library is its own data dir; root stays untouched."""
+    c = TestClient(create_app(replace(settings, linxiv_bin=BIN, password="owner-password")))
+    assert c.post("/api/login", json={"password": "owner-password"}).status_code == 200
+    csrf = {"X-CSRF-Token": c.cookies.get("lxw_csrf")}
+    r = c.post("/api/admin/multi-user", json={"enabled": True, "username": "boss"}, headers=csrf)
+    assert r.status_code == 200, r.text
+    shared = {**csrf, "X-Linxiv-Library": "shared"}
+    bib = tmp_path / "one.bib"
+    bib.write_text("@misc{sharedone, title={Shared One}, author={Doe, Jane}, year={2020}}\n")
+    with bib.open("rb") as f:
+        r = c.post("/api/import/bibtex", files={"file": ("one.bib", f)}, headers=shared)
+    assert r.status_code == 200, r.text
+    ids = [p["source_id"] for p in c.get("/api/papers", headers=shared).json()]
+    assert ids == ["local:sharedone"]
+    assert c.get("/api/papers").json() == []
+    lib = settings.data_dir / "libraries" / "shared"
+    assert (lib / "papers.db").is_file() and (lib / "pdfs").is_dir()
+
+
+def test_real_cli_copy_from_shared(settings):
+    """Admin fills the shared library; a user copies papers (with PDF) into their own."""
+    s = replace(settings, linxiv_bin=BIN, password="owner-password")
+    with TestClient(create_app(s)) as admin, TestClient(create_app(s)) as user:
+        assert admin.post("/api/login", json={"password": "owner-password"}).status_code == 200
+        csrf = {"X-CSRF-Token": admin.cookies.get("lxw_csrf")}
+        body = {"enabled": True, "username": "boss"}
+        assert admin.post("/api/admin/multi-user", json=body, headers=csrf).status_code == 200
+        new = {"username": "alice", "password": "alice-password", "role": "user"}
+        r = admin.post("/api/users", json=new, headers=csrf)
+        assert r.status_code == 201, r.text
+        key = r.json()["library"]
+        shared = {**csrf, "X-Linxiv-Library": "shared"}
+        pdf = _tiny_pdf("Shared Paper")
+        r = admin.post("/api/pdfs/import", files={"file": ("a.pdf", pdf)}, headers=shared)
+        assert r.status_code == 200, r.text
+        pdf_sid = r.json()["source_id"]
+        bib = (
+            b"@article{d1, title={DOI One}, author={Doe, Jane}, year={2020}, doi={10.1234/ab.5}}\n"
+        )
+        r = admin.post("/api/import/bibtex", files={"file": ("a.bib", bib)}, headers=shared)
+        assert r.status_code == 200, r.text
+        ids = [p["source_id"] for p in admin.get("/api/papers", headers=shared).json()]
+        assert pdf_sid in ids and len(ids) == 2
+
+        body = {"username": "alice", "password": "alice-password"}
+        assert user.post("/api/login", json=body).status_code == 200
+        ucsrf = {"X-CSRF-Token": user.cookies.get("lxw_csrf")}
+        ushared = {**ucsrf, "X-Linxiv-Library": "shared"}
+        assert user.get("/api/papers").json() == []
+        assert sorted(p["source_id"] for p in user.get("/api/papers", headers=ushared).json()) == (
+            sorted(ids)
+        )
+        # Read only for a non-admin.
+        assert user.delete(f"/api/papers/{pdf_sid}", headers=ushared).status_code == 403
+        r = user.post("/api/shared/copy", json={"source_ids": ids}, headers=ushared)
+        assert r.status_code == 200, r.text
+        assert sorted(r.json()["copied"]) == sorted(ids)
+        mine = [p["source_id"] for p in user.get("/api/papers").json()]
+        assert sorted(mine) == sorted(ids)
+        got = user.get(f"/api/papers/{pdf_sid}/pdf")
+        assert got.status_code == 200 and got.content.startswith(b"%PDF-")
+        lib_pdfs = settings.data_dir / "libraries" / key / "pdfs"
+        assert any(lib_pdfs.rglob("*.pdf"))
+        # No temporary projects left behind, papers still in the shared library.
+        for c, h in ((user, {}), (admin, shared)):
+            assert c.get("/api/projects", headers=h).json() == []
+            assert c.get("/api/trash", headers=h).json()["projects"] == []
+        assert len(admin.get("/api/papers", headers=shared).json()) == 2

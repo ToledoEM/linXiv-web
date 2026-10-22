@@ -14,7 +14,9 @@ import type {
   LogWindow,
   LookupSource,
   McpStatus,
+  Me,
   MergeCandidates,
+  MultiUserStatus,
   MetadataCandidate,
   MetadataInput,
   NewVersion,
@@ -37,9 +39,12 @@ import type {
   Source,
   Stats,
   TrashListing,
+  Role,
+  UserAccount,
   UserSettings,
 } from './types'
 import type { GraphView } from './graph/model'
+import { libraryHeaders, withLibrary } from './library'
 import type { Anchor } from './pdfAnchor'
 
 export class ApiError extends Error {
@@ -68,14 +73,14 @@ export function paperPath(sourceId: string): string {
 }
 
 export function pdfUrl(sourceId: string): string {
-  return `/api/papers/${idPath(sourceId)}/pdf`
+  return withLibrary(`/api/papers/${idPath(sourceId)}/pdf`)
 }
 
 export type ExportFormat = 'lxproj' | 'bibtex' | 'obsidian' | 'zotero' | 'notes-md'
 
 /** Plain GET download link: the browser streams the file with the session cookie. */
 export function projectExportUrl(id: number, format: ExportFormat, pdfs = false): string {
-  return `/api/projects/${id}/export?format=${format}${pdfs && format === 'lxproj' ? '&pdfs=true' : ''}`
+  return withLibrary(`/api/projects/${id}/export?format=${format}${pdfs && format === 'lxproj' ? '&pdfs=true' : ''}`)
 }
 
 /** App log export for a time window (GET; streamed with the session cookie). */
@@ -84,7 +89,9 @@ export const logsExportUrl = (window: LogWindow) =>
 export const ACTIVITY_EXPORT_URL = '/api/activity/export'
 /** Knowledge Graph as GraphML or a zip of nodes.csv + edges.csv (GET; streamed with the session cookie). */
 export const graphExportUrl = (format: 'graphml' | 'csv', excludeSingleAuthors: boolean) =>
-  `/api/graph/export${qs({ format, exclude_single_authors: excludeSingleAuthors || undefined })}`
+  withLibrary(`/api/graph/export${qs({ format, exclude_single_authors: excludeSingleAuthors || undefined })}`)
+/** Database snapshot download of the library in view. */
+export const backupUrl = () => withLibrary(BACKUP_URL)
 export const DIAGNOSTICS_URL = '/api/system/diagnostics'
 
 /** Tell the activity tray a background job just started (it polls slowly when idle). */
@@ -139,6 +146,7 @@ async function request<T>(
     const token = csrfToken()
     if (token) headers['X-CSRF-Token'] = token
   }
+  Object.assign(headers, libraryHeaders(url))
   const res = await fetch(url, { method, headers, body: payload, credentials: 'same-origin' })
   onResponse?.(res)
   if (res.status === 401 && !url.endsWith('/login')) onUnauthorized()
@@ -166,7 +174,7 @@ const qs = (params: Record<string, string | number | boolean | undefined>) => {
 
 /** POST that returns a file: the body as a Blob (errors read like `request`). */
 async function requestBlob(url: string, body: unknown): Promise<Blob> {
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  const headers: Record<string, string> = { 'Content-Type': 'application/json', ...libraryHeaders(url) }
   const token = csrfToken()
   if (token) headers['X-CSRF-Token'] = token
   const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body), credentials: 'same-origin' })
@@ -197,13 +205,7 @@ export function saveBlob(blob: Blob, filename: string) {
 }
 
 export const api = {
-  me: () =>
-    request<{
-      auth_enabled: boolean
-      setup_required: boolean
-      authenticated: boolean
-      password_source: 'env' | 'stored' | null
-    }>('GET', '/api/me'),
+  me: () => request<Me>('GET', '/api/me'),
   changePassword: (current: string, next: string) =>
     request('POST', '/api/password', { current, new: next }),
   revokeOtherSessions: () => request<{ revoked: number }>('POST', '/api/sessions/revoke-others'),
@@ -212,8 +214,19 @@ export const api = {
   updateStatus: () => request<UpdateStatus>('GET', '/api/update'),
   checkUpdate: () => request<UpdateStatus>('POST', '/api/update/check'),
   systemStatus: () => request<SystemStatus>('GET', '/api/system/status'),
-  login: (password: string, remember = false) => request('POST', '/api/login', { password, remember }),
+  /** `username` only in multi-user mode (single-user login is password only). */
+  login: (password: string, remember = false, username?: string) =>
+    request('POST', '/api/login', username ? { username, password, remember } : { password, remember }),
   logout: () => request('POST', '/api/logout'),
+  multiUser: () => request<MultiUserStatus>('GET', '/api/admin/multi-user'),
+  setMultiUser: (enabled: boolean, username?: string) =>
+    request<MultiUserStatus>('POST', '/api/admin/multi-user', username ? { enabled, username } : { enabled }),
+  users: () => request<UserAccount[]>('GET', '/api/users'),
+  createUser: (body: { username: string; password: string; role: Role }) =>
+    request<UserAccount>('POST', '/api/users', body),
+  updateUser: (id: number, body: { username?: string; password?: string; role?: Role }) =>
+    request<UserAccount>('PUT', `/api/users/${id}`, body),
+  deleteUser: (id: number) => request<{ ok: boolean; library_dir: string }>('DELETE', `/api/users/${id}`),
 
   search: (q: string, source: Source, max: number) =>
     request<SearchResult[]>('GET', `/api/search${qs({ q, source, max })}`),
@@ -365,6 +378,11 @@ export const api = {
   deleteProject: (id: number) => request('DELETE', `/api/projects/${id}`),
   project: (id: number) => request<Project>('GET', `/api/projects/${id}`),
   projectPapers: (id: number) => request<Paper[]>('GET', `/api/projects/${id}/papers`),
+  /** Multi-user: copy papers (with PDFs, notes, highlights) from the shared library into your own. */
+  copyFromShared: (sourceIds: string[]) =>
+    request<{ copied: string[]; failed: string[]; skipped_pdfs: string[] }>('POST', '/api/shared/copy', {
+      source_ids: sourceIds,
+    }),
   addProjectPapers: (id: number, sourceIds: string[]) =>
     request<{ ok: boolean; added: string[]; failed: string[] }>('POST', `/api/projects/${id}/papers`, {
       source_ids: sourceIds,

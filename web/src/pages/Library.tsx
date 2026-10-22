@@ -5,12 +5,14 @@ import type { Paper } from '../types'
 import { useAiEnabled } from '../aiEnabled'
 import BatchMetadata from '../BatchMetadata'
 import BatchTags from '../BatchTags'
+import CopyToMine from '../CopyToMine'
 import { DoiLine, ErrorText, Pager, PaperColGroup, SortHeader, TagCell } from '../components'
 import { paperLabel } from '../format'
 import { loadSort, nextSort, parsePaperSort, saveSort, type PaperSort, type PaperSortKey } from '../paperSort'
 import { AddToProjectBar } from '../projectParts'
 import { toggled } from '../projects'
 import { PAGE_SIZES, tableMinWidth, useTableColumns } from '../tableColumns'
+import { useLibrary } from '../library'
 import { MathText } from '../tex'
 
 /** Selection bar action: BibTeX for the selected papers. */
@@ -172,6 +174,7 @@ export default function Library() {
   // Batch panel content: metadata lookup, or AI tag suggestions (when AI is on).
   const [batchMode, setBatchMode] = useState<'metadata' | 'tags'>('metadata')
   const aiOn = useAiEnabled()
+  const library = useLibrary()
   const cols = useTableColumns()
   const mode = aiOn ? batchMode : 'metadata'
   const [reload, setReload] = useState(0)
@@ -268,14 +271,16 @@ export default function Library() {
             </button>
           ))}
         </div>
-        <button
-          type="button"
-          className={batch ? 'batch-toggle active' : 'batch-toggle'}
-          aria-pressed={batch}
-          onClick={() => setBatch((b) => !b)}
-        >
-          batch edit
-        </button>
+        {library.canWrite && (
+          <button
+            type="button"
+            className={batch ? 'batch-toggle active' : 'batch-toggle'}
+            aria-pressed={batch}
+            onClick={() => setBatch((b) => !b)}
+          >
+            batch edit
+          </button>
+        )}
         {batch && aiOn && (
           <div className="chips" role="group" aria-label="Batch mode">
             {(
@@ -355,7 +360,17 @@ export default function Library() {
       {deepError && (
         <p className="muted small">Full text and notes could not be searched ({deepError}); showing other matches.</p>
       )}
-      <AddToProjectBar selected={selected} onSelect={setSelected} extra={<ExportBibButton ids={selected} />} />
+      <AddToProjectBar
+        selected={selected}
+        onSelect={setSelected}
+        readOnly={!library.canWrite}
+        extra={
+          <>
+            <ExportBibButton ids={selected} />
+            {library.shared && <CopyToMine ids={[...selected]} />}
+          </>
+        }
+      />
       <div className={batch ? 'library-batch' : undefined}>
         <div className="library-main">
           {papers && papers.length === 0 && <p className="muted">No papers.</p>}

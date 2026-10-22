@@ -1,7 +1,8 @@
 import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { api, paperPath } from '../api'
-import { ErrorText } from '../components'
+import { ErrorText, ReadOnlyNote } from '../components'
+import { useLibrary } from '../library'
 import { MathText } from '../tex'
 import UploadPdfs from '../UploadPdfs'
 
@@ -21,7 +22,14 @@ type Added = {
 
 const KIND_LABEL: Record<string, string> = { arxiv: 'arXiv', doi: 'DOI', pdf: 'PDF link' }
 
+/** Adding is a write: in the shared library only admins see the form. */
 export default function AddPaper() {
+  const { canWrite } = useLibrary()
+  if (!canWrite) return <ReadOnlyNote title="Add Paper" />
+  return <AddPaperForm />
+}
+
+function AddPaperForm() {
   const [input, setInput] = useState('')
   const [busy, setBusy] = useState(false)
   const [added, setAdded] = useState<Added[]>([])
