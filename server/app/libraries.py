@@ -28,7 +28,7 @@ from pathlib import Path
 
 from fastapi import HTTPException, Request
 
-from .auth import current_user
+from .auth import LIBRARY_HEADER, SHARED_LIBRARY, current_user
 from .cli import Runner
 from .fulltext_worker import FullTextWorker
 from .jobs import Jobs
@@ -38,8 +38,8 @@ from .state_db import OWNER_LIBRARY
 log = logging.getLogger(__name__)
 
 ROOT = OWNER_LIBRARY
-SHARED = "shared"
-HEADER = "x-linxiv-library"
+SHARED = SHARED_LIBRARY
+HEADER = LIBRARY_HEADER
 LIBRARIES_DIR = "libraries"
 _KEY = re.compile(r"^(root|shared|u[1-9][0-9]{0,9})$")
 

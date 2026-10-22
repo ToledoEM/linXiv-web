@@ -11,7 +11,7 @@ from ..cli import Runner
 from ..libraries import library
 from ..settings import Settings
 
-__all__ = ["ident", "library", "run", "runner", "save_upload", "settings"]
+__all__ = ["ident", "library", "run", "run_root", "runner", "save_upload", "settings"]
 
 
 def runner(request: Request) -> Runner:
@@ -38,6 +38,13 @@ def ident(value: str, what: str = "id") -> str:
 async def run(request: Request, args: list[str], long: bool = False, raw: bool = False) -> Any:
     s = settings(request)
     return await runner(request)(args, s.timeout_long if long else s.timeout_short, raw=raw)
+
+
+async def run_root(request: Request, args: list[str], long: bool = False) -> Any:
+    """Run against the root library whatever the request's library: server-wide
+    state (MCP, update check, system status) lives there."""
+    s = settings(request)
+    return await request.app.state.cli(args, s.timeout_long if long else s.timeout_short)
 
 
 _CHUNK = 1024 * 1024

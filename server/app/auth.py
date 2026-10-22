@@ -46,6 +46,12 @@ PASSWORD_MIN = 8
 PASSWORD_MAX = 256
 USERNAME_RE = r"^[a-z0-9_.-]{1,32}$"
 ROLES = ("admin", "user")
+# Multi-user mode: requests carrying this header with SHARED_LIBRARY work on the
+# shared library (app/libraries.py), which only admins may change.
+LIBRARY_HEADER = "x-linxiv-library"
+SHARED_LIBRARY = "shared"
+# POSTs that only read the shared library, open to every account.
+SHARED_READ_POSTS = ("/api/shared/copy", "/api/export/bibtex")
 
 
 def auth_file(data_dir: Path) -> Path:
@@ -314,7 +320,18 @@ class Auth:
             header = request.headers.get(CSRF_HEADER)
             if not cookie or not header or not secrets.compare_digest(cookie, header):
                 raise HTTPException(status_code=403, detail="invalid or missing CSRF token")
+            if (
+                user["role"] != "admin"
+                and _wants_shared(request)
+                and request.url.path not in SHARED_READ_POSTS
+                and self.multi_user()
+            ):
+                raise HTTPException(status_code=403, detail="the shared library is read-only")
         request.state.user = user
+
+
+def _wants_shared(request: Request) -> bool:
+    return (request.headers.get(LIBRARY_HEADER) or "").strip().lower() == SHARED_LIBRARY
 
 
 def public_user(user: dict) -> dict:
