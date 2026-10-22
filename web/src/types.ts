@@ -436,10 +436,41 @@ export interface Annotation {
 /** One line of the activity log (`server/app/activity.py`): no bodies, no values. */
 export interface ActivityEvent {
   at: string
+  /** Acting username (multi-user mode only). */
+  actor?: string
   client: string
   method: string
   route: string
   target: Record<string, string>
   status: number
   fields?: string[]
+}
+
+export type Role = 'admin' | 'user'
+
+/** `GET /api/me`. `owner`: the server owner's account (root library, server password). */
+export interface Me {
+  auth_enabled: boolean
+  setup_required: boolean
+  authenticated: boolean
+  password_source: 'env' | 'stored' | null
+  multi_user: boolean
+  username: string | null
+  role: Role | null
+  owner: boolean
+}
+
+/** Multi-user account (`server/app/routes/users.py`); never carries a password. */
+export interface UserAccount {
+  id: number
+  username: string
+  role: Role
+  library: string
+  created_at: string
+  owner: boolean
+}
+
+export interface MultiUserStatus {
+  enabled: boolean
+  owner_username: string | null
 }

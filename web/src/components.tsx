@@ -117,3 +117,13 @@ export function Pager({
     </nav>
   )
 }
+
+/** Shared library, non-admin: a page whose only job is to change the library. */
+export function ReadOnlyNote({ title }: { title: string }) {
+  return (
+    <section>
+      <h2>{title}</h2>
+      <p className="muted">The shared library is read only. Switch to My library in the sidebar to use this page.</p>
+    </section>
+  )
+}

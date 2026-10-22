@@ -7,6 +7,7 @@ import { addTerm, DEFAULT_HISTORY_MAX } from '../searchHistory'
 import QueryBuilder from '../QueryBuilder'
 import { makeClause, type Clause } from '../searchQuery'
 import SuggestInput from '../SuggestInput'
+import { useLibrary } from '../library'
 import { MathText } from '../tex'
 
 type RowState = { busy?: boolean; paper?: Paper; error?: string }
@@ -43,6 +44,7 @@ function asResult(p: Paper): SearchResult {
 }
 
 export default function Search() {
+  const { canWrite } = useLibrary()
   const [q, setQ] = useState('')
   const [source, setSource] = useState<Tab>('arxiv')
   const [max, setMax] = useState(25)
@@ -211,6 +213,8 @@ export default function Search() {
               <div className="actions">
                 {row.paper ? (
                   <Link to={paperPath(row.paper.source_id)}>In library — open</Link>
+                ) : !canWrite ? (
+                  <span className="muted small">Switch to My library to add papers.</span>
                 ) : (
                   <>
                     <button disabled={row.busy} onClick={() => add(r, false)}>

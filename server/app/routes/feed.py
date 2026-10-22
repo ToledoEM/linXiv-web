@@ -20,7 +20,7 @@ from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..cli import CLIError
-from .common import ident, run
+from .common import ident, library, run
 
 router = APIRouter(prefix="/api", tags=["feed"])
 
@@ -29,10 +29,11 @@ ARXIV_ID = r"^(\d{4}\.\d{4,5}|[a-z-]+(\.[A-Z]{2})?/\d{7})$"
 
 
 def _cache(request: Request) -> dict[str, tuple[float, object]]:
+    """This library's cached pages by URL (dismissals and rules differ per library)."""
     state = request.app.state
     if not hasattr(state, "feed_cache"):
         state.feed_cache = {}
-    return state.feed_cache
+    return state.feed_cache.setdefault(library(request).key, {})
 
 
 def clear_feed_cache(request: Request) -> None:

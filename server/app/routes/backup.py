@@ -18,7 +18,7 @@ from fastapi.responses import FileResponse
 from starlette.background import BackgroundTask
 
 from ..cli import CLIError
-from .common import run, save_upload
+from .common import library, run, save_upload
 from .feed import clear_feed_cache
 
 router = APIRouter(prefix="/api", tags=["backup"])
@@ -77,8 +77,7 @@ async def import_backup(request: Request, file: UploadFile):
 @router.post("/backup/restore")
 async def restore_backup(request: Request, file: UploadFile):
     """Replace the whole database. Refused while a background job is running."""
-    jobs = request.app.state.jobs
-    if busy := next((j for j in jobs.list() if j.state == "running"), None):
+    if busy := request.app.state.jobs.running(None, library(request).key):
         raise HTTPException(
             status_code=409, detail=f"a {busy.kind} job is running; cancel it or wait first"
         )

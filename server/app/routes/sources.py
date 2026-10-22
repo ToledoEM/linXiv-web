@@ -21,10 +21,12 @@ from pathlib import Path
 from fastapi import APIRouter, FastAPI, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field
 
+from ..auth import current_user
 from ..cli import CLIError
 from ..jobs import Job, JobBusy, Jobs
+from ..libraries import Library
 from ..pdf_text import PdfTextError, extract_text_async
-from .common import ident, run
+from .common import ident, library, run
 from .pdfs import _inside
 
 router = APIRouter(prefix="/api", tags=["sources"])
@@ -76,17 +78,17 @@ class PdfTextFailed(Exception):
     """A paper whose PDF can't be indexed (no PDF, unreadable, no text layer)."""
 
 
-async def index_pdf_text(app: FastAPI, source_id: str) -> dict:
+async def index_pdf_text(app: FastAPI, lib: Library, source_id: str) -> dict:
     """Extract the saved PDF's text and store it with `paper set-text`.
     Returns the CLI receipt plus `truncated`."""
     s = app.state.settings
-    cli = app.state.cli
+    cli = lib.cli
     loc = await cli(["pdf", "path", "--", source_id], s.timeout_short)
     raw = loc.get("path") if isinstance(loc, dict) else None
     if not raw:
         raise PdfTextFailed("no PDF saved for this paper")
     path = Path(raw)
-    if not _inside(path, [s.data_dir, s.pdf_dir]) or not path.is_file():
+    if not _inside(path, [lib.data_dir, lib.pdf_dir]) or not path.is_file():
         raise PdfTextFailed("PDF file missing on disk")
     try:
         text, truncated = await extract_text_async(path, PDF_MAX_PAGES, PDF_MAX_CHARS)
@@ -110,7 +112,7 @@ async def index_pdf_text(app: FastAPI, source_id: str) -> dict:
 async def pdf_text(request: Request, source_id: str):
     """Index one paper's PDF text for full-text search (replaces stored text)."""
     try:
-        return await index_pdf_text(request.app, ident(source_id, "paper id"))
+        return await index_pdf_text(request.app, library(request), ident(source_id, "paper id"))
     except PdfTextFailed as e:
         raise HTTPException(status_code=422, detail=str(e)) from e
 
@@ -142,7 +144,7 @@ def _pending(papers: object) -> list[str]:
 @router.get("/sources/worker")
 async def worker_status(request: Request):
     """Background indexer (Settings toggle `full_text_worker_enabled`): session counters."""
-    return request.app.state.fulltext_worker.public()
+    return library(request).worker.public()
 
 
 @router.get("/sources/pending")
@@ -156,9 +158,9 @@ async def pending(request: Request):
     }
 
 
-async def _index(app: FastAPI, job: Job, limit: int) -> None:
+async def _index(app: FastAPI, lib: Library, job: Job, limit: int) -> None:
     timeout = app.state.settings.timeout_long
-    cli = app.state.cli
+    cli = lib.cli
     todo = _pending(await cli(["list"], timeout))[:limit]
     job.total = len(todo)
     job.result = {"indexed": 0, "skipped": 0, "failed": 0}
@@ -192,15 +194,16 @@ async def _pause(job: Job) -> None:
 async def start_index(request: Request, body: IndexBody | None = None):
     limit = (body or IndexBody()).limit
     app = request.app
+    lib = library(request)
     try:
-        job = jobs(request).start(KIND, lambda j: _index(app, j, limit))
+        job = jobs(request).start(KIND, lambda j: _index(app, lib, j, limit), *_owner(request))
     except JobBusy as e:
         raise HTTPException(status_code=409, detail=str(e)) from e
     return job.public()
 
 
-async def _index_pdfs(app: FastAPI, job: Job) -> None:
-    todo = _pdf_pending(await app.state.cli(["list"], app.state.settings.timeout_long))
+async def _index_pdfs(app: FastAPI, lib: Library, job: Job) -> None:
+    todo = _pdf_pending(await lib.cli(["list"], app.state.settings.timeout_long))
     job.total = len(todo)
     job.result = {"indexed": 0, "failed": 0}
     for i, sid in enumerate(todo):
@@ -208,7 +211,7 @@ async def _index_pdfs(app: FastAPI, job: Job) -> None:
             return
         job.current = sid
         try:
-            await index_pdf_text(app, sid)
+            await index_pdf_text(app, lib, sid)
             job.result["indexed"] += 1
         except (PdfTextFailed, CLIError) as e:
             job.result["failed"] += 1
@@ -219,21 +222,35 @@ async def _index_pdfs(app: FastAPI, job: Job) -> None:
 @router.post("/jobs/index-pdf-text")
 async def start_pdf_index(request: Request):
     app = request.app
+    lib = library(request)
     try:
-        job = jobs(request).start(PDF_KIND, lambda j: _index_pdfs(app, j))
+        job = jobs(request).start(PDF_KIND, lambda j: _index_pdfs(app, lib, j), *_owner(request))
     except JobBusy as e:
         raise HTTPException(status_code=409, detail=str(e)) from e
     return job.public()
 
 
+def _owner(request: Request) -> tuple[str, int | None]:
+    """(library, user id) a new job is filed under."""
+    return library(request).key, current_user(request).get("id")
+
+
+def _visible(request: Request, job: Job | None) -> Job | None:
+    """Admins see every job; other accounts only the ones they started."""
+    user = current_user(request)
+    if job is None or user["role"] == "admin" or job.user_id == user.get("id"):
+        return job
+    return None
+
+
 @router.get("/jobs")
 async def list_jobs(request: Request, kind: str | None = None):
-    return [j.public() for j in jobs(request).list(kind)]
+    return [j.public() for j in jobs(request).list(kind) if _visible(request, j)]
 
 
 @router.get("/jobs/{job_id}")
 async def get_job(request: Request, job_id: int):
-    job = jobs(request).get(job_id)
+    job = _visible(request, jobs(request).get(job_id))
     if not job:
         raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
     return job.public()
@@ -241,6 +258,8 @@ async def get_job(request: Request, job_id: int):
 
 @router.post("/jobs/{job_id}/cancel")
 async def cancel_job(request: Request, job_id: int):
+    if not _visible(request, jobs(request).get(job_id)):
+        raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
     job = jobs(request).cancel(job_id)
     if not job:
         raise HTTPException(status_code=404, detail=f"Job {job_id} not found")

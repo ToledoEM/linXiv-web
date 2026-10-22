@@ -8,6 +8,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 - Live demo link in the README and the documentation home page.
+- Multi-user mode, off by default. Settings → **Server Admin** turns it on: you pick a username and keep the server password, and your library stays as it is. The login page then asks for a username. Turning it off again lets only the owner log in (password only) and keeps every account and library for later.
+- Settings → Server Admin → **Users** (admins only): add accounts (user or admin), rename them, set a role or a new password, delete them. Each account gets its own library with its own PDFs and settings (AI keys, contacts, feeds, lookup). Deleting an account keeps its library folder on disk and shows where it is. No two accounts may share a password, the last admin can't be demoted or deleted, and the owner always stays admin.
+- Shared library: a separate library everyone can read and only admins change. The sidebar switches between **My library** and **Shared library**; admins fill it with the usual Add, Upload, Search and Feed pages. Users see it read only and use **Copy to my library** (Library selection bar or paper page) to copy papers with their PDFs into their own library; papers they already have keep their stored metadata.
+- `python -m app reset-password --user <name>` resets one account's password and logs that account out.
+- `LINXIV_WEB_LIBRARIES_PDF_DIR`: keep the PDFs of the shared and per-user libraries on another disk (`<dir>/<library>`); it must not be inside `LINXIV_WEB_PDF_DIR`.
+- API: `GET/POST /api/users`, `PUT/DELETE /api/users/{id}`, `GET/POST /api/admin/multi-user`, `POST /api/shared/copy`. Requests choose the shared library with the `X-Linxiv-Library: shared` header or `?library=shared` on plain links. `/api/me` reports `multi_user`, `username`, `role` and `owner`.
+
+### Changed
+- Background jobs belong to the library they run on and the account that started them: the same job can run in two libraries at once, and users see only their own jobs. The full-text indexer runs once per library, one arXiv fetch at a time across all of them.
+- Activity log entries name the account that made the change.
+
+### Security
+- In multi-user mode, app logs, the activity log, the update check, system status and diagnostics, and MCP settings are admin only, as are the server-wide settings (log level, update check, `GHCR_TOKEN`, MCP). The MCP endpoint keeps serving the owner's library.
+- Every request reads the account's role from the server, so a role change, password reset or deletion applies at once and ends that account's sessions. Failed logins are counted per address and username, so one account under attack doesn't lock out others.
 
 ## [0.1.2] - 2026-10-20
 

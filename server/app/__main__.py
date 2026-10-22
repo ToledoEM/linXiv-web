@@ -1,6 +1,7 @@
 """`python -m app`: startup checks, then uvicorn. `python -m app hash-password` prints
 an argon2 hash for LINXIV_WEB_PASSWORD_HASH. `python -m app reset-password` stores a
-new admin password and logs every browser out."""
+new admin password and logs every browser out; `--user <name>` resets one
+multi-user account instead."""
 
 from __future__ import annotations
 
@@ -30,6 +31,12 @@ def check(s: settings_mod.Settings) -> None:
             f"linxiv stores PDFs in {managed}, which does not point at "
             f"LINXIV_WEB_PDF_DIR={s.pdf_dir} (entrypoint.sh links them)"
         )
+    lib_pdfs = s.libraries_pdf_dir
+    if lib_pdfs is not None and (not lib_pdfs.is_dir() or not os.access(lib_pdfs, os.W_OK)):
+        _fail(f"LINXIV_WEB_LIBRARIES_PDF_DIR={lib_pdfs} is not a writable directory")
+    if lib_pdfs is not None and lib_pdfs.resolve().is_relative_to(s.pdf_dir.resolve()):
+        # The root library counts and tidies its PDF folder recursively.
+        _fail(f"LINXIV_WEB_LIBRARIES_PDF_DIR={lib_pdfs} must not be inside LINXIV_WEB_PDF_DIR")
     try:
         parse_networks(s.trusted_proxies)
     except ValueError as exc:
@@ -48,20 +55,33 @@ def check(s: settings_mod.Settings) -> None:
         )
 
 
-def reset_password(s: settings_mod.Settings) -> None:
-    """Set the stored admin password and log every browser out. PASSWORD env or prompt."""
+def reset_password(s: settings_mod.Settings, username: str | None = None) -> None:
+    """Set a password and log that account's browsers out. PASSWORD env or prompt.
+    No `username` (or the owner's): the stored server password. Otherwise the named
+    multi-user account."""
     from argon2 import PasswordHasher
 
     from .auth import PASSWORD_MAX, PASSWORD_MIN, replace_stored_hash
-    from .state_db import StateDB
+    from .state_db import OWNER_LIBRARY, StateDB
 
     if not s.data_dir.is_dir():
         _fail(f"LINXIV_WEB_DATA_DIR={s.data_dir} does not exist or is not a directory")
+    state = StateDB(s.data_dir)
+    user = state.user_by_name(username.strip().lower()) if username else None
+    if username and user is None:
+        _fail(f"no user named {username!r}")
     pw = os.environ.get("PASSWORD") or getpass.getpass("New password: ")
     if not PASSWORD_MIN <= len(pw) <= PASSWORD_MAX:
         _fail("password must be 8 to 256 characters")
-    replace_stored_hash(s.data_dir, PasswordHasher().hash(pw))
-    ended = StateDB(s.data_dir).drop_all_sessions()
+    password_hash = PasswordHasher().hash(pw)
+    if user and user["library"] != OWNER_LIBRARY:
+        state.update_user(user["id"], password_hash=password_hash)
+        ended = state.drop_user_sessions(user["id"])
+        print(f"linxiv-web: password stored for {user['username']}; {ended} session(s) logged out.")
+        return
+    replace_stored_hash(s.data_dir, password_hash)
+    owner = state.owner()
+    ended = state.drop_user_sessions(owner["id"]) if owner else state.drop_all_sessions()
     print(f"linxiv-web: password stored; {ended} session(s) logged out.")
     if s.auth_enabled:
         print(
@@ -79,7 +99,13 @@ def main() -> None:
         return
 
     if sys.argv[1:2] == ["reset-password"]:
-        reset_password(settings_mod.load())
+        rest = sys.argv[2:]
+        username = None
+        if rest[:1] == ["--user"] and len(rest) == 2:
+            username = rest[1]
+        elif rest:
+            _fail("usage: python -m app reset-password [--user <name>]")
+        reset_password(settings_mod.load(), username)
         return
 
     s = settings_mod.load()

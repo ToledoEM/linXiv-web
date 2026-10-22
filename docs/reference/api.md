@@ -4,9 +4,17 @@ The web UI uses this API, and scripts can call it too. Every route except `/api/
 
 Most routes map to one `linxiv` CLI command. The right column names the command or describes what the server does.
 
+In multi-user mode (see [Server Admin](../server-admin.md)) each request works on the caller's own library, or on the shared library when it sends the header `X-Linxiv-Library: shared` (plain links such as a PDF or a download use `?library=shared` instead). Writes to the shared library by accounts that are not admins get 403, except `POST /api/shared/copy` and `POST /api/export/bibtex`. Logs, activity, update check, system status and diagnostics, and `/api/mcp` are admin only. `GET /api/jobs` lists only the caller's own jobs for accounts that are not admins.
+
 | Route | linxiv command / behaviour |
 |---|---|
-| `POST /api/password` `{current, new, remember?}` | Change the stored admin password (409 when it comes from `LINXIV_WEB_PASSWORD(_HASH)`); logs out every other session |
+| `POST /api/login` `{username?, password, remember?}` | Start a session. `username` is required in multi-user mode and ignored otherwise; failed attempts are limited per client address and username |
+| `GET /api/me` | Login state: `auth_enabled`, `setup_required`, `authenticated`, `password_source`, `multi_user`, `username`, `role` (`admin` or `user`), `owner` |
+| `POST /api/password` `{current, new, remember?}` | Change the caller's own password; logs out the caller's other sessions. For the owner this is the stored server password (409 when it comes from `LINXIV_WEB_PASSWORD(_HASH)`). In multi-user mode the new password must differ from every other account's |
+| `GET /api/admin/multi-user`, `POST /api/admin/multi-user` `{enabled, username?}` | Admin only. Multi-user status and owner username; turn it on (`username` names the owner the first time) or off (owner only; logs out every other account) |
+| `GET /api/users`, `POST /api/users` `{username, password, role}` | Admin only. List accounts (never their password hashes); create one with its own library (409 for a taken username, 400 for a password another account uses) |
+| `PUT /api/users/{id}` `{username?, password?, role?}`, `DELETE /api/users/{id}` | Admin only. Rename, set a password, change the role (each ends that account's sessions); delete (the library stays on disk, its path is returned). The owner stays admin and can't be deleted; the last admin can't be demoted or deleted; nobody deletes their own account |
+| `POST /api/shared/copy` `{source_ids}` | Copy papers with their PDFs from the shared library into the caller's own: a temporary project is exported with `project export --pdfs` and imported with `project import --on-conflict=merge`, then both temporary projects are deleted. Returns `copied`, `failed`, `skipped_pdfs` |
 | `POST /api/sessions/revoke-others` | Log out every session except the caller's; returns `{revoked}` |
 | `GET /api/activity?limit`, `GET /api/activity/export` | Activity log, newest first / as CSV: every POST/PUT/PATCH/DELETE under `/api/` with time, client address, route, path parameters, status (Settings saves: key names only). Kept in `<data dir>/logs/activity.jsonl`, 5 MiB + one rotated file |
 | `DELETE /api/activity` `{confirm: "delete activity log"}` | Clear the activity log (the clear is recorded) |

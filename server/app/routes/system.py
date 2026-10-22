@@ -13,7 +13,7 @@ from fastapi.responses import PlainTextResponse
 from .. import diagnostics, logs
 from ..cli import CLIError
 from ..pdf_layout import storage_bytes
-from .common import run, settings
+from .common import run_root, settings
 
 router = APIRouter(prefix="/api", tags=["system"])
 
@@ -25,7 +25,7 @@ PDF_LIMIT_WARN = 0.90  # warn at 90 % of pdf_save_limit_mb
 async def update_status(request: Request):
     """Last release check (cached; `POST /api/update/check` asks GHCR now)."""
     try:
-        stored = await run(request, ["settings", "get"])
+        stored = await run_root(request, ["settings", "get"])
     except CLIError:
         stored = {}
     return request.app.state.update_checker.view(stored if isinstance(stored, dict) else {})
@@ -89,7 +89,7 @@ async def system_status(request: Request):
     issues: list[dict] = []
     stored: dict = {}
     try:
-        out = await run(request, ["settings", "get"])
+        out = await run_root(request, ["settings", "get"])
         stored = out if isinstance(out, dict) else {}
     except CLIError as e:
         issues.append({"level": "error", "message": f"linxiv CLI not responding: {e.message}"})
@@ -140,12 +140,12 @@ async def system_status(request: Request):
 async def system_diagnostics(request: Request):
     """Markdown report for bug reports; secrets and locating addresses only as set/unset."""
     try:
-        out = await run(request, ["settings", "get"])
+        out = await run_root(request, ["settings", "get"])
         stored = out if isinstance(out, dict) else {}
     except CLIError:
         stored = {}
     try:
-        stats = await run(request, ["stats"])
+        stats = await run_root(request, ["stats"])
     except CLIError:
         stats = None
     status = await system_status(request)

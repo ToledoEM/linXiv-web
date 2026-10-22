@@ -201,6 +201,7 @@ export function AddToProjectBar({
   onSelect,
   extra,
   inline = false,
+  readOnly = false,
 }: {
   selected: Set<string>
   onSelect: (ids: Set<string>) => void
@@ -208,6 +209,8 @@ export function AddToProjectBar({
   extra?: ReactNode
   /** Paper page: one fixed paper, so drop the sticky bar, the count and Clear. */
   inline?: boolean
+  /** Shared library for a non-admin: no project picker, only `extra`. */
+  readOnly?: boolean
 }) {
   const [projects, setProjects] = useState<Project[] | null>(null)
   const [target, setTarget] = useState('')
@@ -217,11 +220,12 @@ export function AddToProjectBar({
   const [done, setDone] = useState('')
 
   useEffect(() => {
+    if (readOnly) return
     api
       .projects('active')
       .then(setProjects)
       .catch((err) => setError((err as Error).message))
-  }, [])
+  }, [readOnly])
 
   const addTo = async (projectId: number, label: string, created: boolean) => {
     const ids = [...selected]
@@ -271,40 +275,44 @@ export function AddToProjectBar({
   return (
     <div className={inline ? 'selection-bar inline-bar' : 'selection-bar'}>
       {!inline && <span>{selected.size} selected</span>}
-      <select aria-label="Project" value={target} onChange={(e) => setTarget(e.target.value)} disabled={busy}>
-        <option value="">Choose project…</option>
-        {(
-          [
-            ['Projects', projects?.filter((p) => !isReadingList(p))],
-            ['Reading lists', projects?.filter(isReadingList)],
-          ] as const
-        ).map(
-          ([label, group]) =>
-            !!group?.length && (
-              <optgroup key={label} label={label}>
-                {group.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </optgroup>
-            ),
-        )}
-      </select>
-      <button onClick={addExisting} disabled={busy || !target}>
-        Add to project
-      </button>
-      <span className="muted small">or</span>
-      <input
-        placeholder="New project name"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        onKeyDown={(e) => e.key === 'Enter' && name.trim() && !busy && addNew()}
-        disabled={busy}
-      />
-      <button onClick={addNew} disabled={busy || !name.trim()}>
-        Create and add
-      </button>
+      {!readOnly && (
+        <>
+          <select aria-label="Project" value={target} onChange={(e) => setTarget(e.target.value)} disabled={busy}>
+            <option value="">Choose project…</option>
+            {(
+              [
+                ['Projects', projects?.filter((p) => !isReadingList(p))],
+                ['Reading lists', projects?.filter(isReadingList)],
+              ] as const
+            ).map(
+              ([label, group]) =>
+                !!group?.length && (
+                  <optgroup key={label} label={label}>
+                    {group.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                ),
+            )}
+          </select>
+          <button onClick={addExisting} disabled={busy || !target}>
+            Add to project
+          </button>
+          <span className="muted small">or</span>
+          <input
+            placeholder="New project name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && name.trim() && !busy && addNew()}
+            disabled={busy}
+          />
+          <button onClick={addNew} disabled={busy || !name.trim()}>
+            Create and add
+          </button>
+        </>
+      )}
       {extra}
       <span className="grow" />
       {!inline && (

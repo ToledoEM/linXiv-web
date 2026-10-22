@@ -22,6 +22,8 @@ import MetadataEditor from '../MetadataEditor'
 import Notes from '../Notes'
 import TagSuggestions from '../TagSuggestions'
 import { toggled } from '../projects'
+import CopyToMine from '../CopyToMine'
+import { useLibrary } from '../library'
 import { AddToProjectBar, UndoDeleteButton } from '../projectParts'
 import { MathText } from '../tex'
 
@@ -68,6 +70,9 @@ export default function PaperDetail() {
   const [busy, setBusy] = useState('')
   const [newTag, setNewTag] = useState('')
   const aiOn = useAiEnabled()
+  const library = useLibrary()
+  // Shared library for a non-admin: read and copy only.
+  const ro = !library.canWrite
   const [suggested, setSuggested] = useState<TagSuggestion[] | null>(null)
   const [pickedTags, setPickedTags] = useState<Set<string>>(new Set())
   const [customUrl, setCustomUrl] = useState('')
@@ -241,7 +246,7 @@ export default function PaperDetail() {
       setPdfOkFor(null)
     })
 
-  const downloadForm = (
+  const downloadForm = ro ? null : (
     <div className="actions">
       <button disabled={!!busy} onClick={downloadPdf}>
         {busy === 'pdf' ? 'Downloading…' : 'Download PDF'}
@@ -366,7 +371,7 @@ export default function PaperDetail() {
               </Link>
             )}
             <span className="mono muted paper-id">{sid}</span>
-            {!editingMeta && (
+            {!editingMeta && !ro && (
               <button
                 type="button"
                 className="link"
@@ -416,33 +421,37 @@ export default function PaperDetail() {
                 {paper.tags.map((t) => (
                   <span key={t} className="pill">
                     {t}
-                    <button
-                      className="pill-x"
-                      title={`Remove ${t}`}
-                      aria-label={`Remove ${t}`}
-                      disabled={!!busy}
-                      onClick={() => act('tags', () => api.removeTag(id, t))}
-                    >
-                      ×
-                    </button>
+                    {!ro && (
+                      <button
+                        className="pill-x"
+                        title={`Remove ${t}`}
+                        aria-label={`Remove ${t}`}
+                        disabled={!!busy}
+                        onClick={() => act('tags', () => api.removeTag(id, t))}
+                      >
+                        ×
+                      </button>
+                    )}
                   </span>
                 ))}
               </div>
             )}
-            <form onSubmit={addTag} className="paper-tagform">
-              <input
-                aria-label="Add tags"
-                placeholder="add tags, comma separated"
-                value={newTag}
-                onChange={(e) => setNewTag(e.target.value)}
-              />
-              <button disabled={!!busy || !newTag.trim()}>Add</button>
-              {aiOn && (
-                <button type="button" disabled={!!busy} onClick={suggestTags}>
-                  {busy === 'suggest' ? 'Suggesting…' : 'AI Tags'}
-                </button>
-              )}
-            </form>
+            {!ro && (
+              <form onSubmit={addTag} className="paper-tagform">
+                <input
+                  aria-label="Add tags"
+                  placeholder="add tags, comma separated"
+                  value={newTag}
+                  onChange={(e) => setNewTag(e.target.value)}
+                />
+                <button disabled={!!busy || !newTag.trim()}>Add</button>
+                {aiOn && (
+                  <button type="button" disabled={!!busy} onClick={suggestTags}>
+                    {busy === 'suggest' ? 'Suggesting…' : 'AI Tags'}
+                  </button>
+                )}
+              </form>
+            )}
             {suggested && (
               <div className="tag-suggest card">
                 <span className="muted small">AI suggestions: click to toggle, then add the ticked ones.</span>
@@ -538,12 +547,23 @@ export default function PaperDetail() {
             </>
           )}
 
-          <details className="paper-section" open>
-            <summary>Projects</summary>
-            <AddToProjectBar inline selected={paperSelection} onSelect={() => {}} />
-          </details>
+          {library.shared && (
+            <details className="paper-section" open>
+              <summary>Shared library</summary>
+              <div className="actions">
+                <CopyToMine ids={[sid]} />
+              </div>
+            </details>
+          )}
 
-          {aiOn && (
+          {!ro && (
+            <details className="paper-section" open>
+              <summary>Projects</summary>
+              <AddToProjectBar inline selected={paperSelection} onSelect={() => {}} />
+            </details>
+          )}
+
+          {aiOn && !ro && (
             <details className="paper-section" open>
               <summary>AI summary</summary>
               <AiSummary
@@ -569,14 +589,16 @@ export default function PaperDetail() {
                 <a href={pdfUrl(sid)} target="_blank" rel="noreferrer">
                   Open in new tab
                 </a>
-                <UndoDeleteButton label="Delete PDF" busy={!!busy} onConfirm={() => act('pdf', () => api.deletePdf(id))} />
+                {!ro && (
+                  <UndoDeleteButton label="Delete PDF" busy={!!busy} onConfirm={() => act('pdf', () => api.deletePdf(id))} />
+                )}
               </div>
             ) : (
               <p className="muted small">No PDF stored. Download it from the reader area.</p>
             )}
           </details>
 
-          {(sid.startsWith('arxiv:') || paper.has_pdf) && (
+          {!ro && (sid.startsWith('arxiv:') || paper.has_pdf) && (
             <details className="paper-section" open>
               <summary>Full text</summary>
               <p className="muted small">
@@ -623,13 +645,15 @@ export default function PaperDetail() {
             </details>
           )}
 
-          <details className="paper-section">
-            <summary>Danger zone</summary>
-            <div className="actions">
-              <UndoDeleteButton label="Delete paper" busy={!!busy} onConfirm={deletePaper} />
-              <span className="muted small">Moves the paper to the trash.</span>
-            </div>
-          </details>
+          {!ro && (
+            <details className="paper-section">
+              <summary>Danger zone</summary>
+              <div className="actions">
+                <UndoDeleteButton label="Delete paper" busy={!!busy} onConfirm={deletePaper} />
+                <span className="muted small">Moves the paper to the trash.</span>
+              </div>
+            </details>
+          )}
         </div>
 
         <div

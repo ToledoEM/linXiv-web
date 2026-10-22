@@ -20,7 +20,7 @@ from fastapi import APIRouter, FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, Response
 
 from ..mcp_bridge import PROFILES, BridgeError, McpBridge, call_refusal, filter_tools
-from .common import run
+from .common import run_root
 
 router = APIRouter(prefix="/api/mcp", tags=["mcp"])
 endpoint = APIRouter(tags=["mcp"])
@@ -40,7 +40,7 @@ async def _conf(request: Request) -> dict:
     `update_setting` is never exposed), and it drops the cache when it does."""
     conf = getattr(request.app.state, "mcp_conf", None)
     if conf is None:
-        raw = await run(request, ["settings", "get"])
+        raw = await run_root(request, ["settings", "get"])
         raw = raw if isinstance(raw, dict) else {}
         profile = raw.get("mcp_profile")
         conf = {
@@ -78,7 +78,7 @@ async def status(request: Request):
 
 async def _store_token(request: Request, digest: str, hint: str, created: str) -> None:
     for key, value in ((HASH_KEY, digest), (HINT_KEY, hint), (CREATED_KEY, created)):
-        await run(request, ["settings", "update", "--", key, json.dumps(value)])
+        await run_root(request, ["settings", "update", "--", key, json.dumps(value)])
     request.app.state.mcp_conf = None
     # Sessions opened with the old token end now.
     await _bridge(request).close_all()
