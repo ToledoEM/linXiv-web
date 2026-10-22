@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import { useAccount } from './account'
 import { api } from './api'
 
 type Msg = { ok: boolean; text: string } | null
@@ -6,8 +7,10 @@ type Source = 'env' | 'stored' | null
 
 const MIN = 8
 
-/** Settings → Server & data → Login: change the admin password, end other sessions. */
+/** Settings → Server & data → Login: change your own password, end your other sessions.
+ *  The owner's password is the server password (read-only when set by env). */
 export default function LoginSettings() {
+  const account = useAccount()
   const [source, setSource] = useState<Source | undefined>(undefined)
   const [authOn, setAuthOn] = useState(true)
   const [current, setCurrent] = useState('')
@@ -29,7 +32,9 @@ export default function LoginSettings() {
   }, [])
 
   const mismatch = confirm !== '' && confirm !== next
-  const canSave = source === 'stored' && current !== '' && next.length >= MIN && next === confirm && !busy
+  // Named accounts keep their own password; only the owner's may come from env.
+  const own = !account.owner || source === 'stored'
+  const canSave = own && current !== '' && next.length >= MIN && next === confirm && !busy
 
   const change = async (e: FormEvent) => {
     e.preventDefault()
@@ -70,7 +75,7 @@ export default function LoginSettings() {
       <h3>Login</h3>
       {!authOn ? (
         <p className="muted small">No password is set: this loopback-only instance is open without login.</p>
-      ) : source === 'env' ? (
+      ) : account.owner && source === 'env' ? (
         <p className="muted small">
           The password comes from <code>LINXIV_WEB_PASSWORD_HASH</code> / <code>LINXIV_WEB_PASSWORD</code>. Change it
           there and restart the container.

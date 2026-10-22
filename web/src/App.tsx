@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
+import { accountFrom, setAccount, useAccount } from './account'
 import { api, setUnauthorizedHandler } from './api'
 import ActivityTray from './ActivityTray'
 import Sidebar, { type NavItem } from './Sidebar'
@@ -37,10 +38,17 @@ const NAV: NavItem[] = [
   { to: '/settings', label: 'Settings', icon: '⚙' },
 ]
 
-type AuthState = { checked: boolean; enabled: boolean; setup: boolean; authenticated: boolean }
+type AuthState = { checked: boolean; enabled: boolean; setup: boolean; authenticated: boolean; multiUser: boolean }
 
 export default function App() {
-  const [auth, setAuth] = useState<AuthState>({ checked: false, enabled: false, setup: false, authenticated: false })
+  const [auth, setAuth] = useState<AuthState>({
+    checked: false,
+    enabled: false,
+    setup: false,
+    authenticated: false,
+    multiUser: false,
+  })
+  const account = useAccount()
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const pages = useSidebarPages()
@@ -51,15 +59,30 @@ export default function App() {
     if (hiddenPageFor(pathname, pages)) void navigate('/', { replace: true })
   }, [pathname, pages, navigate])
 
+  // Login state + who is logged in; read again after each login (the role decides
+  // which Settings groups show).
+  const refreshMe = useCallback(
+    () =>
+      api
+        .me()
+        .then((me) => {
+          setAccount(accountFrom(me))
+          setAuth({
+            checked: true,
+            enabled: me.auth_enabled,
+            setup: me.setup_required,
+            authenticated: me.authenticated,
+            multiUser: me.multi_user,
+          })
+        })
+        .catch(() => setAuth((a) => ({ ...a, checked: true, enabled: true, setup: false, authenticated: false }))),
+    [],
+  )
+
   useEffect(() => {
     setUnauthorizedHandler(() => setAuth((a) => ({ ...a, authenticated: false })))
-    api
-      .me()
-      .then((me) =>
-        setAuth({ checked: true, enabled: me.auth_enabled, setup: me.setup_required, authenticated: me.authenticated }),
-      )
-      .catch(() => setAuth({ checked: true, enabled: true, setup: false, authenticated: false }))
-  }, [])
+    void refreshMe()
+  }, [refreshMe])
 
   useEffect(() => {
     if (!auth.authenticated) return
@@ -74,18 +97,23 @@ export default function App() {
     return <Setup onDone={() => setAuth((a) => ({ ...a, setup: false, authenticated: true }))} />
   }
   if (!auth.authenticated) {
-    return <Login onLogin={() => setAuth((a) => ({ ...a, authenticated: true }))} />
+    return <Login multiUser={auth.multiUser} onLogin={() => void refreshMe()} />
   }
 
   const logout = async () => {
     await api.logout()
-    setAuth((a) => ({ ...a, authenticated: false }))
+    // Mode may have changed meanwhile (username field on the login page).
+    await refreshMe()
     void navigate('/')
   }
 
   return (
     <div className="layout">
-      <Sidebar items={NAV.filter((i) => !i.pageKey || pages[i.pageKey])} onLogout={auth.enabled ? logout : undefined} />
+      <Sidebar
+        items={NAV.filter((i) => !i.pageKey || pages[i.pageKey])}
+        onLogout={auth.enabled ? logout : undefined}
+        account={account}
+      />
       <main className="content">
         <Routes>
           <Route path="/" element={<Home />} />

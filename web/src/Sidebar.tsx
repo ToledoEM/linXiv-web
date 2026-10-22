@@ -1,5 +1,6 @@
 import { useState, type MouseEvent } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
+import type { Account } from './account'
 import { useBatchRunning } from './batchGuard'
 import ConfirmDialog from './ConfirmDialog'
 import ThemePicker from './ThemePicker'
@@ -17,7 +18,15 @@ function loadCollapsed(): boolean {
   }
 }
 
-export default function Sidebar({ items, onLogout }: { items: NavItem[]; onLogout?: () => void }) {
+export default function Sidebar({
+  items,
+  onLogout,
+  account,
+}: {
+  items: NavItem[]
+  onLogout?: () => void
+  account?: Account
+}) {
   const [collapsed, setCollapsed] = useState(loadCollapsed)
   const navigate = useNavigate()
   const batchRunning = useBatchRunning()
@@ -75,6 +84,11 @@ export default function Sidebar({ items, onLogout }: { items: NavItem[]; onLogou
       <div className="sidebar-theme">
         <ThemePicker compact />
       </div>
+      {account?.multiUser && account.username && (
+        <div className="sidebar-user muted small" title={`Logged in as ${account.username} (${account.role})`}>
+          {account.username} · {account.role}
+        </div>
+      )}
       {onLogout && (
         <button className="link sidebar-foot" onClick={onLogout} title="Log out">
           <span className="nav-icon" aria-hidden="true">

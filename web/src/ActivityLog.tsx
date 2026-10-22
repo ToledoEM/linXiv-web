@@ -80,7 +80,10 @@ export default function ActivityLog() {
               {events.map((e, i) => (
                 <tr key={`${e.at}-${i}`}>
                   <td className="small">{when(e.at)}</td>
-                  <td className="mono small">{e.client}</td>
+                  <td className="mono small">
+                    {e.actor && <strong>{e.actor} </strong>}
+                    {e.client}
+                  </td>
                   <td className="mono small">
                     {e.method} {e.route}
                     {e.fields && <div className="muted">{e.fields.join(', ')}</div>}

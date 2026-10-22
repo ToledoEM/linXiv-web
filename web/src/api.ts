@@ -14,7 +14,9 @@ import type {
   LogWindow,
   LookupSource,
   McpStatus,
+  Me,
   MergeCandidates,
+  MultiUserStatus,
   MetadataCandidate,
   MetadataInput,
   NewVersion,
@@ -37,6 +39,8 @@ import type {
   Source,
   Stats,
   TrashListing,
+  Role,
+  UserAccount,
   UserSettings,
 } from './types'
 import type { GraphView } from './graph/model'
@@ -197,13 +201,7 @@ export function saveBlob(blob: Blob, filename: string) {
 }
 
 export const api = {
-  me: () =>
-    request<{
-      auth_enabled: boolean
-      setup_required: boolean
-      authenticated: boolean
-      password_source: 'env' | 'stored' | null
-    }>('GET', '/api/me'),
+  me: () => request<Me>('GET', '/api/me'),
   changePassword: (current: string, next: string) =>
     request('POST', '/api/password', { current, new: next }),
   revokeOtherSessions: () => request<{ revoked: number }>('POST', '/api/sessions/revoke-others'),
@@ -212,8 +210,19 @@ export const api = {
   updateStatus: () => request<UpdateStatus>('GET', '/api/update'),
   checkUpdate: () => request<UpdateStatus>('POST', '/api/update/check'),
   systemStatus: () => request<SystemStatus>('GET', '/api/system/status'),
-  login: (password: string, remember = false) => request('POST', '/api/login', { password, remember }),
+  /** `username` only in multi-user mode (single-user login is password only). */
+  login: (password: string, remember = false, username?: string) =>
+    request('POST', '/api/login', username ? { username, password, remember } : { password, remember }),
   logout: () => request('POST', '/api/logout'),
+  multiUser: () => request<MultiUserStatus>('GET', '/api/admin/multi-user'),
+  setMultiUser: (enabled: boolean, username?: string) =>
+    request<MultiUserStatus>('POST', '/api/admin/multi-user', username ? { enabled, username } : { enabled }),
+  users: () => request<UserAccount[]>('GET', '/api/users'),
+  createUser: (body: { username: string; password: string; role: Role }) =>
+    request<UserAccount>('POST', '/api/users', body),
+  updateUser: (id: number, body: { username?: string; password?: string; role?: Role }) =>
+    request<UserAccount>('PUT', `/api/users/${id}`, body),
+  deleteUser: (id: number) => request<{ ok: boolean; library_dir: string }>('DELETE', `/api/users/${id}`),
 
   search: (q: string, source: Source, max: number) =>
     request<SearchResult[]>('GET', `/api/search${qs({ q, source, max })}`),

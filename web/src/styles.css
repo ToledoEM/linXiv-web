@@ -92,6 +92,8 @@ button.link { background: none; border: none; color: var(--muted); padding: 0; }
 .sidebar nav a.active { background: var(--accent-soft); color: var(--text); font-weight: 600; }
 .sidebar.collapsed .nav-label { display: none; }
 .sidebar.collapsed nav a, .sidebar.collapsed .sidebar-foot { justify-content: center; }
+.sidebar-user { padding: 0.2rem 0.6rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sidebar.collapsed .sidebar-user { display: none; }
 .nav-icon { width: 1.2rem; text-align: center; flex-shrink: 0; }
 .sidebar-toggle { font-size: 1.1rem; }
 .sidebar-theme { padding: 0 0.6rem; }
@@ -618,3 +620,10 @@ kbd { display: inline-block; margin-right: 0.25rem; padding: 0.05rem 0.4rem; fon
 @media (max-width: 700px) {
   .paper-rail-head, .paper-panel { padding-inline: 0.8rem; }
 }
+/* Settings → Server Admin */
+.users-table { width: 100%; border-collapse: collapse; }
+.users-table th, .users-table td { text-align: left; padding: 0.35rem 0.5rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+.users-table .actions { margin-top: 0; }
+.users-table .pill { margin-left: 0.4rem; }
+.users-add { display: grid; gap: 0.6rem; max-width: 24rem; margin-top: 1rem; }
+.users-add h4 { margin: 0; }
