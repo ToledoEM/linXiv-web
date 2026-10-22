@@ -43,6 +43,7 @@ from .routes import (
     system,
     trash,
     user_settings,
+    users,
     versions,
 )
 from .routes import auth as auth_routes
@@ -192,6 +193,8 @@ def create_app(
         return {"ok": True, "version": __version__}
 
     app.include_router(auth_routes.router)
+    # Admin only; its own dependency runs the session check first.
+    app.include_router(users.router)
     # /mcp has its own bearer-token auth (MCP clients have no browser session).
     app.include_router(mcp.endpoint)
     app.include_router(mcp.router, dependencies=[Depends(require_auth)])

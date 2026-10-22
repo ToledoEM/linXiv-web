@@ -1,4 +1,4 @@
-"""Single-admin login: argon2 password check, signed session cookie, CSRF double-submit.
+"""Login: argon2 password check, signed session cookie, CSRF double-submit.
 
 Sessions live in `<data dir>/linxiv-web-state.db` (app/state_db.py) with the
 signing key, so a restart keeps everyone logged in and logout revokes the token.
@@ -8,6 +8,11 @@ Password source, first match wins: LINXIV_WEB_PASSWORD_HASH, LINXIV_WEB_PASSWORD
 then the hash stored by first-run setup in `<data dir>/linxiv-web-auth.json`.
 With none of them: auth is off on a loopback bind; on any other bind the server
 starts in setup mode, where the first visitor creates the admin password.
+
+Multi-user mode (off by default, switched in Settings → Server Admin) adds named
+accounts from the state DB. The owner account keeps the server password above;
+every session row names its account, and role and library are read from that
+account on each request, so a demotion, deletion or reset applies at once.
 """
 
 from __future__ import annotations
@@ -27,7 +32,7 @@ from fastapi import HTTPException, Request
 from itsdangerous import BadSignature, URLSafeTimedSerializer
 
 from .settings import Settings, is_loopback
-from .state_db import StateDB
+from .state_db import OWNER_LIBRARY, USER_FIELDS, StateDB
 
 SESSION_COOKIE = "lxw_session"
 CSRF_COOKIE = "lxw_csrf"
@@ -39,6 +44,8 @@ _UNSAFE = ("POST", "PUT", "PATCH", "DELETE")
 AUTH_FILE = "linxiv-web-auth.json"
 PASSWORD_MIN = 8
 PASSWORD_MAX = 256
+USERNAME_RE = r"^[a-z0-9_.-]{1,32}$"
+ROLES = ("admin", "user")
 
 
 def auth_file(data_dir: Path) -> Path:
@@ -129,12 +136,76 @@ class Auth:
             return True
 
     def change_password(self, new_password: str) -> None:
-        """Replace the stored password (caller checked the current one) and end every
-        session; the caller starts a fresh one for the browser that asked."""
+        """Replace the stored server password (caller checked the current one) and end
+        the owner's sessions (every session in single-user mode); the caller starts a
+        fresh one for the browser that asked."""
         password_hash = self._hasher.hash(new_password)
         replace_stored_hash(self._data_dir, password_hash)
         self._hash = password_hash
-        self._state.drop_all_sessions()
+        owner = self._state.owner()
+        if owner:
+            self._state.drop_user_sessions(owner["id"])
+        else:
+            self._state.drop_all_sessions()
+
+    def set_user_password(self, user_id: int, new_password: str) -> None:
+        """New password for a named (non-owner) account; ends its sessions."""
+        self._state.update_user(user_id, password_hash=self._hasher.hash(new_password))
+        self._state.drop_user_sessions(user_id)
+
+    def hash_password(self, password: str) -> str:
+        return self._hasher.hash(password)
+
+    def password_collides(self, password: str, exclude_id: int | None) -> bool:
+        """True when `password` is another account's password (CatalogueCanvas rule:
+        no two accounts share one). Compared by hash check, never in plain text."""
+        for user in self._state.list_users():
+            if user["id"] == exclude_id:
+                continue
+            if user["library"] == OWNER_LIBRARY:
+                if self.verify_password(password):
+                    return True
+            elif self._check(user["password_hash"], password):
+                return True
+        return False
+
+    # --- accounts ---
+
+    @property
+    def state(self) -> StateDB:
+        return self._state
+
+    def multi_user(self) -> bool:
+        return self.enabled and self._state.multi_user_enabled()
+
+    def _owner_identity(self) -> dict:
+        owner = self._state.owner()
+        if owner:
+            return public_user(owner)
+        return {"id": None, "username": None, "role": "admin", "library": OWNER_LIBRARY}
+
+    def verify_login(self, username: str | None, password: str) -> dict | None:
+        """The account these credentials open, None on failure. Single-user mode
+        ignores the username (password-only login, as before)."""
+        if not self.multi_user():
+            return self._owner_identity() if self.verify_password(password) else None
+        name = (username or "").strip().lower()
+        user = self._state.user_by_name(name) if name else None
+        if user is None:
+            return None
+        if user["library"] == OWNER_LIBRARY:
+            ok = self.verify_password(password)
+        else:
+            ok = self._check(user["password_hash"], password)
+        return public_user(user) if ok else None
+
+    def _check(self, password_hash: str | None, password: str) -> bool:
+        if not password_hash:
+            return False
+        try:
+            return self._hasher.verify(password_hash, password)
+        except (VerificationError, InvalidHashError):
+            return False
 
     def revoke_others(self, token: str | None) -> int:
         """End every session except the one holding `token`. Returns how many ended."""
@@ -149,12 +220,7 @@ class Auth:
                 self._hash = stored_hash(self._data_dir) or self._hash
             except ValueError:
                 return False
-        if not self._hash:
-            return False
-        try:
-            return self._hasher.verify(self._hash, password)
-        except (VerificationError, InvalidHashError):
-            return False
+        return self._check(self._hash, password)
 
     # Failures persist in the state DB, so a restart doesn't reset the count.
     def throttled(self, client: str) -> bool:
@@ -170,11 +236,14 @@ class Auth:
 
     # --- sessions ---
 
-    def create_session(self, max_age: int = SESSION_MAX_AGE) -> str:
+    def create_session(self, max_age: int = SESSION_MAX_AGE, user_id: int | None = None) -> str:
         sid = secrets.token_urlsafe(24)
         now = time.time()
-        self._state.add_session(sid, now + max_age, now)
+        self._state.add_session(sid, now + max_age, now, user_id)
         return self._serializer.dumps({"sid": sid})
+
+    def sid(self, token: str | None) -> str | None:
+        return self._sid(token)
 
     def _sid(self, token: str | None) -> str | None:
         if not token:
@@ -189,16 +258,30 @@ class Auth:
         return data.get("sid") if isinstance(data, dict) else None
 
     def is_valid(self, token: str | None) -> bool:
+        return self.identity(token) is not None
+
+    def identity(self, token: str | None) -> dict | None:
+        """The account behind a live session, None when the session is not valid.
+        Read from the account row each time, never from the token."""
         sid = self._sid(token)
         if sid is None:
-            return False
-        expiry = self._state.session_expiry(sid)
-        if expiry is None:
-            return False
+            return None
+        row = self._state.session(sid)
+        if row is None:
+            return None
+        expiry, user_id = row
         if expiry < time.time():
             self._state.drop_session(sid)
-            return False
-        return True
+            return None
+        if user_id is None:
+            return self._owner_identity()
+        user = self._state.get_user(user_id)
+        if user is None:
+            return None
+        if user["library"] != OWNER_LIBRARY and not self.multi_user():
+            # Named accounts only exist while multi-user mode is on.
+            return None
+        return public_user(user)
 
     def revoke(self, token: str | None) -> None:
         sid = self._sid(token)
@@ -221,15 +304,42 @@ class Auth:
         if self.setup_required:
             raise HTTPException(status_code=403, detail="first-run setup required")
         if not self.enabled:
+            request.state.user = self._owner_identity()
             return
-        if not self.is_valid(request.cookies.get(SESSION_COOKIE)):
+        user = self.identity(request.cookies.get(SESSION_COOKIE))
+        if user is None:
             raise HTTPException(status_code=401, detail="not authenticated")
         if request.method in _UNSAFE:
             cookie = request.cookies.get(CSRF_COOKIE)
             header = request.headers.get(CSRF_HEADER)
             if not cookie or not header or not secrets.compare_digest(cookie, header):
                 raise HTTPException(status_code=403, detail="invalid or missing CSRF token")
+        request.state.user = user
+
+
+def public_user(user: dict) -> dict:
+    """Account fields safe to hand out: never the password hash."""
+    return {k: user[k] for k in USER_FIELDS if k in user and k != "created_at"}
 
 
 def require_auth(request: Request) -> None:
     request.app.state.auth.check(request)
+
+
+def require_admin(request: Request) -> dict:
+    """Any admin account (every login is admin in single-user mode). Returns the user."""
+    if getattr(request.state, "user", None) is None:
+        require_auth(request)
+    user = request.state.user
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="admin privileges required")
+    return user
+
+
+def current_user(request: Request) -> dict:
+    """The caller's account; set by require_auth on every guarded route."""
+    user = getattr(request.state, "user", None)
+    if user is None:
+        require_auth(request)
+        user = request.state.user
+    return user

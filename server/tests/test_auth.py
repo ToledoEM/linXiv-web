@@ -20,6 +20,10 @@ def test_open_when_no_password(client, fake):
         "setup_required": False,
         "authenticated": True,
         "password_source": None,
+        "multi_user": False,
+        "username": None,
+        "role": "admin",
+        "owner": True,
     }
     assert client.get("/api/stats").status_code == 200
 
@@ -237,6 +241,10 @@ def test_setup_mode_blocks_api_until_password_set(setup_client, fake, settings):
         "setup_required": True,
         "authenticated": False,
         "password_source": None,
+        "multi_user": False,
+        "username": None,
+        "role": None,
+        "owner": False,
     }
     r = setup_client.get("/api/stats")
     assert r.status_code == 403
