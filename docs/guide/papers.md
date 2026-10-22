@@ -26,6 +26,10 @@ Notes are Markdown. **Export .md** saves the paper's notes for Obsidian. **AI su
 
 For arXiv papers, **Fetch TeX source** downloads the LaTeX source and indexes its text for search. For other papers, **Index PDF text** indexes the PDF's text instead. A background worker can index all pending arXiv papers; see [Settings](settings.md).
 
+## Papers in the shared library
+
+In multi-user mode, a paper opened from the shared library shows its metadata, abstract, tags and PDF, plus a **Copy to my library** button. Accounts that are not admins don't get the editing controls there: edit metadata, tags, projects, AI summary, PDF download or delete, full text and delete. See [Server Admin](../server-admin.md#the-shared-library).
+
 ## Versions
 
 arXiv version monitoring in **Settings → Library** checks saved arXiv papers for newer versions and lists each one with a link to the paper and a Dismiss button.

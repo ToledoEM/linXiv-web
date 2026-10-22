@@ -125,17 +125,23 @@ docker compose up -d
 
 A password set with `LINXIV_WEB_PASSWORD_HASH` / `LINXIV_WEB_PASSWORD` always wins; change it in `.env` instead.
 
+In multi-user mode, `reset-password --user <name>` resets one account's password and logs only that account out; without `--user` it resets the owner's server password. See [Server Admin](server-admin.md#passwords).
+
 ## Logging in
 
 Tick **Remember me on this browser** to stay logged in for 90 days (`LINXIV_WEB_REMEMBER_DAYS` changes this). Without it, the login ends when the browser closes, and after 14 days at most.
 
 Sessions are kept in `data/linxiv-web-state.db`, so restarting or updating the container keeps you logged in.
 
+## More than one person
+
+By default linXiv-web has one password and one library. To give other people their own logins and libraries, plus a shared library that only admins change, turn on multi-user mode in **Settings → Server Admin**. The login page then asks for a username as well. [Server Admin](server-admin.md) explains accounts, roles and the shared library.
+
 ## Where your data lives
 
 | Host directory | Container | Contents |
 |---|---|---|
-| `data/` (`LINXIV_WEB_DATA_HOST`) | `/data` | `papers.db` (library), `user_settings.json` (linXiv settings, including API keys entered in Settings), `linxiv-web-auth.json` (admin password hash), `linxiv-web-state.db` (sessions, login throttle) |
+| `data/` (`LINXIV_WEB_DATA_HOST`) | `/data` | `papers.db` (library), `user_settings.json` (linXiv settings, including API keys entered in Settings), `linxiv-web-auth.json` (admin password hash), `linxiv-web-state.db` (sessions, login throttle, multi-user accounts), `libraries/` (shared and per-account libraries in multi-user mode) |
 | `pdfs/` (`LINXIV_WEB_PDF_HOST`) | `/pdfs` | PDFs, flat or in year/journal subfolders (Settings → Library → PDF folders) |
 
 Keep `data/` on a local disk: SQLite over network shares or exFAT is unreliable. `pdfs/` may live on a NAS or external drive.
@@ -211,6 +217,7 @@ Settings changed in the web UI are stored in `data/`. Environment variables go i
 | `LINXIV_WEB_ALLOW_EXTERNAL` | `false` | Serve public IP addresses (else 403) |
 | `LINXIV_WEB_TRUSTED_PROXIES` | none | Proxy IPs/CIDRs whose `X-Forwarded-For` is believed |
 | `LINXIV_WEB_MAX_UPLOAD_MB` | `200` | Upload size cap |
+| `LINXIV_WEB_LIBRARIES_PDF_DIR` | none | Multi-user mode: PDF folder for the shared and per-account libraries (container path; mount it) |
 | `CROSSREF_MAILTO`, `NCBI_API_KEY`, `GEMINI_API_KEY`, … | none | Override the values entered in Settings |
 
 The full list is in [Admin Server Configuration](reference/configuration.md).

@@ -26,6 +26,7 @@ nav = [
     { "Settings" = "guide/settings.md" },
     { "Trash and backups" = "guide/trash-backup.md" },
   ] },
+  { "Server Admin" = "server-admin.md" },
   { "AI and agents" = [
     { "AI features" = "ai.md" },
     { "MCP server" = "mcp.md" },
