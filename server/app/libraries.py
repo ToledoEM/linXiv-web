@@ -14,7 +14,8 @@ PDF folders are never nested in the root PDF folder: its storage count is
 recursive and the PDF folder layout prunes empty dirs.
 
 Each request works on one library: the caller's own, or the shared one when the
-client sends `X-Linxiv-Library: shared` in multi-user mode.
+client sends `X-Linxiv-Library: shared` (or `?library=shared` on a plain link) in
+multi-user mode.
 """
 
 from __future__ import annotations
@@ -28,7 +29,7 @@ from pathlib import Path
 
 from fastapi import HTTPException, Request
 
-from .auth import LIBRARY_HEADER, SHARED_LIBRARY, current_user
+from .auth import LIBRARY_HEADER, SHARED_LIBRARY, current_user, wants_shared
 from .cli import Runner
 from .fulltext_worker import FullTextWorker
 from .jobs import Jobs
@@ -137,8 +138,7 @@ def library_key(request: Request) -> str:
         return cached
     user = current_user(request)
     key = user.get("library") or ROOT
-    want = (request.headers.get(HEADER) or "").strip().lower()
-    if want == SHARED and request.app.state.auth.multi_user():
+    if wants_shared(request) and request.app.state.auth.multi_user():
         key = SHARED
     request.state.library_key = key
     return key

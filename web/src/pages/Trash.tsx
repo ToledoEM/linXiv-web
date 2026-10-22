@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../api'
-import { ErrorText } from '../components'
+import { ErrorText, ReadOnlyNote } from '../components'
+import { useLibrary } from '../library'
 import { MathText } from '../tex'
 import type { TrashListing } from '../types'
 
@@ -30,6 +31,12 @@ function PurgeButton({ busy, onConfirm }: { busy: boolean; onConfirm: () => void
 }
 
 export default function Trash() {
+  const { canWrite } = useLibrary()
+  if (!canWrite) return <ReadOnlyNote title="Trash" />
+  return <TrashList />
+}
+
+function TrashList() {
   const [trash, setTrash] = useState<TrashListing | null>(null)
   const [busy, setBusy] = useState('')
   const [error, setError] = useState('')

@@ -1,7 +1,8 @@
 import { useState, type MouseEvent } from 'react'
-import { NavLink, useNavigate } from 'react-router-dom'
+import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import type { Account } from './account'
 import { useBatchRunning } from './batchGuard'
+import { setLibraryView, useLibrary } from './library'
 import ConfirmDialog from './ConfirmDialog'
 import ThemePicker from './ThemePicker'
 import type { PageKey } from './sidebarPages'
@@ -29,6 +30,8 @@ export default function Sidebar({
 }) {
   const [collapsed, setCollapsed] = useState(loadCollapsed)
   const navigate = useNavigate()
+  const { pathname } = useLocation()
+  const library = useLibrary()
   const batchRunning = useBatchRunning()
   // Where the user was heading when a running batch interrupted them.
   const [pending, setPending] = useState<string | null>(null)
@@ -71,6 +74,32 @@ export default function Sidebar({
           {collapsed ? '»' : '«'}
         </button>
       </div>
+      {account?.multiUser && (
+        <div className="library-switch" role="group" aria-label="Library">
+          {(
+            [
+              ['mine', 'My library', 'M'],
+              ['shared', 'Shared library', 'S'],
+            ] as const
+          ).map(([value, label, short]) => (
+            <button
+              key={value}
+              type="button"
+              aria-pressed={library.view === value}
+              className={library.view === value ? 'active' : ''}
+              title={label}
+              onClick={() => {
+                if (library.view === value) return
+                setLibraryView(value)
+                // Paper and project pages belong to the other library.
+                if (/^\/(paper|projects|authors)\//.test(pathname)) void navigate('/library')
+              }}
+            >
+              {collapsed ? short : label}
+            </button>
+          ))}
+        </div>
+      )}
       <nav>
         {items.map((item) => (
           <NavLink key={item.to} to={item.to} end={item.end} title={item.label} onClick={guard(item.to)}>
@@ -85,8 +114,8 @@ export default function Sidebar({
         <ThemePicker compact />
       </div>
       {account?.multiUser && account.username && (
-        <div className="sidebar-user muted small" title={`Logged in as ${account.username} (${account.role})`}>
-          {account.username} · {account.role}
+        <div className="sidebar-user muted small" title={`Logged in as ${account.username}`}>
+          {account.username}
         </div>
       )}
       {onLogout && (

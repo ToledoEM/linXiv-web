@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { accountFrom, setAccount, useAccount } from './account'
 import { api, setUnauthorizedHandler } from './api'
+import { useLibrary } from './library'
 import ActivityTray from './ActivityTray'
 import Sidebar, { type NavItem } from './Sidebar'
 import Login from './pages/Login'
@@ -49,6 +50,7 @@ export default function App() {
     multiUser: false,
   })
   const account = useAccount()
+  const library = useLibrary()
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const pages = useSidebarPages()
@@ -114,7 +116,15 @@ export default function App() {
         onLogout={auth.enabled ? logout : undefined}
         account={account}
       />
-      <main className="content">
+      {/* Switching library remounts every page, so each loads from the library in view. */}
+      <main className="content" key={library.view}>
+        {library.shared && (
+          <p className="library-banner" role="status">
+            {library.canWrite
+              ? 'Shared library: everyone reads it; your changes here are visible to all users.'
+              : 'Shared library: read only. Select papers and use Copy to my library to keep them.'}
+          </p>
+        )}
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/library" element={<Library />} />

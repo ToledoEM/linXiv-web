@@ -44,6 +44,7 @@ import type {
   UserSettings,
 } from './types'
 import type { GraphView } from './graph/model'
+import { libraryHeaders, withLibrary } from './library'
 import type { Anchor } from './pdfAnchor'
 
 export class ApiError extends Error {
@@ -72,14 +73,14 @@ export function paperPath(sourceId: string): string {
 }
 
 export function pdfUrl(sourceId: string): string {
-  return `/api/papers/${idPath(sourceId)}/pdf`
+  return withLibrary(`/api/papers/${idPath(sourceId)}/pdf`)
 }
 
 export type ExportFormat = 'lxproj' | 'bibtex' | 'obsidian' | 'zotero' | 'notes-md'
 
 /** Plain GET download link: the browser streams the file with the session cookie. */
 export function projectExportUrl(id: number, format: ExportFormat, pdfs = false): string {
-  return `/api/projects/${id}/export?format=${format}${pdfs && format === 'lxproj' ? '&pdfs=true' : ''}`
+  return withLibrary(`/api/projects/${id}/export?format=${format}${pdfs && format === 'lxproj' ? '&pdfs=true' : ''}`)
 }
 
 /** App log export for a time window (GET; streamed with the session cookie). */
@@ -88,7 +89,9 @@ export const logsExportUrl = (window: LogWindow) =>
 export const ACTIVITY_EXPORT_URL = '/api/activity/export'
 /** Knowledge Graph as GraphML or a zip of nodes.csv + edges.csv (GET; streamed with the session cookie). */
 export const graphExportUrl = (format: 'graphml' | 'csv', excludeSingleAuthors: boolean) =>
-  `/api/graph/export${qs({ format, exclude_single_authors: excludeSingleAuthors || undefined })}`
+  withLibrary(`/api/graph/export${qs({ format, exclude_single_authors: excludeSingleAuthors || undefined })}`)
+/** Database snapshot download of the library in view. */
+export const backupUrl = () => withLibrary(BACKUP_URL)
 export const DIAGNOSTICS_URL = '/api/system/diagnostics'
 
 /** Tell the activity tray a background job just started (it polls slowly when idle). */
@@ -143,6 +146,7 @@ async function request<T>(
     const token = csrfToken()
     if (token) headers['X-CSRF-Token'] = token
   }
+  Object.assign(headers, libraryHeaders(url))
   const res = await fetch(url, { method, headers, body: payload, credentials: 'same-origin' })
   onResponse?.(res)
   if (res.status === 401 && !url.endsWith('/login')) onUnauthorized()
@@ -170,7 +174,7 @@ const qs = (params: Record<string, string | number | boolean | undefined>) => {
 
 /** POST that returns a file: the body as a Blob (errors read like `request`). */
 async function requestBlob(url: string, body: unknown): Promise<Blob> {
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  const headers: Record<string, string> = { 'Content-Type': 'application/json', ...libraryHeaders(url) }
   const token = csrfToken()
   if (token) headers['X-CSRF-Token'] = token
   const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body), credentials: 'same-origin' })
@@ -374,6 +378,11 @@ export const api = {
   deleteProject: (id: number) => request('DELETE', `/api/projects/${id}`),
   project: (id: number) => request<Project>('GET', `/api/projects/${id}`),
   projectPapers: (id: number) => request<Paper[]>('GET', `/api/projects/${id}/papers`),
+  /** Multi-user: copy papers (with PDFs, notes, highlights) from the shared library into your own. */
+  copyFromShared: (sourceIds: string[]) =>
+    request<{ copied: string[]; failed: string[]; skipped_pdfs: string[] }>('POST', '/api/shared/copy', {
+      source_ids: sourceIds,
+    }),
   addProjectPapers: (id: number, sourceIds: string[]) =>
     request<{ ok: boolean; added: string[]; failed: string[] }>('POST', `/api/projects/${id}/papers`, {
       source_ids: sourceIds,

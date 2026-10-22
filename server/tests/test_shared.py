@@ -137,3 +137,12 @@ def test_copy_nothing_found_cleans_up(admin, alice, libs):  # noqa: F811
 def test_copy_needs_multi_user(client):
     r = client.post("/api/shared/copy", json={"source_ids": IDS})
     assert r.status_code == 409
+
+
+def test_query_param_selects_shared_and_is_guarded(admin, alice, libs):  # noqa: F811
+    admin.get("/api/papers", headers=SHARED)
+    libs.fakes["shared"].on("paper", "delete", result={})
+    rows = alice.get("/api/papers?library=shared").json()
+    assert [p["source_id"] for p in rows] == ["local:shared"]
+    r = alice.delete("/api/papers/x?library=shared", headers=_csrf(alice))
+    assert r.status_code == 403

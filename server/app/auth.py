@@ -49,6 +49,7 @@ ROLES = ("admin", "user")
 # Multi-user mode: requests carrying this header with SHARED_LIBRARY work on the
 # shared library (app/libraries.py), which only admins may change.
 LIBRARY_HEADER = "x-linxiv-library"
+LIBRARY_PARAM = "library"
 SHARED_LIBRARY = "shared"
 # POSTs that only read the shared library, open to every account.
 SHARED_READ_POSTS = ("/api/shared/copy", "/api/export/bibtex")
@@ -322,7 +323,7 @@ class Auth:
                 raise HTTPException(status_code=403, detail="invalid or missing CSRF token")
             if (
                 user["role"] != "admin"
-                and _wants_shared(request)
+                and wants_shared(request)
                 and request.url.path not in SHARED_READ_POSTS
                 and self.multi_user()
             ):
@@ -330,8 +331,11 @@ class Auth:
         request.state.user = user
 
 
-def _wants_shared(request: Request) -> bool:
-    return (request.headers.get(LIBRARY_HEADER) or "").strip().lower() == SHARED_LIBRARY
+def wants_shared(request: Request) -> bool:
+    """The request asks for the shared library: the header (API calls) or the
+    `library` query parameter (plain links: PDF viewer, downloads)."""
+    asked = request.headers.get(LIBRARY_HEADER) or request.query_params.get(LIBRARY_PARAM) or ""
+    return asked.strip().lower() == SHARED_LIBRARY
 
 
 def public_user(user: dict) -> dict:

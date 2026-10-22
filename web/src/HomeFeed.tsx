@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api, paperPath } from './api'
 import { Authors, ErrorText } from './components'
+import { useLibrary } from './library'
 import { MathText } from './tex'
 import type { FeedEntry, FeedResponse } from './types'
 
@@ -56,6 +57,7 @@ function FeedRow({
   showFeed: boolean
   onDismissed: () => void
 }) {
+  const { canWrite } = useLibrary()
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>(saved ? 'saved' : 'idle')
   const [busy, setBusy] = useState(false)
   const [armed, setArmed] = useState(false)
@@ -123,11 +125,13 @@ function FeedRow({
               Saved
             </Link>
           ) : (
-            <button type="button" onClick={save} disabled={saveState === 'saving'}>
-              {saveState === 'saving' ? 'Saving…' : 'Save'}
-            </button>
+            canWrite && (
+              <button type="button" onClick={save} disabled={saveState === 'saving'}>
+                {saveState === 'saving' ? 'Saving…' : 'Save'}
+              </button>
+            )
           )}
-          {version !== null && (
+          {canWrite && version !== null && (
             <>
               <button
                 type="button"
