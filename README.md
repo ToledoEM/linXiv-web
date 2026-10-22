@@ -11,6 +11,10 @@ linXiv-web is a browser UI for [linXiv](https://github.com/linxiv-dev/linXiv). Y
 
 It aligns with the [linxiv-dev](https://github.com/linxiv-dev) organization but has not been adopted by linXiv maintainers, and remains unofficial.
 
+## Live demo
+
+Try it at <https://linxiv-web.onrender.com> with the password `trymelinxiv-web`.
+
 ## Features
 
 - **Library:** sortable table (click any column header), one search box over title, abstract, authors, ids, tags, indexed full text and notes, PDF filters, batch metadata editing.

@@ -6,6 +6,10 @@ It follows the [linxiv-dev](https://github.com/linxiv-dev) organization, but the
 
 ![Home page](assets/screenshots/home.png)
 
+## Live demo
+
+Try it at <https://linxiv-web.onrender.com> with the password `trymelinxiv-web`.
+
 ## Features
 
 - Library: a sortable table (click any column header) and one search box covering title, abstract, authors, ids, tags, indexed full text and notes. You can filter by PDF and edit metadata for many papers at once.

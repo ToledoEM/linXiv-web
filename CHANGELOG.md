@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- Live demo link in the README and the documentation home page.
 - Multi-user mode, off by default. Settings → **Server Admin** turns it on: you pick a username and keep the server password, and your library stays as it is. The login page then asks for a username. Turning it off again lets only the owner log in (password only) and keeps every account and library for later.
 - Settings → Server Admin → **Users** (admins only): add accounts (user or admin), rename them, set a role or a new password, delete them. Each account gets its own library with its own PDFs and settings (AI keys, contacts, feeds, lookup). Deleting an account keeps its library folder on disk and shows where it is. No two accounts may share a password, the last admin can't be demoted or deleted, and the owner always stays admin.
 - Shared library: a separate library everyone can read and only admins change. The sidebar switches between **My library** and **Shared library**; admins fill it with the usual Add, Upload, Search and Feed pages. Users see it read only and use **Copy to my library** (Library selection bar or paper page) to copy papers with their PDFs into their own library; papers they already have keep their stored metadata.
