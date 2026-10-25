@@ -54,9 +54,9 @@ Like `linxiv-headless`, the server refuses to start if it binds to a non-loopbac
 
 | linXiv-web | linXiv CLI / MCP |
 |---|---|
-| 0.1.x | v0.7.0 |
+| 0.1.x | v0.7.1 |
 
-The image builds `linxiv` and `linxiv-mcp` from upstream source at the `LINXIV_REF` build arg (default `v0.7.0`).
+The image builds `linxiv` and `linxiv-mcp` from upstream source at the `LINXIV_REF` build arg (default `v0.7.1`).
 
 ## Resource usage
 
@@ -110,7 +110,7 @@ services:
       # Replace with the repository's git URL
       context: $PLACEHOLDERFUTUREURL#main
       args:
-        LINXIV_REF: ${LINXIV_REF:-v0.7.0}
+        LINXIV_REF: ${LINXIV_REF:-v0.7.1}
     image: linxiv-web:local
     container_name: linxiv-web
     restart: unless-stopped

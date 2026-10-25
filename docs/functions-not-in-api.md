@@ -39,7 +39,7 @@ Compares the `linxiv` CLI that the web server wraps with the web server code in 
 
 ## Blocked on the CLI
 
-These exist in linXiv, but only in the `linxiv-headless` HTTP API ([linXiv `docs/api.md`](https://github.com/linxiv-dev/linXiv/blob/main/docs/api.md)), not in the CLI or `linxiv-mcp` (checked against v0.7.0). linXiv-web would need either new upstream CLI commands or `linxiv-headless` as its backend. The headless server cannot share the library with the CLI, because linXiv allows one process per library.
+These exist in linXiv, but only in the `linxiv-headless` HTTP API ([linXiv `docs/api.md`](https://github.com/linxiv-dev/linXiv/blob/main/docs/api.md)), not in the CLI or `linxiv-mcp` (checked against v0.7.1). linXiv-web would need either new upstream CLI commands or `linxiv-headless` as its backend. The headless server cannot share the library with the CLI, because linXiv allows one process per library.
 
 | Feature | linxiv-headless route | linXiv-web today |
 |---|---|---|
