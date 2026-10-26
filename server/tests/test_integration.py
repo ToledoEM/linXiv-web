@@ -631,6 +631,23 @@ def test_real_cli_cleanup_empties_old_trash(settings):
         assert [p["source_id"] for p in c.get("/api/trash").json()["papers"]] == ["local:new1"]
 
 
+def test_real_cli_settings_export_import(settings, tmp_path):
+    with TestClient(create_app(replace(settings, linxiv_bin=BIN))) as c:
+        change = {"web_lookup_source": "pubmed", "search_history_max": 77}
+        assert c.patch("/api/settings", json=change).status_code == 200
+        exported = c.get("/api/settings/export").json()
+    # A fresh library takes the file as it is, defaults included.
+    data = tmp_path / "other"
+    data.mkdir()
+    (data / "pdfs").mkdir()
+    other = replace(settings, linxiv_bin=BIN, data_dir=data, pdf_dir=data / "pdfs")
+    with TestClient(create_app(other)) as c:
+        r = c.post("/api/settings/import", json=exported)
+        assert r.status_code == 200, r.text
+        got = c.get("/api/settings").json()["settings"]
+        assert (got["web_lookup_source"], got["search_history_max"]) == ("pubmed", 77)
+
+
 def test_real_cli_ncbi_api_key_setting(settings, monkeypatch):
     monkeypatch.delenv("NCBI_API_KEY", raising=False)
     c = TestClient(create_app(replace(settings, linxiv_bin=BIN)))

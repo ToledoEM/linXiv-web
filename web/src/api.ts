@@ -98,6 +98,8 @@ export const graphExportUrl = (format: 'graphml' | 'csv', excludeSingleAuthors: 
   withLibrary(`/api/graph/export${qs({ format, exclude_single_authors: excludeSingleAuthors || undefined })}`)
 /** Database snapshot download of the library in view. */
 export const backupUrl = () => withLibrary(BACKUP_URL)
+/** Settings of the library in view as a JSON file (no API keys). */
+export const settingsExportUrl = () => withLibrary('/api/settings/export')
 export const DIAGNOSTICS_URL = '/api/system/diagnostics'
 /** A database backup kept on the server by the "backup" maintenance operation (GET downloads it). */
 export const serverBackupUrl = (b: ServerBackup) =>
@@ -471,6 +473,8 @@ export const api = {
   clearActivity: (confirm: string) => request<{ ok: boolean }>('DELETE', '/api/activity', { confirm }),
   updateSettings: (patch: Partial<UserSettings>) =>
     request<SettingsResponse>('PATCH', '/api/settings', patch),
+  /** `file`: a parsed settings export (only its `settings` object is applied). */
+  importSettings: (file: unknown) => request<SettingsResponse>('POST', '/api/settings/import', file),
   aiModels: () => request<{ provider: AiProvider; models: string[] }>('GET', '/api/ai/models'),
   aiTest: () => request<AiTestResult>('POST', '/api/ai/test'),
   aiSchemas: () => request<AiTask[]>('GET', '/api/ai/schemas'),
