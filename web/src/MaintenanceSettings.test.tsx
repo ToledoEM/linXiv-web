@@ -10,6 +10,7 @@ const overview = (): MaintenanceOverview => ({
   nightly: ['dup'],
   timezone: 'UTC',
   nightly_on: null,
+  keep_backups: 7,
   ops: [
     {
       id: 'dup',
@@ -65,11 +66,43 @@ describe('MaintenanceSettings', () => {
     vi.spyOn(api, 'maintenance').mockResolvedValue(overview())
     const save = vi
       .spyOn(api, 'setMaintenanceSchedule')
-      .mockImplementation((hour, nightly) => Promise.resolve({ hour, nightly }))
+      .mockImplementation((hour, nightly, keep) => Promise.resolve({ hour, nightly, keep_backups: keep ?? 7 }))
     render(<MaintenanceSettings />)
     fireEvent.click(await screen.findByLabelText('Run Clean up nightly'))
-    await waitFor(() => expect(save).toHaveBeenCalledWith(3, ['dup', 'clean']))
+    await waitFor(() => expect(save).toHaveBeenCalledWith(3, ['dup', 'clean'], undefined))
     fireEvent.change(screen.getByLabelText('Nightly hour'), { target: { value: '1' } })
-    await waitFor(() => expect(save).toHaveBeenLastCalledWith(1, ['dup', 'clean']))
+    await waitFor(() => expect(save).toHaveBeenLastCalledWith(1, ['dup', 'clean'], undefined))
+  })
+
+  it('lists server backups, keeps a count and deletes one', async () => {
+    const data = overview()
+    data.ops.push({
+      id: 'backup',
+      label: 'Back up databases',
+      description: 'Copies.',
+      destructive: false,
+      last: null,
+      job: null,
+    })
+    vi.spyOn(api, 'maintenance').mockResolvedValue(data)
+    const b = { library: 'root', name: 'papers-20261026-030000.db', size: 4096 }
+    vi.spyOn(api, 'maintenanceBackups').mockResolvedValue({ backups: [b] })
+    const del = vi.spyOn(api, 'deleteMaintenanceBackup').mockResolvedValue({ ok: true })
+    const save = vi
+      .spyOn(api, 'setMaintenanceSchedule')
+      .mockImplementation((hour, nightly, keep) => Promise.resolve({ hour, nightly, keep_backups: keep ?? 7 }))
+    render(<MaintenanceSettings />)
+    expect(await screen.findByText('2026-10-26 03:00:00')).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'Download' }).getAttribute('href')).toBe(
+      '/api/maintenance/backups/root/papers-20261026-030000.db',
+    )
+    const keep = screen.getByLabelText('Backups to keep')
+    fireEvent.change(keep, { target: { value: '3' } })
+    fireEvent.blur(keep)
+    await waitFor(() => expect(save).toHaveBeenCalledWith(3, ['dup'], 3))
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
+    fireEvent.click(screen.getAllByRole('button', { name: 'Delete' }).at(-1)!)
+    await waitFor(() => expect(del).toHaveBeenCalledWith(b))
+    expect(await screen.findByText('None yet.')).toBeTruthy()
   })
 })

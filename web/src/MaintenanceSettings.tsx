@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { api } from './api'
 import { ErrorText } from './components'
 import ConfirmDialog from './ConfirmDialog'
+import ServerBackups from './ServerBackups'
 import { runSummary } from './maintenance'
 import type { MaintenanceOp, MaintenanceOverview } from './types'
 
@@ -40,12 +41,12 @@ export default function MaintenanceSettings() {
     return () => clearInterval(t)
   }, [busy, load])
 
-  const saveSchedule = async (hour: number, nightly: string[]) => {
+  const saveSchedule = async (hour: number, nightly: string[], keep?: number) => {
     if (!data) return
     setSaving(true)
     setError('')
     try {
-      const s = await api.setMaintenanceSchedule(hour, nightly)
+      const s = await api.setMaintenanceSchedule(hour, nightly, keep)
       setData({ ...data, ...s })
     } catch (err) {
       setError((err as Error).message)
@@ -178,6 +179,13 @@ export default function MaintenanceSettings() {
             </tbody>
           </table>
         </div>
+      )}
+      {data.ops.some((o) => o.id === 'backup') && (
+        <ServerBackups
+          keep={data.keep_backups}
+          onKeep={(n) => void saveSchedule(data.hour, data.nightly, n)}
+          version={data.ops.find((o) => o.id === 'backup')?.last?.finished_at ?? null}
+        />
       )}
       <ErrorText error={error} />
       <ConfirmDialog

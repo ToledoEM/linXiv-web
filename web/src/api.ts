@@ -31,6 +31,7 @@ import type {
   ProjectInput,
   SavedPdf,
   SavedPdfView,
+  ServerBackup,
   SystemStatus,
   UpdateStatus,
   SearchResult,
@@ -95,6 +96,9 @@ export const graphExportUrl = (format: 'graphml' | 'csv', excludeSingleAuthors: 
 /** Database snapshot download of the library in view. */
 export const backupUrl = () => withLibrary(BACKUP_URL)
 export const DIAGNOSTICS_URL = '/api/system/diagnostics'
+/** A database backup kept on the server by the "backup" maintenance operation (GET downloads it). */
+export const serverBackupUrl = (b: ServerBackup) =>
+  `/api/maintenance/backups/${encodeURIComponent(b.library)}/${encodeURIComponent(b.name)}`
 
 /** Tell the activity tray a background job just started (it polls slowly when idle). */
 function started<T>(p: Promise<T>): Promise<T> {
@@ -445,8 +449,15 @@ export const api = {
   removeMetadataReview: (sourceIds: string[]) =>
     request<{ ok: boolean }>('POST', '/api/metadata-review/remove', { source_ids: sourceIds }),
   maintenance: () => request<MaintenanceOverview>('GET', '/api/maintenance'),
-  setMaintenanceSchedule: (hour: number, nightly: string[]) =>
-    request<{ hour: number; nightly: string[] }>('PUT', '/api/maintenance/schedule', { hour, nightly }),
+  setMaintenanceSchedule: (hour: number, nightly: string[], keepBackups?: number) =>
+    request<{ hour: number; nightly: string[]; keep_backups: number }>('PUT', '/api/maintenance/schedule', {
+      hour,
+      nightly,
+      keep_backups: keepBackups,
+    }),
+  maintenanceBackups: () =>
+    request<{ backups: ServerBackup[] }>('GET', '/api/maintenance/backups'),
+  deleteMaintenanceBackup: (b: ServerBackup) => request<{ ok: boolean }>('DELETE', serverBackupUrl(b)),
   runMaintenance: (id: string) => started(request<Job>('POST', `/api/maintenance/${encodeURIComponent(id)}/run`)),
 
   stats: () => request<Stats>('GET', '/api/stats'),

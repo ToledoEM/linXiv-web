@@ -626,6 +626,8 @@ kbd { display: inline-block; margin-right: 0.25rem; padding: 0.05rem 0.4rem; fon
 .users-table .actions { margin-top: 0; }
 .users-table .pill { margin-left: 0.4rem; }
 .dup-group { margin-bottom: 0.8rem; }
+.server-backups { margin-top: 1rem; }
+.server-backups input[type="number"] { width: 4.5rem; }
 .users-add { display: grid; gap: 0.6rem; max-width: 24rem; margin-top: 1rem; }
 .users-add h4 { margin: 0; }
 /* Multi-user: library switch (sidebar) and shared-library banner */

@@ -566,6 +566,23 @@ def test_real_cli_complete_metadata_finds_new_papers(settings, monkeypatch):
         assert "title" in entry["missing"] and "authors" in entry["missing"]
 
 
+def test_real_cli_backup_operation(settings):
+    with TestClient(create_app(replace(settings, linxiv_bin=BIN))) as c:
+        bib = b"@misc{bk1, title={Backed up paper}, author={Doe, Jane}, year={2021}}\n"
+        assert c.post("/api/import/bibtex", files={"file": ("a.bib", bib)}).status_code == 200
+        job = c.post("/api/maintenance/backup/run").json()
+        for _ in range(200):
+            job = c.get(f"/api/jobs/{job['id']}").json()
+            if job["state"] != "running":
+                break
+            time.sleep(0.05)
+        assert job["state"] == "done" and not job["errors"], job
+        [b] = c.get("/api/maintenance/backups").json()["backups"]
+        got = c.get(f"/api/maintenance/backups/root/{b['name']}")
+        assert got.content.startswith(b"SQLite format 3\x00")
+        assert len(got.content) == b["size"]
+
+
 def test_real_cli_ncbi_api_key_setting(settings, monkeypatch):
     monkeypatch.delenv("NCBI_API_KEY", raising=False)
     c = TestClient(create_app(replace(settings, linxiv_bin=BIN)))

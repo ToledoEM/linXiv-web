@@ -445,7 +445,16 @@ export interface MaintenanceOverview {
   nightly: string[]
   timezone: string | null
   nightly_on: string | null
+  /** Database backups kept per library by the "backup" operation. */
+  keep_backups: number
   ops: MaintenanceOp[]
+}
+
+/** Database backup kept on the server; `library` is the library key (root, shared, u<id>). */
+export interface ServerBackup {
+  library: string
+  name: string
+  size: number
 }
 
 export interface DuplicatePaper {

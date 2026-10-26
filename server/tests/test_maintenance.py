@@ -111,11 +111,16 @@ def test_schedule_put(settings, fake):
     with TestClient(_app(settings, fake, [COUNT, FLAKY])) as c:
         r = c.put("/api/maintenance/schedule", json={"hour": 2, "nightly": ["flaky", "count"]})
         assert r.status_code == 200, r.text
-        assert r.json() == {"hour": 2, "nightly": ["count", "flaky"]}
-        assert json.loads(stored["web_maint_schedule"]) == {
-            "hour": 2,
-            "nightly": ["count", "flaky"],
-        }
+        want = {"hour": 2, "nightly": ["count", "flaky"], "keep_backups": 7}
+        assert r.json() == want
+        assert json.loads(stored["web_maint_schedule"]) == want
+        # keep_backups stays unless given
+        body = {"hour": 2, "nightly": [], "keep_backups": 3}
+        assert c.put("/api/maintenance/schedule", json=body).json()["keep_backups"] == 3
+        body = {"hour": 2, "nightly": ["flaky", "count"]}
+        assert c.put("/api/maintenance/schedule", json=body).json() == {**want, "keep_backups": 3}
+        body = {"hour": 2, "nightly": [], "keep_backups": 0}
+        assert c.put("/api/maintenance/schedule", json=body).status_code == 422
         assert (
             c.put("/api/maintenance/schedule", json={"hour": 2, "nightly": ["x"]}).status_code
             == 400
