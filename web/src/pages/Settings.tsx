@@ -1,10 +1,13 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import AboutSettings from '../AboutSettings'
+import AboutSettings, { AboutBasic } from '../AboutSettings'
 import ActivityLog from '../ActivityLog'
 import AiSettings from '../AiSettings'
 import AppLogs from '../AppLogs'
+import MaintenanceSettings from '../MaintenanceSettings'
 import McpSettings from '../McpSettings'
+import MultiUserSettings from '../MultiUserSettings'
+import { useAccount } from '../account'
 import { setAiEnabled } from '../aiEnabled'
 import { api } from '../api'
 import Backup from '../Backup'
@@ -73,16 +76,20 @@ const SECTIONS: Record<SectionId, (keyof UserSettings)[]> = {
 }
 
 // Groups mirror the desktop SettingsPage: left nav, one panel at a time, #id deep links.
-type GroupId = 'appearance' | 'library' | 'server' | 'ai' | 'integrations' | 'shortcuts' | 'about'
+type GroupId = 'appearance' | 'library' | 'server' | 'ai' | 'integrations' | 'admin' | 'shortcuts' | 'about'
 const GROUPS: { id: GroupId; label: string; icon: string }[] = [
   { id: 'appearance', label: 'Appearance', icon: '◐' },
   { id: 'library', label: 'Library', icon: '▤' },
   { id: 'server', label: 'Server & data', icon: '▥' },
   { id: 'ai', label: 'AI', icon: '✦' },
   { id: 'integrations', label: 'Integrations', icon: '⚇' },
+  { id: 'admin', label: 'Server Admin', icon: '⚿' },
   { id: 'shortcuts', label: 'Shortcuts', icon: '⌨' },
   { id: 'about', label: 'About', icon: 'ⓘ' },
 ]
+
+// Server-wide groups (MCP, accounts): admins only.
+const ADMIN_GROUPS: GroupId[] = ['integrations', 'admin']
 
 function groupFromHash(hash: string): GroupId | null {
   const id = hash.slice(1)
@@ -105,6 +112,10 @@ export default function Settings() {
   const [busy, setBusy] = useState<SectionId | null>(null)
   const [historyCount, setHistoryCount] = useState(historySize)
   const pages = useSidebarPages()
+  const admin = useAccount().role === 'admin'
+  const groups = GROUPS.filter((g) => admin || !ADMIN_GROUPS.includes(g.id))
+  // A hidden group (#admin as a user) falls back to the first one.
+  const shown = groups.some((g) => g.id === active) ? active : groups[0].id
 
   // A hash arriving while mounted (link to /settings#ai) switches the group.
   useEffect(() => {
@@ -165,6 +176,19 @@ export default function Settings() {
     setAiEnabled(r.settings.ai_enabled)
     setTexEnabled(r.settings.tex_rendering_enabled)
     setLookupPrefs(r.settings.web_lookup_source, r.settings.web_lookup_disabled)
+  }
+
+  // A settings file was imported: every card shows the stored values again.
+  const imported = (r: SettingsResponse) => {
+    setSaved(r.settings)
+    setDraft(r.settings)
+    setEnvOverrides(r.env_overrides)
+    setNcbi(r.ncbi_api_key)
+    setAiKeys(r.ai_keys)
+    setAiEnabled(r.settings.ai_enabled)
+    setTexEnabled(r.settings.tex_rendering_enabled)
+    setLookupPrefs(r.settings.web_lookup_source, r.settings.web_lookup_disabled)
+    setStatus({})
   }
 
   const run = async (id: SectionId, fn: () => Promise<SettingsResponse>, done: string) => {
@@ -482,11 +506,15 @@ export default function Settings() {
         </form>
 
         <LoginSettings />
-        <Backup />
-        <form onSubmit={save('logs')} onKeyDown={formSubmitOnCtrlEnter}>
-          <AppLogs level={draft.web_log_level} onLevel={(v) => set('web_log_level', v)} footer={saveBar('logs')} />
-        </form>
-        <ActivityLog />
+        <Backup onSettingsImported={imported} />
+        {admin && (
+          <>
+            <form onSubmit={save('logs')} onKeyDown={formSubmitOnCtrlEnter}>
+              <AppLogs level={draft.web_log_level} onLevel={(v) => set('web_log_level', v)} footer={saveBar('logs')} />
+            </form>
+            <ActivityLog />
+          </>
+        )}
       </>
     ),
     ai: (
@@ -513,6 +541,12 @@ export default function Settings() {
         </form>
       </>
     ),
+    admin: (
+      <>
+        <MultiUserSettings />
+        <MaintenanceSettings />
+      </>
+    ),
     shortcuts: (
       <>
         <div className="card settings-section">
@@ -534,7 +568,7 @@ export default function Settings() {
         </div>
       </>
     ),
-    about: (
+    about: admin ? (
       <form onSubmit={save('update')} onKeyDown={formSubmitOnCtrlEnter}>
         <AboutSettings
           draft={draft}
@@ -542,6 +576,8 @@ export default function Settings() {
           footer={saveBar('update')}
         />
       </form>
+    ) : (
+      <AboutBasic />
     ),
   }
 
@@ -558,15 +594,15 @@ export default function Settings() {
       </div>
       <div className="settings-grid">
         <nav className="settings-nav" role="tablist" aria-orientation="vertical" aria-label="Settings groups">
-          {GROUPS.map((g) => (
+          {groups.map((g) => (
             <button
               key={g.id}
               type="button"
               role="tab"
               id={`settings-tab-${g.id}`}
               aria-controls="settings-panel"
-              aria-selected={active === g.id}
-              className={active === g.id ? 'active' : ''}
+              aria-selected={shown === g.id}
+              className={shown === g.id ? 'active' : ''}
               onClick={() => select(g.id)}
             >
               <span aria-hidden="true" className="settings-nav-icon">
@@ -577,13 +613,13 @@ export default function Settings() {
           ))}
         </nav>
         <div
-          key={active}
+          key={shown}
           id="settings-panel"
           role="tabpanel"
-          aria-labelledby={`settings-tab-${active}`}
+          aria-labelledby={`settings-tab-${shown}`}
           className="settings-panel"
         >
-          {panels[active]}
+          {panels[shown]}
         </div>
       </div>
     </section>

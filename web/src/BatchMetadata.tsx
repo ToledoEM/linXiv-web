@@ -118,7 +118,7 @@ export default function BatchMetadata({
   }
 
   /** Save one paper: stored values with the ticked found fields on top. */
-  const approve = async (sid: string): Promise<boolean> => {
+  const approve = async (sid: string, notify = true): Promise<boolean> => {
     const it = item(sid)
     const c = it.candidates[it.chosen]
     if (!it.paper || !c || !it.picked.size) return false
@@ -132,9 +132,10 @@ export default function BatchMetadata({
     }
     patch(sid, { status: 'saving', error: undefined })
     try {
-      await api.saveMetadata(sid, checked.input)
+      // Tags as loaded for the diff, so the server skips its own `paper get`.
+      await api.saveMetadata(sid, { ...checked.input, tags: it.paper.tags })
       patch(sid, { status: 'saved' })
-      onSaved()
+      if (notify) onSaved()
       return true
     } catch (err) {
       patch(sid, { status: 'match', error: (err as Error).message })
@@ -150,9 +151,10 @@ export default function BatchMetadata({
     let saved = 0
     let failed = 0
     for (const sid of ready) {
-      if (await approve(sid)) saved += 1
+      if (await approve(sid, false)) saved += 1
       else failed += 1
     }
+    if (saved) onSaved()
     setSummary(`${saved} saved${failed ? `, ${failed} failed` : ''}.`)
   }
 

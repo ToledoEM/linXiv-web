@@ -2,9 +2,9 @@
 per line, newest last.
 
 Every state-changing API request (POST/PUT/PATCH/DELETE under /api/) is recorded
-with its route template, path parameters, status and the client address. Request
-bodies and values are never written; a Settings save records only the key names
-(`note_fields`). Writing never raises: a full disk or read-only volume means no
+with its route template, path parameters, status, the client address and, in
+multi-user mode, the acting username. Request bodies and values are never
+written; a Settings save records only the key names (`note_fields`). Writing never raises: a full disk or read-only volume means no
 record, not a failed request. The file rotates at MAX_BYTES, keeping one old copy.
 """
 
@@ -29,7 +29,7 @@ FILE = "activity.jsonl"
 MAX_BYTES = 5 * 1024 * 1024
 CLEAR_PHRASE = "delete activity log"
 _UNSAFE = ("POST", "PUT", "PATCH", "DELETE")
-CSV_FIELDS = ("at", "client", "method", "route", "target", "status", "fields")
+CSV_FIELDS = ("at", "actor", "client", "method", "route", "target", "status", "fields")
 
 log = logging.getLogger(__name__)
 _lock = threading.Lock()
@@ -118,6 +118,9 @@ class ActivityLog(BaseHTTPMiddleware):
                 "target": dict(request.scope.get("path_params") or {}),
                 "status": response.status_code,
             }
+            user = getattr(request.state, "user", None)
+            if user and user.get("username"):
+                event["actor"] = user["username"]
             fields = getattr(request.state, "activity_fields", None)
             if fields:
                 event["fields"] = fields

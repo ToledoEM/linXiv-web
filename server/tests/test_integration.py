@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import sqlite3
 import subprocess
 import time
 import zipfile
@@ -377,6 +378,23 @@ def test_real_cli_library_search_includes_notes(settings):
     assert not abstract[0].get("deep_match")
 
 
+def test_real_cli_library_search_dropped_fts_index_self_heals(settings):
+    # linxiv v0.7.1 `paper search` fails on a broken FTS index (v0.7.0 returned
+    # only the note hits), but the CLI recreates a dropped papers_fts on open,
+    # so deep search keeps working and no error header is set.
+    c = TestClient(create_app(replace(settings, linxiv_bin=BIN)))
+    bib = b"@misc{fx1, title={Plain Survey}, author={Doe, Jane}, year={2021}}\n"
+    assert c.post("/api/import/bibtex", files={"file": ("a.bib", bib)}).status_code == 200
+    note = {"source_id": "local:fx1", "title": "reading", "content": "wombat burrows"}
+    assert c.post("/api/notes", json=note).status_code == 200
+    with sqlite3.connect(settings.data_dir / "papers.db") as db:
+        db.execute("DROP TABLE papers_fts")
+    r = c.get("/api/papers", params={"q": "wombat"})
+    assert r.status_code == 200
+    assert [(p["source_id"], p.get("deep_match")) for p in r.json()] == [("local:fx1", True)]
+    assert "X-Deep-Search-Error" not in r.headers
+
+
 def test_real_cli_search_history_settings(settings):
     c = TestClient(create_app(replace(settings, linxiv_bin=BIN)))
     got = c.get("/api/settings").json()["settings"]
@@ -494,6 +512,169 @@ def test_real_cli_pdf_folder_layout(settings):
         assert not any(settings.pdf_dir.rglob("*.pdf"))
 
 
+def test_real_cli_duplicates_scan_and_merge(settings):
+    with TestClient(create_app(replace(settings, linxiv_bin=BIN))) as c:
+        a = c.post("/api/pdfs/import", files={"file": ("a.pdf", _tiny_pdf("Dup A"))}).json()
+        b = c.post("/api/pdfs/import", files={"file": ("b.pdf", _tiny_pdf("Dup B"))}).json()
+        keep, drop = a["source_id"], b["source_id"]
+        assert c.post(f"/api/papers/{keep}/tags", json={"tags": ["kept"]}).status_code == 200
+        assert c.post(f"/api/papers/{drop}/tags", json={"tags": ["moved"]}).status_code == 200
+        # Same bytes under two papers (e.g. one file imported twice under other ids).
+        files = {p.name: p for p in settings.pdf_dir.rglob("*.pdf")}
+        drop_file = files[f"{drop.replace(':', '_')}v1.pdf"]
+        drop_file.write_bytes(files[f"{keep.replace(':', '_')}v1.pdf"].read_bytes())
+
+        job = c.post("/api/maintenance/duplicates/run").json()
+        for _ in range(200):
+            job = c.get(f"/api/jobs/{job['id']}").json()
+            if job["state"] != "running":
+                break
+            time.sleep(0.05)
+        assert job["state"] == "done", job
+        assert job["result"]["duplicate_groups"] == 1
+        [group] = c.get("/api/duplicates").json()["groups"]
+        assert {p["source_id"] for p in group["papers"]} == {keep, drop}
+
+        r = c.post("/api/duplicates/merge", json={"winner": keep, "loser": drop})
+        assert r.status_code == 200, r.text
+        assert r.json()["groups"] == []
+        assert c.get(f"/api/papers/{drop}").status_code == 404
+        assert set(c.get(f"/api/papers/{keep}").json()["tags"]) == {"kept", "moved"}
+        assert c.get(f"/api/papers/{keep}/pdf").content.startswith(b"%PDF-")
+
+
+def test_real_cli_complete_metadata_finds_new_papers(settings, monkeypatch):
+    from app import metadata_fill
+
+    monkeypatch.setattr(metadata_fill, "PACE_SECONDS", 0.0)
+    with TestClient(create_app(replace(settings, linxiv_bin=BIN))) as c:
+        bib = b"@misc{nm1, title={scan0001}, year={2021}}\n"
+        assert c.post("/api/import/bibtex", files={"file": ("a.bib", bib)}).status_code == 200
+        # arXiv only: never asked for a local paper, so no network.
+        opts = {"gaps": ["title", "authors"], "sources": ["arxiv"]}
+        url = "/api/maintenance/complete-metadata/options"
+        assert c.put(url, json=opts).status_code == 200
+        job = c.post("/api/maintenance/complete-metadata/run").json()
+        for _ in range(200):
+            job = c.get(f"/api/jobs/{job['id']}").json()
+            if job["state"] != "running":
+                break
+            time.sleep(0.05)
+        assert job["state"] == "done", job
+        assert job["result"] == {"new_papers": 1, "completed": 0, "to_review": 1}
+        [entry] = c.get("/api/metadata-review").json()["papers"]
+        assert entry["source_id"] == "local:nm1"
+        assert entry["missing"] == ["title", "authors"]  # only the ticked gaps
+
+
+def test_real_cli_backup_operation(settings):
+    with TestClient(create_app(replace(settings, linxiv_bin=BIN))) as c:
+        bib = b"@misc{bk1, title={Backed up paper}, author={Doe, Jane}, year={2021}}\n"
+        assert c.post("/api/import/bibtex", files={"file": ("a.bib", bib)}).status_code == 200
+        job = c.post("/api/maintenance/backup/run").json()
+        for _ in range(200):
+            job = c.get(f"/api/jobs/{job['id']}").json()
+            if job["state"] != "running":
+                break
+            time.sleep(0.05)
+        assert job["state"] == "done" and not job["errors"], job
+        [b] = c.get("/api/maintenance/backups").json()["backups"]
+        got = c.get(f"/api/maintenance/backups/root/{b['name']}")
+        assert got.content.startswith(b"SQLite format 3\x00")
+        assert len(got.content) == b["size"]
+
+
+def test_real_cli_pdf_check(settings):
+    with TestClient(create_app(replace(settings, linxiv_bin=BIN))) as c:
+        sid = c.post("/api/pdfs/import", files={"file": ("a.pdf", _tiny_pdf("Checked"))}).json()[
+            "source_id"
+        ]
+        (settings.pdf_dir / "stray.pdf").write_bytes(_tiny_pdf("Stray"))
+
+        def run() -> dict:
+            job = c.post("/api/maintenance/pdf-check/run").json()
+            for _ in range(200):
+                job = c.get(f"/api/jobs/{job['id']}").json()
+                if job["state"] != "running":
+                    return job["result"]
+                time.sleep(0.05)
+            raise AssertionError("check did not finish")
+
+        # linXiv's own file counts as linked, through the data dir's pdfs link
+        assert run() == {"pdfs_checked": 1, "missing_files": 0, "unlinked_files": 1}
+        next(p for p in settings.pdf_dir.glob("*.pdf") if p.name != "stray.pdf").unlink()
+        assert run() == {"pdfs_checked": 1, "missing_files": 1, "unlinked_files": 1}
+        [report] = c.get("/api/maintenance/pdf-check").json()["libraries"]
+        assert [m["source_id"] for m in report["missing"]] == [sid]
+
+
+def test_real_cli_empty_trash_deletes_old_papers(settings):
+    with TestClient(create_app(replace(settings, linxiv_bin=BIN))) as c:
+        bib = b"@misc{old1, title={Old One}, year={2020}}\n@misc{new1, title={New One}, year={2020}}\n"
+        assert c.post("/api/import/bibtex", files={"file": ("a.bib", bib)}).status_code == 200
+        for sid in ("local:old1", "local:new1"):
+            assert c.delete(f"/api/papers/{sid}").status_code == 200
+        with sqlite3.connect(settings.data_dir / "papers.db") as db:
+            db.execute(
+                "UPDATE PAPER_ROOTS SET DELETED_AT = '2020-01-01 00:00:00' WHERE SOURCE_ID = ?",
+                ("local:old1",),
+            )
+        body = {"hour": 3, "nightly": [], "trash_days": 30}
+        assert c.put("/api/maintenance/schedule", json=body).status_code == 200
+        job = c.post("/api/maintenance/empty-trash/run").json()
+        for _ in range(200):
+            job = c.get(f"/api/jobs/{job['id']}").json()
+            if job["state"] != "running":
+                break
+            time.sleep(0.05)
+        assert job["state"] == "done" and not job["errors"], job
+        assert job["result"]["papers_purged"] == 1
+        assert [p["source_id"] for p in c.get("/api/trash").json()["papers"]] == ["local:new1"]
+
+
+def test_real_cli_clean_authors(settings):
+    with TestClient(create_app(replace(settings, linxiv_bin=BIN))) as c:
+        bib = (
+            b"@misc{ka1, title={Kept Paper}, author={Keeper, Kim}, year={2020}}\n"
+            b"@misc{ga1, title={Gone Paper}, author={Orphan, Olga}, year={2020}}\n"
+        )
+        assert c.post("/api/import/bibtex", files={"file": ("a.bib", bib)}).status_code == 200
+        assert c.delete("/api/papers/local:ga1").status_code == 200
+        assert c.delete("/api/trash/papers/local:ga1").status_code == 200
+        before = {a["full_name"]: a["paper_count"] for a in c.get("/api/authors").json()}
+        assert before["Kim Keeper"] == 1
+        orphans = [name for name, n in before.items() if n == 0]
+        assert orphans == ["Olga Orphan"]  # linXiv keeps the author of a deleted paper
+        job = c.post("/api/maintenance/clean-authors/run").json()
+        for _ in range(200):
+            job = c.get(f"/api/jobs/{job['id']}").json()
+            if job["state"] != "running":
+                break
+            time.sleep(0.05)
+        assert job["state"] == "done" and not job["errors"], job
+        assert job["result"] == {"authors_removed": len(orphans), "skipped": 0}
+        after = {a["full_name"]: a["paper_count"] for a in c.get("/api/authors").json()}
+        assert all(n > 0 for n in after.values())
+        assert set(after) == set(before) - set(orphans)
+
+
+def test_real_cli_settings_export_import(settings, tmp_path):
+    with TestClient(create_app(replace(settings, linxiv_bin=BIN))) as c:
+        change = {"web_lookup_source": "pubmed", "search_history_max": 77}
+        assert c.patch("/api/settings", json=change).status_code == 200
+        exported = c.get("/api/settings/export").json()
+    # A fresh library takes the file as it is, defaults included.
+    data = tmp_path / "other"
+    data.mkdir()
+    (data / "pdfs").mkdir()
+    other = replace(settings, linxiv_bin=BIN, data_dir=data, pdf_dir=data / "pdfs")
+    with TestClient(create_app(other)) as c:
+        r = c.post("/api/settings/import", json=exported)
+        assert r.status_code == 200, r.text
+        got = c.get("/api/settings").json()["settings"]
+        assert (got["web_lookup_source"], got["search_history_max"]) == ("pubmed", 77)
+
+
 def test_real_cli_ncbi_api_key_setting(settings, monkeypatch):
     monkeypatch.delenv("NCBI_API_KEY", raising=False)
     c = TestClient(create_app(replace(settings, linxiv_bin=BIN)))
@@ -505,3 +686,74 @@ def test_real_cli_ncbi_api_key_setting(settings, monkeypatch):
     assert (
         c.patch("/api/settings", json={"NCBI_API_KEY": ""}).json()["ncbi_api_key"]["set"] is False
     )
+
+
+def test_real_cli_libraries_kept_apart(settings, tmp_path):
+    """Multi-user: the shared library is its own data dir; root stays untouched."""
+    c = TestClient(create_app(replace(settings, linxiv_bin=BIN, password="owner-password")))
+    assert c.post("/api/login", json={"password": "owner-password"}).status_code == 200
+    csrf = {"X-CSRF-Token": c.cookies.get("lxw_csrf")}
+    r = c.post("/api/admin/multi-user", json={"enabled": True, "username": "boss"}, headers=csrf)
+    assert r.status_code == 200, r.text
+    shared = {**csrf, "X-Linxiv-Library": "shared"}
+    bib = tmp_path / "one.bib"
+    bib.write_text("@misc{sharedone, title={Shared One}, author={Doe, Jane}, year={2020}}\n")
+    with bib.open("rb") as f:
+        r = c.post("/api/import/bibtex", files={"file": ("one.bib", f)}, headers=shared)
+    assert r.status_code == 200, r.text
+    ids = [p["source_id"] for p in c.get("/api/papers", headers=shared).json()]
+    assert ids == ["local:sharedone"]
+    assert c.get("/api/papers").json() == []
+    lib = settings.data_dir / "libraries" / "shared"
+    assert (lib / "papers.db").is_file() and (lib / "pdfs").is_dir()
+
+
+def test_real_cli_copy_from_shared(settings):
+    """Admin fills the shared library; a user copies papers (with PDF) into their own."""
+    s = replace(settings, linxiv_bin=BIN, password="owner-password")
+    with TestClient(create_app(s)) as admin, TestClient(create_app(s)) as user:
+        assert admin.post("/api/login", json={"password": "owner-password"}).status_code == 200
+        csrf = {"X-CSRF-Token": admin.cookies.get("lxw_csrf")}
+        body = {"enabled": True, "username": "boss"}
+        assert admin.post("/api/admin/multi-user", json=body, headers=csrf).status_code == 200
+        new = {"username": "alice", "password": "alice-password", "role": "user"}
+        r = admin.post("/api/users", json=new, headers=csrf)
+        assert r.status_code == 201, r.text
+        key = r.json()["library"]
+        shared = {**csrf, "X-Linxiv-Library": "shared"}
+        pdf = _tiny_pdf("Shared Paper")
+        r = admin.post("/api/pdfs/import", files={"file": ("a.pdf", pdf)}, headers=shared)
+        assert r.status_code == 200, r.text
+        pdf_sid = r.json()["source_id"]
+        bib = (
+            b"@article{d1, title={DOI One}, author={Doe, Jane}, year={2020}, doi={10.1234/ab.5}}\n"
+        )
+        r = admin.post("/api/import/bibtex", files={"file": ("a.bib", bib)}, headers=shared)
+        assert r.status_code == 200, r.text
+        ids = [p["source_id"] for p in admin.get("/api/papers", headers=shared).json()]
+        assert pdf_sid in ids and len(ids) == 2
+
+        body = {"username": "alice", "password": "alice-password"}
+        assert user.post("/api/login", json=body).status_code == 200
+        ucsrf = {"X-CSRF-Token": user.cookies.get("lxw_csrf")}
+        ushared = {**ucsrf, "X-Linxiv-Library": "shared"}
+        assert user.get("/api/papers").json() == []
+        assert sorted(p["source_id"] for p in user.get("/api/papers", headers=ushared).json()) == (
+            sorted(ids)
+        )
+        # Read only for a non-admin.
+        assert user.delete(f"/api/papers/{pdf_sid}", headers=ushared).status_code == 403
+        r = user.post("/api/shared/copy", json={"source_ids": ids}, headers=ushared)
+        assert r.status_code == 200, r.text
+        assert sorted(r.json()["copied"]) == sorted(ids)
+        mine = [p["source_id"] for p in user.get("/api/papers").json()]
+        assert sorted(mine) == sorted(ids)
+        got = user.get(f"/api/papers/{pdf_sid}/pdf")
+        assert got.status_code == 200 and got.content.startswith(b"%PDF-")
+        lib_pdfs = settings.data_dir / "libraries" / key / "pdfs"
+        assert any(lib_pdfs.rglob("*.pdf"))
+        # No temporary projects left behind, papers still in the shared library.
+        for c, h in ((user, {}), (admin, shared)):
+            assert c.get("/api/projects", headers=h).json() == []
+            assert c.get("/api/trash", headers=h).json()["projects"] == []
+        assert len(admin.get("/api/papers", headers=shared).json()) == 2

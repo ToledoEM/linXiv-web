@@ -15,7 +15,7 @@ flowchart LR
 
 - Each MCP session (one `initialize`) gets its own `linxiv-mcp` process. At most 4 sessions run at once; a session closes after 30 minutes idle, and a restart of the container drops all sessions (clients re-initialize).
 - Requests in one session run one at a time. Replies are plain JSON; `GET /mcp` answers 405 (no server-sent events).
-- Which tools a client sees and may call is decided by the bridge (`server/app/mcp_bridge.py`), not by `linxiv-mcp`.
+- The bridge (`server/app/mcp_bridge.py`) decides which tools a client sees and may call.
 
 ## Turning it on
 
@@ -104,11 +104,11 @@ Tools added in a new upstream release stay hidden until they are classified in `
 | `openWorldHint: true` | tools that call outside services (arXiv, DOI resolvers, feeds, ORCID sources) |
 | `title` | readable name, e.g. `List papers` |
 
-Hints are advice to the client, not access control: the profile decides what can be called. A reasonable client setup is to auto-allow read-only tools and always confirm destructive ones by hand.
+Hints only advise the client; the profile decides what can be called. A reasonable client setup auto-allows read-only tools and asks before every destructive one.
 
 ## Tool reference
 
-Descriptions come from `linxiv-mcp` (linXiv v0.7.0). Hints: read-only, edit (undoable), destructive (permanent), idempotent, open world (calls outside services).
+Descriptions come from `linxiv-mcp` (linXiv v0.7.1). Hints: read-only, edit (undoable), destructive (permanent), idempotent, open world (calls outside services).
 
 ### Read only (32 tools)
 
@@ -207,6 +207,7 @@ Descriptions come from `linxiv-mcp` (linXiv v0.7.0). Hints: read-only, edit (und
 - A request carrying another site's `Origin` header is refused with 403, which blocks DNS-rebinding attacks from a browser.
 - Behind a reverse proxy, pass the `Host` header through (see [self-hosting.md](self-hosting.md#https-with-a-reverse-proxy)) so the `Origin` check compares against the public name.
 - Pick the smallest profile that does the job. Full lets an agent delete papers and projects permanently.
+- In multi-user mode only admins can change the MCP settings or create the token, and `/mcp` always works on the owner's library. The shared and per-account libraries are out of its reach. See [Server Admin](server-admin.md).
 
 ## Troubleshooting
 

@@ -12,7 +12,14 @@ const JOB_INFO: Record<string, { label: string; href: string }> = {
 const BUSY_POLL = 5_000
 const IDLE_POLL = 30_000
 
-const label = (j: Job) => JOB_INFO[j.kind]?.label ?? j.kind
+// Maintenance operations (Settings → Server Admin) are `maint-<operation id>`.
+const MAINT = 'maint-'
+const info = (j: Job) =>
+  JOB_INFO[j.kind] ??
+  (j.kind.startsWith(MAINT)
+    ? { label: `Maintenance: ${j.kind.slice(MAINT.length).replaceAll('-', ' ')}`, href: '/settings#admin' }
+    : undefined)
+const label = (j: Job) => info(j)?.label ?? j.kind
 const progress = (j: Job) => (j.total > 0 ? `${j.done} / ${j.total}` : `${j.done}`)
 
 /** Corner panel on every page: running background jobs with progress and Cancel;
@@ -80,7 +87,7 @@ export default function ActivityTray() {
       {running.map((j) => (
         <div key={j.id} className="tray-job">
           <div className="tray-head">
-            <Link to={JOB_INFO[j.kind]?.href ?? '/settings'}>{label(j)}</Link>
+            <Link to={info(j)?.href ?? '/settings'}>{label(j)}</Link>
             <span className="muted small">{progress(j)}</span>
           </div>
           {j.total > 0 && <progress max={j.total} value={j.done} />}

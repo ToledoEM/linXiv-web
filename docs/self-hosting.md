@@ -10,7 +10,7 @@ The current release is the `release` branch, published as the image tag used bel
 - An `amd64` or `arm64` machine. The image is published for both.
 - Two directories on the host: one for the library database, one for PDFs.
 
-The image bundles the `linxiv` CLI and `linxiv-mcp`, built from linXiv v0.7.0. Do not point linXiv-web at a data directory that the linXiv desktop app or `linxiv-headless` also uses: linXiv expects one process per library.
+The image bundles the `linxiv` CLI and `linxiv-mcp`, built from linXiv v0.7.1. Do not point linXiv-web at a data directory that the linXiv desktop app or `linxiv-headless` also uses: linXiv expects one process per library.
 
 ## Quick start
 
@@ -30,7 +30,7 @@ Create `docker-compose.yml`:
 ```yaml
 services:
   linxiv-web:
-    image: ghcr.io/toledoem/linxiv-web:0.1.2
+    image: ghcr.io/toledoem/linxiv-web:0.1.3
     container_name: linxiv-web
     restart: unless-stopped
     env_file:
@@ -67,7 +67,7 @@ docker compose logs -f linxiv-web
 
 Open http://127.0.0.1:8086.
 
-The image is tagged with the linXiv-web version (`0.1.2`) and `latest`; pin the version to choose when you update. The image is public: no `docker login` needed.
+The image is tagged with the linXiv-web version (`0.1.3`) and `latest`; pin the version to choose when you update. The image is public: no `docker login` needed.
 
 ## First-run setup
 
@@ -96,7 +96,7 @@ A password from the environment always wins over the stored one, and setup never
 
 ```sh
 docker run --rm -e PASSWORD='your-password' --entrypoint python \
-  ghcr.io/toledoem/linxiv-web:0.1.2 -m app hash-password
+  ghcr.io/toledoem/linxiv-web:0.1.3 -m app hash-password
 ```
 
 Put it in `.env` next to `docker-compose.yml`, in single quotes (the hash contains `$`):
@@ -125,17 +125,23 @@ docker compose up -d
 
 A password set with `LINXIV_WEB_PASSWORD_HASH` / `LINXIV_WEB_PASSWORD` always wins; change it in `.env` instead.
 
+In multi-user mode, `reset-password --user <name>` resets one account's password and logs only that account out; without `--user` it resets the owner's server password. See [Server Admin](server-admin.md#passwords).
+
 ## Logging in
 
 Tick **Remember me on this browser** to stay logged in for 90 days (`LINXIV_WEB_REMEMBER_DAYS` changes this). Without it, the login ends when the browser closes, and after 14 days at most.
 
 Sessions are kept in `data/linxiv-web-state.db`, so restarting or updating the container keeps you logged in.
 
+## More than one person
+
+By default linXiv-web has one password and one library. To give other people their own logins and libraries, plus a shared library that only admins change, turn on multi-user mode in **Settings → Server Admin**. The login page then asks for a username as well. [Server Admin](server-admin.md) explains accounts, roles and the shared library.
+
 ## Where your data lives
 
 | Host directory | Container | Contents |
 |---|---|---|
-| `data/` (`LINXIV_WEB_DATA_HOST`) | `/data` | `papers.db` (library), `user_settings.json` (linXiv settings, including API keys entered in Settings), `linxiv-web-auth.json` (admin password hash), `linxiv-web-state.db` (sessions, login throttle) |
+| `data/` (`LINXIV_WEB_DATA_HOST`) | `/data` | `papers.db` (library), `user_settings.json` (linXiv settings, including API keys entered in Settings), `linxiv-web-auth.json` (admin password hash), `linxiv-web-state.db` (sessions, login throttle, multi-user accounts), `libraries/` (shared and per-account libraries in multi-user mode) |
 | `pdfs/` (`LINXIV_WEB_PDF_HOST`) | `/pdfs` | PDFs, flat or in year/journal subfolders (Settings → Library → PDF folders) |
 
 Keep `data/` on a local disk: SQLite over network shares or exFAT is unreliable. `pdfs/` may live on a NAS or external drive.
@@ -211,6 +217,7 @@ Settings changed in the web UI are stored in `data/`. Environment variables go i
 | `LINXIV_WEB_ALLOW_EXTERNAL` | `false` | Serve public IP addresses (else 403) |
 | `LINXIV_WEB_TRUSTED_PROXIES` | none | Proxy IPs/CIDRs whose `X-Forwarded-For` is believed |
 | `LINXIV_WEB_MAX_UPLOAD_MB` | `200` | Upload size cap |
+| `LINXIV_WEB_LIBRARIES_PDF_DIR` | none | Multi-user mode: PDF folder for the shared and per-account libraries (container path; mount it) |
 | `CROSSREF_MAILTO`, `NCBI_API_KEY`, `GEMINI_API_KEY`, … | none | Override the values entered in Settings |
 
 The full list is in [Admin Server Configuration](reference/configuration.md).
@@ -221,7 +228,8 @@ To import a folder of PDFs that is already on the server, without the web UI, us
 
 ## Backups
 
-- Database only: Settings → Server & data → Backup downloads a copy of `papers.db` and can import or restore one. It does not include PDFs.
+- Database only: Settings → Server & data → Backup downloads a copy of `papers.db` and can import or restore one. It does not include PDFs. The same card exports and imports the settings (without API keys).
+- Database copies on the server: the "Back up databases" maintenance operation keeps the newest copies of every library database inside the data directory, nightly or on demand. See [Maintenance operations](server-admin.md#maintenance-operations). Set `TZ` on the container so the nightly hour is your local time.
 - Everything: stop the container and copy both directories:
 
   ```sh
@@ -249,7 +257,7 @@ Instead of pulling from GHCR, compose can build from the git repository. Replace
     build:
       context: https://github.com/ToledoEM/linXiv-web.git#release
       args:
-        LINXIV_REF: v0.7.0
+        LINXIV_REF: v0.7.1
     image: linxiv-web:local
 ```
 

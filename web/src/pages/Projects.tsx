@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../api'
 import { ErrorText } from '../components'
+import { useLibrary } from '../library'
 import ProjectImport from '../ProjectImport'
 import { DeleteButton, ProjectForm, Swatch } from '../projectParts'
 import { isReadingList } from '../projects'
@@ -15,9 +16,12 @@ function ProjectCard({
   busy,
   onEdit,
   onAction,
+  readOnly = false,
 }: {
   project: Project
   busy: boolean
+  /** Shared library for a non-admin: no edit/archive/delete. */
+  readOnly?: boolean
   onEdit: () => void
   onAction: (action: 'archive' | 'restore' | 'delete') => void
 }) {
@@ -47,28 +51,31 @@ function ProjectCard({
         ))}
         {tags.length > 3 && <span className="muted small">+{tags.length - 3}</span>}
       </div>
-      <div className="actions">
-        {project.status === 'archived' ? (
-          <button disabled={busy} onClick={() => onAction('restore')}>
-            Restore
-          </button>
-        ) : (
-          <>
-            <button disabled={busy} onClick={onEdit}>
-              Edit
+      {!readOnly && (
+        <div className="actions">
+          {project.status === 'archived' ? (
+            <button disabled={busy} onClick={() => onAction('restore')}>
+              Restore
             </button>
-            <button disabled={busy} onClick={() => onAction('archive')}>
-              Archive
-            </button>
-          </>
-        )}
-        <DeleteButton busy={busy} onConfirm={() => onAction('delete')} />
-      </div>
+          ) : (
+            <>
+              <button disabled={busy} onClick={onEdit}>
+                Edit
+              </button>
+              <button disabled={busy} onClick={() => onAction('archive')}>
+                Archive
+              </button>
+            </>
+          )}
+          <DeleteButton busy={busy} onConfirm={() => onAction('delete')} />
+        </div>
+      )}
     </li>
   )
 }
 
 export default function Projects() {
+  const { canWrite } = useLibrary()
   const [showArchived, setShowArchived] = useState(false)
   const [projects, setProjects] = useState<Project[] | null>(null)
   const [archivedCount, setArchivedCount] = useState(0)
@@ -148,7 +155,7 @@ export default function Projects() {
             </button>
           )
         )}
-        {!showArchived && !creating && !importing && (
+        {canWrite && !showArchived && !creating && !importing && (
           <span className="page-head-action actions-inline">
             <button className="link" onClick={() => setImporting(true)}>
               Import…
@@ -198,6 +205,7 @@ export default function Projects() {
                 key={p.id}
                 project={p}
                 busy={busy !== null}
+                readOnly={!canWrite}
                 onEdit={() => setEditing(p.id)}
                 onAction={(a) => act(p, a)}
               />

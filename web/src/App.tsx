@@ -1,6 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
+import { accountFrom, setAccount, useAccount } from './account'
 import { api, setUnauthorizedHandler } from './api'
+import { useLibrary } from './library'
 import ActivityTray from './ActivityTray'
 import Sidebar, { type NavItem } from './Sidebar'
 import Login from './pages/Login'
@@ -14,6 +16,7 @@ import AddPaper from './pages/AddPaper'
 import Trash from './pages/Trash'
 import AuthorDetail from './pages/AuthorDetail'
 import Authors from './pages/Authors'
+import Duplicates from './pages/Duplicates'
 import Graph from './pages/Graph'
 import Projects from './pages/Projects'
 import ProjectDetail from './pages/ProjectDetail'
@@ -33,14 +36,23 @@ const NAV: NavItem[] = [
   { to: '/search', label: 'Search', icon: '⌕', pageKey: 'search' },
   { to: '/add', label: 'Add Paper', icon: '＋', pageKey: 'add' },
   { to: '/authors', label: 'Authors', icon: '◎' },
+  { to: '/duplicates', label: 'Duplicates', icon: '⧉', pageKey: 'duplicates' },
   { to: '/trash', label: 'Trash', icon: '⌫', pageKey: 'trash' },
   { to: '/settings', label: 'Settings', icon: '⚙' },
 ]
 
-type AuthState = { checked: boolean; enabled: boolean; setup: boolean; authenticated: boolean }
+type AuthState = { checked: boolean; enabled: boolean; setup: boolean; authenticated: boolean; multiUser: boolean }
 
 export default function App() {
-  const [auth, setAuth] = useState<AuthState>({ checked: false, enabled: false, setup: false, authenticated: false })
+  const [auth, setAuth] = useState<AuthState>({
+    checked: false,
+    enabled: false,
+    setup: false,
+    authenticated: false,
+    multiUser: false,
+  })
+  const account = useAccount()
+  const library = useLibrary()
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const pages = useSidebarPages()
@@ -51,15 +63,30 @@ export default function App() {
     if (hiddenPageFor(pathname, pages)) void navigate('/', { replace: true })
   }, [pathname, pages, navigate])
 
+  // Login state + who is logged in; read again after each login (the role decides
+  // which Settings groups show).
+  const refreshMe = useCallback(
+    () =>
+      api
+        .me()
+        .then((me) => {
+          setAccount(accountFrom(me))
+          setAuth({
+            checked: true,
+            enabled: me.auth_enabled,
+            setup: me.setup_required,
+            authenticated: me.authenticated,
+            multiUser: me.multi_user,
+          })
+        })
+        .catch(() => setAuth((a) => ({ ...a, checked: true, enabled: true, setup: false, authenticated: false }))),
+    [],
+  )
+
   useEffect(() => {
     setUnauthorizedHandler(() => setAuth((a) => ({ ...a, authenticated: false })))
-    api
-      .me()
-      .then((me) =>
-        setAuth({ checked: true, enabled: me.auth_enabled, setup: me.setup_required, authenticated: me.authenticated }),
-      )
-      .catch(() => setAuth({ checked: true, enabled: true, setup: false, authenticated: false }))
-  }, [])
+    void refreshMe()
+  }, [refreshMe])
 
   useEffect(() => {
     if (!auth.authenticated) return
@@ -74,19 +101,32 @@ export default function App() {
     return <Setup onDone={() => setAuth((a) => ({ ...a, setup: false, authenticated: true }))} />
   }
   if (!auth.authenticated) {
-    return <Login onLogin={() => setAuth((a) => ({ ...a, authenticated: true }))} />
+    return <Login multiUser={auth.multiUser} onLogin={() => void refreshMe()} />
   }
 
   const logout = async () => {
     await api.logout()
-    setAuth((a) => ({ ...a, authenticated: false }))
+    // Mode may have changed meanwhile (username field on the login page).
+    await refreshMe()
     void navigate('/')
   }
 
   return (
     <div className="layout">
-      <Sidebar items={NAV.filter((i) => !i.pageKey || pages[i.pageKey])} onLogout={auth.enabled ? logout : undefined} />
-      <main className="content">
+      <Sidebar
+        items={NAV.filter((i) => !i.pageKey || pages[i.pageKey])}
+        onLogout={auth.enabled ? logout : undefined}
+        account={account}
+      />
+      {/* Switching library remounts every page, so each loads from the library in view. */}
+      <main className="content" key={library.view}>
+        {library.shared && (
+          <p className="library-banner" role="status">
+            {library.canWrite
+              ? 'Shared library: everyone reads it; your changes here are visible to all users.'
+              : 'Shared library: read only. Select papers and use Copy to my library to keep them.'}
+          </p>
+        )}
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/library" element={<Library />} />
@@ -99,6 +139,7 @@ export default function App() {
           <Route path="/paper/*" element={<PaperDetail />} />
           <Route path="/add" element={<AddPaper />} />
           <Route path="/upload" element={<Navigate to="/add" replace />} />
+          <Route path="/duplicates" element={<Duplicates />} />
           <Route path="/trash" element={<Trash />} />
           <Route path="/authors" element={<Authors />} />
           <Route path="/authors/:id" element={<AuthorDetail />} />

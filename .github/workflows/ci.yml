@@ -42,6 +42,8 @@ jobs:
         run: |
           failed=0
           for sha in $(git rev-list --no-merges "$BASE..$HEAD"); do
+            # Dependabot writes its own long bodies; its PRs skip this job too.
+            [ "$(git log -1 --format=%an "$sha")" = "dependabot[bot]" ] && continue
             git log -1 --format=%B "$sha" > msg
             if ! out=$(sh .githooks/commit-lint.sh msg); then
               echo "::error::$(git log -1 --format='%h %s' "$sha")"
@@ -75,7 +77,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        linxiv_ref: [v0.7.0]
+        linxiv_ref: [v0.7.1]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1

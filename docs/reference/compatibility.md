@@ -4,9 +4,9 @@
 
 | linXiv-web | linXiv CLI / MCP |
 |---|---|
-| 0.1.x | v0.7.0 |
+| 0.1.x | v0.7.1 |
 
-The image builds `linxiv` and `linxiv-mcp` from upstream source at the `LINXIV_REF` build arg (default `v0.7.0`).
+The image builds `linxiv` and `linxiv-mcp` from upstream source at the `LINXIV_REF` build arg (default `v0.7.1`).
 
 ## Resource usage
 
@@ -27,7 +27,7 @@ No CPU or memory limits were set.
 
 Not supported, but feasible without code changes. Docker is the tested path. Running directly on a host needs:
 
-- `linxiv` and `linxiv-mcp` built from the [linXiv repo](https://github.com/linxiv-dev/linXiv) at `v0.7.0` (Rust toolchain, `cargo build --release -p linxiv-cli -p linxiv-mcp`), on `PATH` or set with `LINXIV_BIN` / `LINXIV_MCP_BIN`
+- `linxiv` and `linxiv-mcp` built from the [linXiv repo](https://github.com/linxiv-dev/linXiv) at `v0.7.1` (Rust toolchain, `cargo build --release -p linxiv-cli -p linxiv-mcp`), on `PATH` or set with `LINXIV_BIN` / `LINXIV_MCP_BIN`
 - PDFium library from linXiv's `scripts/fetch_pdfium.sh`, with `LINXIV_PDFIUM_LIB` set to its path
 - Python 3.11+ and `uv` for the server (`cd server && uv sync --frozen --no-dev`)
 - Node.js and `npm` to build the web UI once (`cd web && npm ci && npm run build`), with `LINXIV_WEB_STATIC_DIR` set to `web/dist`

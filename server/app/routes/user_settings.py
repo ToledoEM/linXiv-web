@@ -9,14 +9,18 @@ from __future__ import annotations
 import json
 import os
 import re
-from typing import Literal
+from datetime import UTC, datetime
+from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException, Request
-from pydantic import BaseModel, ConfigDict, Field
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from .. import logs
 from ..activity import note_fields
-from .common import run
+from ..auth import current_user
+from ..libraries import ROOT
+from .common import library, run
 from .feed import clear_feed_cache
 from .mcp import settings_changed as mcp_settings_changed
 
@@ -90,6 +94,9 @@ QUOTED_KEYS = (
     "web_update_check",
     "web_feeds",
 )
+# Server-wide keys: kept in the root library only, changed by admins only (in
+# multi-user mode each library holds its own copy of everything else).
+SERVER_KEYS = ("web_log_level", "web_update_check", GHCR_KEY, "mcp_enabled", "mcp_profile")
 MODEL_RE = r"^[A-Za-z0-9._:/@+-]{0,128}$"
 BASE_URL = r"^$|^[Hh][Tt][Tt][Pp][Ss]?://[^\s/?#]+[^\s?#]*$"
 EMAIL = r"^$|^[^@\s]+@[^@\s]+\.[^@\s]+$"
@@ -130,9 +137,18 @@ class SettingsPatch(BaseModel):
     GHCR_TOKEN: str | None = Field(None, pattern=AI_KEY_RE)
 
 
+async def _root_settings(request: Request) -> dict:
+    out = await request.app.state.cli(["settings", "get"], request.app.state.settings.timeout_short)
+    return out if isinstance(out, dict) else {}
+
+
 async def _current(request: Request) -> dict:
     raw = await run(request, ["settings", "get"])
     raw = raw if isinstance(raw, dict) else {}
+    admin = current_user(request)["role"] == "admin"
+    if admin and library(request).key != ROOT:
+        root = await _root_settings(request)
+        raw = {**raw, **{k: root[k] for k in SERVER_KEYS if k in root}}
     values = {k: raw.get(k, d) for k, d in DEFAULTS.items()}
     for k in (*MAILTO_KEYS, "home_feed_url", "genai_model", "genai_base_url"):
         values[k] = values[k] or ""
@@ -147,7 +163,7 @@ async def _current(request: Request) -> dict:
         s for s in TOGGLE_SOURCES if s in disabled_sources(raw)
     )
     env_overrides = [k for k in (*MAILTO_KEYS, *SECRET_KEYS) if os.environ.get(k)]
-    return {
+    out = {
         # write-only: stored keys never leave the server
         "settings": {**values, **{k: "" for k in SECRET_KEYS}},
         "env_overrides": env_overrides,
@@ -155,6 +171,12 @@ async def _current(request: Request) -> dict:
         "ai_keys": {k: _status(raw, k) for k in AI_KEYS},
         "ghcr_token": _status(raw, GHCR_KEY),
     }
+    if not admin:
+        for k in SERVER_KEYS:
+            out["settings"].pop(k, None)
+        out["env_overrides"] = [k for k in env_overrides if k not in SERVER_KEYS]
+        del out["ghcr_token"]
+    return out
 
 
 def _status(stored: dict, name: str) -> dict:
@@ -292,17 +314,28 @@ async def get_settings(request: Request):
 async def update_settings(request: Request, body: SettingsPatch):
     patch = body.model_dump(exclude_none=True)
     note_fields(request, patch)  # key names only, never values (API keys)
+    server_wide = [k for k in patch if k in SERVER_KEYS]
+    if server_wide and current_user(request)["role"] != "admin":
+        raise HTTPException(
+            status_code=403, detail=f"server-wide settings are admin only: {', '.join(server_wide)}"
+        )
     if "web_lookup_disabled" in patch or "web_lookup_source" in patch:
         await _check_lookup(request, patch)
     if "web_feeds" in patch:
         _check_feeds(patch)
+    root_cli = request.app.state.cli
+    timeout = request.app.state.settings.timeout_short
     for key, value in patch.items():
         # The CLI JSON-parses the value, so bools/ints go as JSON; an email is
         # never valid JSON and stays a string.
         arg = json.dumps(value) if isinstance(value, bool | int) else value
         if key in QUOTED_KEYS:
             arg = json.dumps(value)  # quoted, so an all-digit value stays a string
-        await run(request, ["settings", "update", "--", key, arg])
+        args = ["settings", "update", "--", key, arg]
+        if key in SERVER_KEYS:
+            await root_cli(args, timeout)
+        else:
+            await run(request, args)
     if any(k in patch for k in FEED_KEYS):
         clear_feed_cache(request)
     if any(k.startswith("mcp_") for k in patch):
@@ -311,7 +344,59 @@ async def update_settings(request: Request, body: SettingsPatch):
         logs.set_level(patch["web_log_level"])
     if "full_text_worker_enabled" in patch:
         # Start or stop the background indexer now, not at its next poll.
-        request.app.state.fulltext_worker.wake()
+        library(request).worker.wake()
     if "web_update_check" in patch or GHCR_KEY in patch:
         request.app.state.update_checker.wake()
     return await _current(request)
+
+
+# ---------------------------------------------------------------------------
+# Export / import (Settings → Server & data → Backup)
+
+EXPORT_FORMAT = 1
+
+
+@router.get("/settings/export")
+async def export_settings(request: Request):
+    """The settings a Save can change, as a JSON file, without API keys or
+    tokens. Admins also get the server-wide keys."""
+    current = (await _current(request))["settings"]
+    key = library(request).key
+    body = {
+        "linxiv_web_settings": EXPORT_FORMAT,
+        "exported_at": datetime.now(UTC).isoformat(timespec="seconds"),
+        "library": key,
+        # Only keys a Save can change (not e.g. the applied PDF folder layout).
+        "settings": {
+            k: v
+            for k, v in current.items()
+            if k in SettingsPatch.model_fields and k not in SECRET_KEYS
+        },
+    }
+    name = f"linxiv-web-settings-{key}-{datetime.now(UTC):%Y%m%d}.json"
+    return JSONResponse(body, headers={"Content-Disposition": f'attachment; filename="{name}"'})
+
+
+class SettingsImport(BaseModel):
+    # The exported file as a whole; only `settings` is read.
+    model_config = ConfigDict(extra="ignore")
+
+    settings: dict[str, Any] = Field(max_length=200)
+
+
+@router.post("/settings/import")
+async def import_settings(request: Request, body: SettingsImport):
+    """Apply an exported file through the same checks as a Save. API keys are
+    never imported; unknown keys fail the whole import."""
+    secrets = [k for k in body.settings if k in SECRET_KEYS]
+    if secrets:
+        raise HTTPException(
+            status_code=400, detail=f"API keys are not imported: {', '.join(secrets)}"
+        )
+    try:
+        patch = SettingsPatch.model_validate(body.settings)
+    except ValidationError as e:
+        first = e.errors()[0]
+        where = ".".join(str(p) for p in first.get("loc", ())) or "settings"
+        raise HTTPException(status_code=400, detail=f"{where}: {first.get('msg')}") from e
+    return await update_settings(request, patch)

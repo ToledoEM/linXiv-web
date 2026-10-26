@@ -4,7 +4,7 @@
 
 import { useEffect, useState } from 'react'
 
-export type PageKey = 'reading' | 'tags' | 'graph' | 'search' | 'add' | 'trash'
+export type PageKey = 'reading' | 'tags' | 'graph' | 'search' | 'add' | 'duplicates' | 'trash'
 export type SidebarPages = Record<PageKey, boolean>
 
 export const PAGE_OPTIONS: { key: PageKey; route: string; label: string; description: string }[] = [
@@ -18,6 +18,7 @@ export const PAGE_OPTIONS: { key: PageKey; route: string; label: string; descrip
     label: 'Add Paper',
     description: 'Add papers by link, DOI or arXiv ID, upload PDFs, import metadata files',
   },
+  { key: 'duplicates', route: '/duplicates', label: 'Duplicates', description: 'Papers that share the same PDF file' },
   { key: 'trash', route: '/trash', label: 'Trash', description: 'Deleted papers and projects' },
 ]
 
@@ -27,6 +28,7 @@ export const DEFAULT_SIDEBAR_PAGES: SidebarPages = {
   graph: true,
   search: true,
   add: true,
+  duplicates: true,
   trash: true,
 }
 

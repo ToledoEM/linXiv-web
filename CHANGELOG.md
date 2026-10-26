@@ -6,6 +6,35 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-10-26
+
+### Added
+- Live demo link in the README and the documentation home page.
+- Multi-user mode, off by default. Settings → **Server Admin** turns it on: you pick a username and keep the server password, and your library stays as it is. The login page then asks for a username. Turning it off again lets only the owner log in (password only) and keeps every account and library for later.
+- Settings → Server Admin → **Users** (admins only): add accounts (user or admin), rename them, set a role or a new password, delete them. Each account gets its own library with its own PDFs and settings (AI keys, contacts, feeds, lookup). Deleting an account keeps its library folder on disk and shows where it is. No two accounts may share a password, the last admin can't be demoted or deleted, and the owner always stays admin.
+- Shared library: a separate library everyone can read and only admins change. The sidebar switches between **My library** and **Shared library**; admins fill it with the usual Add, Upload, Search and Feed pages. Users see it read only and use **Copy to my library** (Library selection bar or paper page) to copy papers with their PDFs into their own library; papers they already have keep their stored metadata.
+- `python -m app reset-password --user <name>` resets one account's password and logs that account out.
+- `LINXIV_WEB_LIBRARIES_PDF_DIR`: keep the PDFs of the shared and per-user libraries on another disk (`<dir>/<library>`); it must not be inside `LINXIV_WEB_PDF_DIR`.
+- Settings → Server Admin → **Maintenance operations** (admins only): jobs that run over every library on the server, from a **Run** button or once a night at a chosen hour (server local time, `TZ`). Each row shows its last result:
+  - **Find duplicate papers** hashes every saved PDF (only new or changed files on later runs) and lists papers with identical files on a new **Duplicates** page, where you keep one paper and merge the others into it (notes, highlights, projects, tags and PDFs move over) or mark a group as not duplicates.
+  - **Complete metadata of new papers** looks up papers added since its last run that have one of the gaps you tick (junk title, no authors, date, abstract, journal or DOI) by their own DOI or arXiv id, never by title, in the sources you tick and in the order you set (arXiv, bioRxiv, Crossref, PubMed), and fills only those empty fields. Papers it can't complete are listed; the Library header's **N to complete** link opens them in batch edit metadata.
+  - **Check PDF files** reports papers whose PDF is missing on disk and PDF files no paper points at, without changing anything.
+  - **Back up databases** keeps database copies on the server (newest 7 by default) for download from the same card.
+  - **Clean authors without papers** deletes author records no paper uses any more, such as the authors of papers deleted from the trash. It asks before running.
+  - **Empty trash** deletes for good the papers that have been in the trash longer than a number of days you type (1 to 120; 0, the default, never). Projects in the trash stay. It asks before running.
+- Settings → Server & data → Backup: **Download settings** and **Import settings**, a JSON file of every setting a Save can change. API keys and tokens are never in the file and stay as they are on import.
+- API: `GET/POST /api/users`, `PUT/DELETE /api/users/{id}`, `GET/POST /api/admin/multi-user`, `POST /api/shared/copy`. Requests choose the shared library with the `X-Linxiv-Library: shared` header or `?library=shared` on plain links. `/api/me` reports `multi_user`, `username`, `role` and `owner`. Maintenance: `GET /api/maintenance`, `PUT /api/maintenance/schedule`, `POST /api/maintenance/{op}/run`, `GET /api/maintenance/backups`, `GET/DELETE /api/maintenance/backups/{library}/{name}`, `GET /api/maintenance/pdf-check`, `GET/PUT /api/maintenance/complete-metadata/options`, `GET /api/duplicates`, `POST /api/duplicates/merge`, `POST /api/duplicates/dismiss`, `GET /api/metadata-review`, `POST /api/metadata-review/remove`, `GET /api/settings/export`, `POST /api/settings/import`.
+
+### Changed
+- Built against linXiv v0.7.1 (was v0.7.0). CLI commands and MCP tools are unchanged. Project BibTeX export now includes authors and, for arXiv papers, `eprint`/`archivePrefix`; BibTeX import keeps arXiv ids and versions, so an exported project re-imports as the same papers. A broken full-text index now shows as a Library search error instead of returning fewer results.
+- Background jobs belong to the library they run on and the account that started them: the same job can run in two libraries at once, and users see only their own jobs. The full-text indexer runs once per library, one arXiv fetch at a time across all of them.
+- Activity log entries name the account that made the change.
+- Batch edit metadata: Approve all reloads the list once at the end instead of after every paper, and each save no longer reads the paper again first, so a save costs one CLI call instead of three or four. `PUT /api/papers/{id}/metadata` accepts the paper's current `tags`; when they are sent the server skips its own `paper get`.
+
+### Security
+- In multi-user mode, app logs, the activity log, the update check, system status and diagnostics, and MCP settings are admin only, as are the server-wide settings (log level, update check, `GHCR_TOKEN`, MCP). The MCP endpoint keeps serving the owner's library.
+- Every request reads the account's role from the server, so a role change, password reset or deletion applies at once and ends that account's sessions. Failed logins are counted per address and username, so one account under attack doesn't lock out others.
+
 ## [0.1.2] - 2026-10-20
 
 ### Added

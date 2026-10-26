@@ -12,7 +12,7 @@ on:
       linxiv_ref:
         description: "linXiv tag/branch to bundle (Dockerfile LINXIV_REF)"
         required: false
-        default: v0.7.0
+        default: v0.7.1
         type: string
 
 concurrency:
@@ -101,7 +101,7 @@ jobs:
         with:
           context: .
           platforms: ${{ matrix.platform }}
-          build-args: LINXIV_REF=${{ inputs.linxiv_ref || 'v0.7.0' }}
+          build-args: LINXIV_REF=${{ inputs.linxiv_ref || 'v0.7.1' }}
           labels: |
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.version=${{ needs.version.outputs.version }}

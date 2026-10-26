@@ -36,6 +36,31 @@ function UpdateLine({ u }: { u: UpdateStatus }) {
   return null
 }
 
+/** Settings → About for non-admin accounts: version only (release check and server
+ *  status are admin only). */
+export function AboutBasic() {
+  const [version, setVersion] = useState('')
+  useEffect(() => {
+    api
+      .health()
+      .then((h) => setVersion(h.version))
+      .catch(() => setVersion(''))
+  }, [])
+  return (
+    <div className="card settings-section">
+      <h3>About</h3>
+      <strong>linXiv-web</strong>
+      <div className="muted small">Version {version || '…'}</div>
+      <p className="muted small">
+        Web interface for linXiv. Open source under the Apache License 2.0.{' '}
+        <a href="https://github.com/ToledoEM/linXiv-web" target="_blank" rel="noreferrer">
+          Source on GitHub
+        </a>
+      </p>
+    </div>
+  )
+}
+
 /** Settings → About: version + release check, health, disk space (Sonarr-style status page). */
 export default function AboutSettings({
   draft,

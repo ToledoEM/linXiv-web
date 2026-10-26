@@ -4,9 +4,17 @@ The web UI uses this API, and scripts can call it too. Every route except `/api/
 
 Most routes map to one `linxiv` CLI command. The right column names the command or describes what the server does.
 
+In multi-user mode (see [Server Admin](../server-admin.md)) each request works on the caller's own library, or on the shared library when it sends the header `X-Linxiv-Library: shared` (plain links such as a PDF or a download use `?library=shared` instead). Writes to the shared library by accounts that are not admins get 403, except `POST /api/shared/copy` and `POST /api/export/bibtex`. Logs, activity, update check, system status and diagnostics, and `/api/mcp` are admin only. `GET /api/jobs` lists only the caller's own jobs for accounts that are not admins.
+
 | Route | linxiv command / behaviour |
 |---|---|
-| `POST /api/password` `{current, new, remember?}` | Change the stored admin password (409 when it comes from `LINXIV_WEB_PASSWORD(_HASH)`); logs out every other session |
+| `POST /api/login` `{username?, password, remember?}` | Start a session. `username` is required in multi-user mode and ignored otherwise; failed attempts are limited per client address and username |
+| `GET /api/me` | Login state: `auth_enabled`, `setup_required`, `authenticated`, `password_source`, `multi_user`, `username`, `role` (`admin` or `user`), `owner` |
+| `POST /api/password` `{current, new, remember?}` | Change the caller's own password; logs out the caller's other sessions. For the owner this is the stored server password (409 when it comes from `LINXIV_WEB_PASSWORD(_HASH)`). In multi-user mode the new password must differ from every other account's |
+| `GET /api/admin/multi-user`, `POST /api/admin/multi-user` `{enabled, username?}` | Admin only. Multi-user status and owner username; turn it on (`username` names the owner the first time) or off (owner only; logs out every other account) |
+| `GET /api/users`, `POST /api/users` `{username, password, role}` | Admin only. List accounts (never their password hashes); create one with its own library (409 for a taken username, 400 for a password another account uses) |
+| `PUT /api/users/{id}` `{username?, password?, role?}`, `DELETE /api/users/{id}` | Admin only. Rename, set a password, change the role (each ends that account's sessions); delete (the library stays on disk, its path is returned). The owner stays admin and can't be deleted; the last admin can't be demoted or deleted; nobody deletes their own account |
+| `POST /api/shared/copy` `{source_ids}` | Copy papers with their PDFs from the shared library into the caller's own: a temporary project is exported with `project export --pdfs` and imported with `project import --on-conflict=merge`, then both temporary projects are deleted. Returns `copied`, `failed`, `skipped_pdfs` |
 | `POST /api/sessions/revoke-others` | Log out every session except the caller's; returns `{revoked}` |
 | `GET /api/activity?limit`, `GET /api/activity/export` | Activity log, newest first / as CSV: every POST/PUT/PATCH/DELETE under `/api/` with time, client address, route, path parameters, status (Settings saves: key names only). Kept in `<data dir>/logs/activity.jsonl`, 5 MiB + one rotated file |
 | `DELETE /api/activity` `{confirm: "delete activity log"}` | Clear the activity log (the clear is recorded) |
@@ -51,6 +59,13 @@ Most routes map to one `linxiv` CLI command. The right column names the command 
 | `POST /api/trash/papers/{id}/restore`, `DELETE /api/trash/papers/{id}` | `trash restore`, `trash hard-delete` (paper must be in the trash) |
 | `POST /api/trash/projects/{id}/restore`, `DELETE /api/trash/projects/{id}` | `trash restore-project`, `trash hard-delete-project` |
 | `GET /api/backup`, `POST /api/backup/import`, `POST /api/backup/restore` (multipart `file`) | `backup` (database snapshot download), `import` (merge another database), `restore` (replace the library; refused while a job runs) |
+| `GET /api/settings/export`, `POST /api/settings/import` (the exported JSON) | Settings that `PATCH /api/settings` accepts, as a download without API keys or tokens (admins also get the server-wide keys); import applies a file's `settings` through the same checks, refusing API keys and unknown keys |
+| `GET /api/maintenance`, `PUT /api/maintenance/schedule` `{hour, nightly[], keep_backups?, trash_days? (0-120)}`, `POST /api/maintenance/{op}/run` | Admin only. Maintenance operations (`duplicates`, `complete-metadata`, `pdf-check`, `backup`, `clean-authors`, `empty-trash`) with their last result and running job; the nightly hour (server local time) and ticked operations; start one as job `maint-<op>` over every library (409 while it runs) |
+| `GET /api/maintenance/backups`, `GET`/`DELETE /api/maintenance/backups/{library}/{name}` | Admin only. Database backups the `backup` operation keeps in each library's `maintenance/backups/`: list, download, delete |
+| `GET`/`PUT /api/maintenance/complete-metadata/options` `{gaps[], sources[]}` | Admin only. Which gaps (`title`, `authors`, `date`, `abstract`, `journal`, `doi`) make a new paper incomplete, and which sources (`arxiv`, `biorxiv`, `crossref`, `pubmed`) are asked, in order; at least one of each |
+| `GET /api/maintenance/pdf-check` | Admin only. Last `pdf-check` report per library: missing PDF files and files no paper points at (lists capped at 500, counts complete) |
+| `GET /api/duplicates`, `POST /api/duplicates/merge` `{winner, loser}`, `POST /api/duplicates/dismiss` `{source_ids}` | Groups of papers with identical PDF files from the last `duplicates` run in this library; `paper merge` keeps the winner; dismissed groups stay hidden on later runs |
+| `GET /api/metadata-review`, `POST /api/metadata-review/remove` `{source_ids}` | Papers `complete-metadata` could not complete in this library (fixed or deleted ones drop out); take papers off the list |
 | `GET /api/settings`, `PATCH /api/settings` | `settings get`, `settings update`, limited to an allowlist (storage cap, TeX rendering, contact addresses, home feed, search history, full-text worker, AI and MCP settings); API keys are write-only |
 | `GET /api/ai/models`, `POST /api/ai/test`, `GET /api/ai/schemas` | Provider model list, connection test, the JSON Schema and example each AI action uses (409 while AI is off) |
 | `POST /api/ai/tags/{id}`, `POST /api/ai/summary/{id}?pdf=`, `POST /api/ai/cleanup/{id}` | AI tag suggestions, summary, metadata cleanup; previews only, nothing is written |

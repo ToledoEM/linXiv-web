@@ -15,6 +15,8 @@ Compares the `linxiv` CLI that the web server wraps with the web server code in 
 - Direct external calls: PubMed via NCBI E-utilities (`routes/metadata.py`), and bioRxiv/medRxiv as a source (DOI-only, 2 MB cap).
 - `POST /api/add`: `routes/add.py` classifies the input (arXiv ID, DOI, publisher article link, PDF URL) on the server and then picks the CLI command. Publisher links (Nature, Springer, Wiley, ACS, APS, IOP, Science, PNAS and others) map to their DOI with the table from linXiv v0.7.0's `recognize.rs`, which only the linXiv app and `linxiv-headless` use. The publisher PDF is fetched on a best-effort basis: the server checks that the link returns a real PDF before `linxiv pdf download` stores it, because that command keeps whatever the link returns.
 - Metadata from the PDF's file name: `app/pdf_name.py` reads a title and a year folder from the stored PDF path. `GET /papers` and `GET /papers/{id}` flag titles that look like junk read from the PDF (`title_suspect`), and `GET /papers/{id}/lookup?by=filename` searches Crossref, OpenAlex, arXiv or PubMed with the file name's title instead of the stored DOI.
+- Maintenance operations: `app/maintenance.py` runs them as jobs over every library and schedules them nightly. Duplicate detection (`app/duplicates.py`) hashes PDF files and reads PDF paths from SQLite; linXiv keeps no checksum. "Complete metadata of new papers" (`app/metadata_fill.py`) reads `PAPER_ROOTS.CREATED_AT` from SQLite, because no CLI command reports when a paper was added, and saves through `paper repair`. The PDF file check (`app/pdf_check.py`) compares the folder with SQLite. Backups (`app/db_backup.py`), author cleanup (`app/authors_clean.py`) and Empty trash (`app/trash_empty.py`) only call `linxiv backup`, `author list/delete` and `trash list/hard-delete`.
+- Settings export and import: `GET /settings/export` and `POST /settings/import` in `routes/user_settings.py`. The CLI has no settings file format.
 - PDF full text: `routes/sources.py` extracts a saved PDF's text with pypdf and stores it with `linxiv paper set-text` (linXiv v0.7.0). This works for one paper or as a job over every non-arXiv paper with a PDF. The CLI only fetches arXiv TeX source by itself.
 
 ## Server-side logic layered on CLI results
@@ -39,7 +41,7 @@ Compares the `linxiv` CLI that the web server wraps with the web server code in 
 
 ## Blocked on the CLI
 
-These exist in linXiv, but only in the `linxiv-headless` HTTP API ([linXiv `docs/api.md`](https://github.com/linxiv-dev/linXiv/blob/main/docs/api.md)), not in the CLI or `linxiv-mcp` (checked against v0.7.0). linXiv-web would need either new upstream CLI commands or `linxiv-headless` as its backend. The headless server cannot share the library with the CLI, because linXiv allows one process per library.
+These exist in linXiv, but only in the `linxiv-headless` HTTP API ([linXiv `docs/api.md`](https://github.com/linxiv-dev/linXiv/blob/main/docs/api.md)), not in the CLI or `linxiv-mcp` (checked against v0.7.1). linXiv-web would need either new upstream CLI commands or `linxiv-headless` as its backend. The headless server cannot share the library with the CLI, because linXiv allows one process per library.
 
 | Feature | linxiv-headless route | linXiv-web today |
 |---|---|---|

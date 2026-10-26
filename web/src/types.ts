@@ -366,6 +366,8 @@ export interface MetadataInput {
   category: string | null
   doi: string | null
   url: string | null
+  /** Current tags, kept by the save; omitted = the server reads them. */
+  tags?: string[]
 }
 
 /** 'ai' = AI metadata cleanup (POST /api/ai/cleanup), same candidate shape. */
@@ -421,6 +423,90 @@ export interface Job {
   cancel_requested: boolean
 }
 
+/** Last run of one maintenance operation; `libraries` maps library key to what it did there. */
+export interface MaintenanceRun {
+  started_at: string
+  finished_at: string
+  state: 'done' | 'cancelled'
+  errors: number
+  libraries: Record<string, Record<string, unknown>>
+}
+
+export interface MaintenanceOp {
+  id: string
+  label: string
+  description: string
+  destructive: boolean
+  last: MaintenanceRun | null
+  job: Job | null
+}
+
+/** GET /api/maintenance: nightly schedule (server local hour) and the operations. */
+export interface MaintenanceSchedule {
+  /** Nightly run hour, server local time. */
+  hour: number
+  nightly: string[]
+  /** Database backups kept per library by the "backup" operation. */
+  keep_backups: number
+  /** Cleanup empties trash entries older than this many days; 0 keeps the trash. */
+  trash_days: number
+}
+
+export type MaintenanceScheduleInput = Pick<MaintenanceSchedule, 'hour' | 'nightly'> &
+  Partial<Pick<MaintenanceSchedule, 'keep_backups' | 'trash_days'>>
+
+export interface MaintenanceOverview extends MaintenanceSchedule {
+  timezone: string | null
+  nightly_on: string | null
+  ops: MaintenanceOp[]
+}
+
+/** Database backup kept on the server; `library` is the library key (root, shared, u<id>). */
+export interface ServerBackup {
+  library: string
+  name: string
+  size: number
+}
+
+/** "Complete metadata of new papers" choices: ticked gaps, ticked sources in asking order. */
+export interface FillOptions {
+  gaps: string[]
+  sources: string[]
+  all_gaps: string[]
+  all_sources: string[]
+}
+
+/** Last "Check PDF files" result of one library; lists are capped, counts are not. */
+export interface PdfCheckReport {
+  library: string
+  checked_at: string
+  pdfs: number
+  missing_count: number
+  unlinked_count: number
+  missing: { source_id: string; version: number; title: string }[]
+  unlinked: { file: string; size: number }[]
+}
+
+export interface DuplicatePaper {
+  source_id: string
+  version: number
+  title: string
+  /** File path inside the PDF folder. */
+  file: string
+  size: number
+}
+
+/** Papers whose saved PDFs are byte-identical (same SHA-256). */
+export interface DuplicateGroup {
+  sha256: string
+  papers: DuplicatePaper[]
+}
+
+export interface DuplicatesReport {
+  scanned_at: string | null
+  groups: DuplicateGroup[]
+}
+
 /** `annotation list` row; `anchor` is the raw JSON string (parse with parseAnchor). */
 export interface Annotation {
   id: number
@@ -436,10 +522,41 @@ export interface Annotation {
 /** One line of the activity log (`server/app/activity.py`): no bodies, no values. */
 export interface ActivityEvent {
   at: string
+  /** Acting username (multi-user mode only). */
+  actor?: string
   client: string
   method: string
   route: string
   target: Record<string, string>
   status: number
   fields?: string[]
+}
+
+export type Role = 'admin' | 'user'
+
+/** `GET /api/me`. `owner`: the server owner's account (root library, server password). */
+export interface Me {
+  auth_enabled: boolean
+  setup_required: boolean
+  authenticated: boolean
+  password_source: 'env' | 'stored' | null
+  multi_user: boolean
+  username: string | null
+  role: Role | null
+  owner: boolean
+}
+
+/** Multi-user account (`server/app/routes/users.py`); never carries a password. */
+export interface UserAccount {
+  id: number
+  username: string
+  role: Role
+  library: string
+  created_at: string
+  owner: boolean
+}
+
+export interface MultiUserStatus {
+  enabled: boolean
+  owner_username: string | null
 }

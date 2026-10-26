@@ -30,6 +30,12 @@ Tick papers and open **batch edit** to:
 
 While a batch runs, leaving the page asks for confirmation, because leaving stops the batch.
 
+When the maintenance operations have found something, the paper count at the top gains links: **N duplicate groups** opens the Duplicates page, and **N to complete** selects the papers whose metadata could not be completed automatically and opens batch edit metadata on them. See [Maintenance operations](../server-admin.md#maintenance-operations).
+
+## Shared library
+
+In multi-user mode the top of the sidebar switches between **My library** and **Shared library**. The shared library is read only unless you are an admin: batch edit and the project picker are hidden, and the selection bar offers **Export .bib** and **Copy to my library**, which copies the selected papers and their PDFs into your own library. See [Server Admin](../server-admin.md#the-shared-library).
+
 ## Dark mode
 
 ![Library in dark mode](../assets/screenshots/library-dark.png)

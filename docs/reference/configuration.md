@@ -12,10 +12,12 @@ linXiv-web reads these environment variables, usually from the `.env` file next 
 | `LINXIV_WEB_REMEMBER_DAYS` | `90` | Login lifetime when "Remember me" is ticked (otherwise the login lasts until the browser closes, at most 14 days) |
 | `LINXIV_WEB_DATA_DIR` | `/data` | linXiv data dir (`papers.db`). Passed to the CLI and MCP server as `LINXIV_DATA_DIR` |
 | `LINXIV_WEB_PDF_DIR` | `/pdfs` | PDF directory, symlinked from `<data dir>/pdfs` |
+| `LINXIV_WEB_LIBRARIES_PDF_DIR` | none | Multi-user mode: where the shared and per-account libraries keep their PDFs (`<dir>/<library>`). Unset: inside each library's folder under `<data dir>/libraries/`. Must be writable and not inside `LINXIV_WEB_PDF_DIR`. See [Server Admin](../server-admin.md) |
 | `LINXIV_WEB_HOST` / `LINXIV_WEB_PORT` | `0.0.0.0` / `8000` in the image | Listen address |
 | `LINXIV_WEB_ALLOW_EXTERNAL` | `false` | Serve clients with public IP addresses. Off: only loopback, private LAN and link-local clients get through (others get 403) |
 | `LINXIV_WEB_TRUSTED_PROXIES` | none | Comma-separated IPs/CIDRs of reverse proxies whose `X-Forwarded-For` is believed (read right to left). Unlisted proxies count as the client |
 | `LINXIV_WEB_MAX_UPLOAD_MB` | `200` | Upload size cap |
+| `TZ` | UTC | Time zone for the nightly maintenance hour and the times shown for maintenance runs and server backups, e.g. `Europe/London`. See [Maintenance operations](../server-admin.md#maintenance-operations) |
 | `LINXIV_WEB_TIMEOUT_LONG` / `_SHORT` | `120` / `30` | CLI timeout in seconds (search, fetch, download and import use the long one) |
 | `LINXIV_BIN` / `LINXIV_MCP_BIN` | `linxiv` / `linxiv-mcp` | CLI and MCP server binaries |
 | `ARXIV_MAILTO`, `CROSSREF_MAILTO`, `OPENALEX_MAILTO` | none | Contact addresses sent to those services; override the values set in Settings |

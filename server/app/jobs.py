@@ -35,6 +35,9 @@ class Job:
     started_at: float = field(default_factory=time.time)
     finished_at: float | None = None
     cancel_requested: bool = False
+    # Which library it works on, and who started it (None: single-user mode).
+    library: str = "root"
+    user_id: int | None = None
 
     def public(self) -> dict[str, Any]:
         return asdict(self)
@@ -55,23 +58,40 @@ class Jobs:
     def get(self, job_id: int) -> Job | None:
         return self._jobs.get(job_id)
 
-    def list(self, kind: str | None = None) -> list[Job]:
-        jobs = [j for j in self._jobs.values() if kind is None or j.kind == kind]
+    def list(self, kind: str | None = None, library: str | None = None) -> list[Job]:
+        jobs = [
+            j
+            for j in self._jobs.values()
+            if (kind is None or j.kind == kind) and (library is None or j.library == library)
+        ]
         return sorted(jobs, key=lambda j: j.id, reverse=True)
 
-    def running(self, kind: str) -> Job | None:
-        return next((j for j in self.list(kind) if j.state == "running"), None)
+    def running(self, kind: str | None, library: str | None = None) -> Job | None:
+        """A running job of `kind` (any kind when None) in `library` (any when None)."""
+        return next((j for j in self.list(kind, library) if j.state == "running"), None)
 
-    def start(self, kind: str, work: Callable[[Job], Awaitable[None]]) -> Job:
-        """Start `work(job)` unless a job of the same kind is running."""
-        if busy := self.running(kind):
+    def start(
+        self,
+        kind: str,
+        work: Callable[[Job], Awaitable[None]],
+        library: str = "root",
+        user_id: int | None = None,
+    ) -> Job:
+        """Start `work(job)` unless a job of the same kind runs on the same library."""
+        if busy := self.running(kind, library):
             raise JobBusy(busy)
-        job = Job(id=next(self._ids), kind=kind)
+        job = Job(id=next(self._ids), kind=kind, library=library, user_id=user_id)
         self._jobs[job.id] = job
         self._tasks[job.id] = asyncio.get_running_loop().create_task(self._run(job, work))
         self._prune()
         log.info("job %d %s started", job.id, job.kind)
         return job
+
+    async def wait(self, job_id: int) -> None:
+        """Return once the job has finished (at once if it is not running)."""
+        task = self._tasks.get(job_id)
+        if task is not None:
+            await asyncio.wait({task})
 
     def cancel(self, job_id: int) -> Job | None:
         job = self._jobs.get(job_id)

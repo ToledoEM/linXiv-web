@@ -17,7 +17,8 @@ from __future__ import annotations
 import json
 import re
 import xml.etree.ElementTree as ET
-from typing import Annotated, Literal
+from collections.abc import Awaitable, Callable
+from typing import Annotated, Any, Literal
 from urllib.parse import quote
 
 import httpx
@@ -29,10 +30,12 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from ..cli import CLIError
 from ..doi import clean_doi
 from ..pdf_name import pdf_file, title_from_file, year_from_file
-from .common import ident, run, settings
+from .common import ident, library, run
 from .user_settings import disabled_sources, ncbi_api_key
 
 router = APIRouter(prefix="/api", tags=["metadata"])
+# A library CLI call with the timeout already chosen: argv -> parsed JSON.
+Call = Callable[[list[str]], Awaitable[Any]]
 
 # One argv string is capped at 128 KiB on Linux.
 MAX_TEXT_BYTES = 100_000
@@ -50,6 +53,7 @@ BIORXIV_SERVERS = ("biorxiv", "medrxiv")
 BIORXIV_JOURNAL = {"biorxiv": "bioRxiv", "medrxiv": "medRxiv"}
 DOI_RE = re.compile(r"^10\.\d{4,9}/\S+$")
 Author = Annotated[str, Field(min_length=1, max_length=500)]
+Tag = Annotated[str, Field(min_length=1, max_length=512)]
 _MONTHS = {
     m: i
     for i, m in enumerate(
@@ -74,6 +78,9 @@ class MetadataIn(BaseModel):
     category: str | None = Field(None, max_length=500)
     doi: str | None = Field(None, max_length=500)
     url: str | None = Field(None, max_length=2000)
+    # The paper's current tags, when the client already holds them (batch edit):
+    # saves the `paper get` round trip. Omitted = read them from the CLI.
+    tags: list[Tag] | None = Field(None, max_length=2000)
 
     @field_validator("title", "category", "doi", "url")
     @classmethod
@@ -93,6 +100,16 @@ class MetadataIn(BaseModel):
             raise ValueError("author names must not be blank")
         return names
 
+    @field_validator("tags")
+    @classmethod
+    def _tags(cls, v: list[str] | None) -> list[str] | None:
+        if v is None:
+            return None
+        tags = [_no_ctrl(t.strip()) for t in v]
+        if not all(tags):
+            raise ValueError("tags must not be blank")
+        return tags
+
     @field_validator("summary")
     @classmethod
     def _summary(cls, v: str) -> str:
@@ -109,8 +126,10 @@ async def save_metadata(request: Request, source_id: str, body: MetadataIn):
     sid = ident(source_id, "paper id")
     if not body.title:
         raise HTTPException(status_code=400, detail="title must not be blank")
-    paper = await run(request, ["paper", "get", "--", sid])
-    tags = (paper.get("tags") or []) if isinstance(paper, dict) else []
+    tags = body.tags
+    if tags is None:
+        paper = await run(request, ["paper", "get", "--", sid])
+        tags = (paper.get("tags") or []) if isinstance(paper, dict) else []
     args = ["paper", "repair", f"--title={body.title}"]
     args += [f"--authors={a}" for a in (body.authors or [UNKNOWN_AUTHOR])]
     args += [f"--published={body.published}", f"--summary={body.summary}"]
@@ -158,15 +177,20 @@ def _from_search(source: str, r: dict) -> dict:
     )
 
 
-async def _search(request: Request, source: str, query: str) -> list[dict]:
+def cli_call(request: Request) -> Call:
+    """The library's CLI with the long timeout (lookups reach outside services)."""
+    return lambda args: run(request, args, long=True)
+
+
+async def _search(call: Call, source: str, query: str) -> list[dict]:
     args = ["search", "--source", source, "--max", str(MAX_RESULTS), "--", ident(query, "query")]
-    results = await run(request, args, long=True)
+    results = await call(args)
     return [_from_search(source, r) for r in results or [] if isinstance(r, dict)]
 
 
-async def _crossref_doi(request: Request, doi: str) -> list[dict]:
+async def _crossref_doi(call: Call, doi: str) -> list[dict]:
     try:
-        d = await run(request, ["doi", "resolve", "--", ident(doi, "DOI")], long=True)
+        d = await call(["doi", "resolve", "--", ident(doi, "DOI")])
     except CLIError as e:
         if e.status == 404:
             return []
@@ -383,8 +407,8 @@ async def _by_filename(request: Request, source: str, paper: dict) -> dict:
     """Search by the title in the PDF's file name, ignoring the stored DOI (it may
     belong to another paper). The last candidate is the file name itself: its
     title, and its year folder as the date, for papers no source can find."""
-    s = settings(request)
-    rel = pdf_file(paper.get("pdf_path"), [str(s.data_dir / "pdfs"), str(s.pdf_dir)])
+    lib = library(request)
+    rel = pdf_file(paper.get("pdf_path"), [str(lib.data_dir / "pdfs"), str(lib.pdf_dir)])
     title = title_from_file(rel)
     if not title:
         raise HTTPException(status_code=400, detail="the PDF file name has no title to search by")
@@ -396,7 +420,7 @@ async def _by_filename(request: Request, source: str, paper: dict) -> dict:
     if source == "pubmed":
         found = await _pubmed(f"{title}[title]", await _ncbi_key(request))
     else:
-        found = await _search(request, source, title)
+        found = await _search(cli_call(request), source, title)
     year = year_from_file(rel)
     published = paper.get("published")
     if year and not str(published or "").startswith(str(year)):
@@ -437,9 +461,10 @@ async def lookup(
     arxiv_id = sid.removeprefix("arxiv:") if sid.startswith("arxiv:") else None
 
     if source == "crossref" and doi:
-        return {"match": "doi", "candidates": await _crossref_doi(request, doi)}
+        return {"match": "doi", "candidates": await _crossref_doi(cli_call(request), doi)}
     if source == "arxiv" and arxiv_id:
-        return {"match": "arxiv", "candidates": await _search(request, "arxiv", f"id:{arxiv_id}")}
+        found = await _search(cli_call(request), "arxiv", f"id:{arxiv_id}")
+        return {"match": "arxiv", "candidates": found}
     if source == "biorxiv":
         if not doi:
             raise HTTPException(
@@ -455,4 +480,56 @@ async def lookup(
         return {"match": "title", "candidates": await _pubmed(f"{title}[title]", key)}
     if not title:
         raise HTTPException(status_code=400, detail="paper has no title to search by")
-    return {"match": "title", "candidates": await _search(request, source, title)}
+    return {"match": "title", "candidates": await _search(cli_call(request), source, title)}
+
+
+# ---------------------------------------------------------------------------
+# Identifier match (maintenance: complete metadata of new papers)
+
+# bioRxiv/medRxiv DOI prefixes: their API only knows these.
+BIORXIV_PREFIXES = ("10.1101/", "10.64898/")
+# Sources that can look a paper up by its exact identifier. OpenAlex is not one:
+# the CLI only searches it by text or fetches it by OpenAlex work id.
+ID_SOURCES = ("arxiv", "biorxiv", "crossref", "pubmed")
+
+
+async def match_by_id(
+    call: Call, paper: dict, sources: list[str], ncbi_key: str = ""
+) -> dict | None:
+    """The record a source holds under this paper's own arXiv id or DOI, or None.
+    Never searches by title, so a hit is the same paper. `sources` are tried in
+    order; each is asked only when it applies: arXiv for arXiv papers, bioRxiv
+    for bioRxiv/medRxiv DOIs, Crossref and PubMed for any DOI."""
+    sid = str(paper.get("source_id") or "")
+    arxiv_id = sid.removeprefix("arxiv:") if sid.startswith("arxiv:") else None
+    doi = clean_doi(paper.get("doi"))
+    for source in sources:
+        if source == "arxiv" and arxiv_id:
+            found = await _search(call, "arxiv", f"id:{arxiv_id}")
+            hit = next((c for c in found if (c.get("ref") or "").endswith(arxiv_id)), None)
+        elif source == "biorxiv" and doi and doi.startswith(BIORXIV_PREFIXES):
+            found = await _biorxiv(doi)
+            hit = next((c for c in found if (c.get("doi") or "").lower() == doi.lower()), None)
+        elif source in ("crossref", "pubmed") and doi:
+            if source == "crossref":
+                found = await _crossref_doi(call, doi)
+            else:
+                found = await _pubmed(f"{doi}[doi]", ncbi_key)
+            hit = next((c for c in found if (c.get("doi") or "").lower() == doi.lower()), None)
+        else:
+            continue
+        if hit:
+            return hit
+    return None
+
+
+def repair_args(sid: str, body: MetadataIn, tags: list[str]) -> list[str]:
+    """`paper repair` argv for a full record (see save_metadata: omitted options
+    are cleared, so every field and the current tags go along)."""
+    args = ["paper", "repair", f"--title={body.title}"]
+    args += [f"--authors={a}" for a in (body.authors or [UNKNOWN_AUTHOR])]
+    args += [f"--published={body.published}", f"--summary={body.summary}"]
+    for flag, value in (("category", body.category), ("doi", body.doi), ("url", body.url)):
+        if value:
+            args.append(f"--{flag}={value}")
+    return [*args, *(f"--tags={t}" for t in tags), "--", sid]

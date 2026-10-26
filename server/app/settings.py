@@ -51,6 +51,9 @@ class Settings:
     trusted_proxies: tuple[str, ...] = ()
     # Send Strict-Transport-Security (only when served over HTTPS).
     hsts: bool = False
+    # Multi-user mode: where the shared and per-user libraries keep their PDFs
+    # (`<dir>/<library>`); unset = inside each library's own folder.
+    libraries_pdf_dir: Path | None = None
 
     @property
     def auth_enabled(self) -> bool:
@@ -59,6 +62,7 @@ class Settings:
 
 def load() -> Settings:
     static = os.environ.get("LINXIV_WEB_STATIC_DIR")
+    lib_pdfs = os.environ.get("LINXIV_WEB_LIBRARIES_PDF_DIR")
     data_dir = Path(os.environ.get("LINXIV_WEB_DATA_DIR", "/data"))
     return Settings(
         linxiv_bin=os.environ.get("LINXIV_BIN", "linxiv"),
@@ -79,6 +83,7 @@ def load() -> Settings:
         log_level=os.environ.get("LINXIV_WEB_LOG_LEVEL", "info").strip().lower() or "info",
         allow_external=_bool("LINXIV_WEB_ALLOW_EXTERNAL"),
         hsts=_bool("LINXIV_WEB_HSTS"),
+        libraries_pdf_dir=Path(lib_pdfs) if lib_pdfs else None,
         trusted_proxies=tuple(
             p.strip()
             for p in os.environ.get("LINXIV_WEB_TRUSTED_PROXIES", "").split(",")
