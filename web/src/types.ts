@@ -448,6 +448,26 @@ export interface MaintenanceOverview {
   ops: MaintenanceOp[]
 }
 
+export interface DuplicatePaper {
+  source_id: string
+  version: number
+  title: string
+  /** File path inside the PDF folder. */
+  file: string
+  size: number
+}
+
+/** Papers whose saved PDFs are byte-identical (same SHA-256). */
+export interface DuplicateGroup {
+  sha256: string
+  papers: DuplicatePaper[]
+}
+
+export interface DuplicatesReport {
+  scanned_at: string | null
+  groups: DuplicateGroup[]
+}
+
 /** `annotation list` row; `anchor` is the raw JSON string (parse with parseAnchor). */
 export interface Annotation {
   id: number

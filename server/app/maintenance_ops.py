@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from . import duplicates
 from .maintenance import Op
 
-OPS: list[Op] = []
+OPS: list[Op] = [duplicates.OP]

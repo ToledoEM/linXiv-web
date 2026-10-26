@@ -7,6 +7,7 @@ import type {
   Author,
   AuthorDetail,
   AuthorUpdate,
+  DuplicatesReport,
   FeedResponse,
   FeedRule,
   Job,
@@ -434,6 +435,11 @@ export const api = {
   jobs: (kind?: string) => request<Job[]>('GET', `/api/jobs${qs({ kind })}`),
   job: (id: number) => request<Job>('GET', `/api/jobs/${id}`),
   cancelJob: (id: number) => request<Job>('POST', `/api/jobs/${id}/cancel`),
+  duplicates: () => request<DuplicatesReport>('GET', '/api/duplicates'),
+  mergeDuplicate: (winner: string, loser: string) =>
+    request<DuplicatesReport>('POST', '/api/duplicates/merge', { winner, loser }),
+  dismissDuplicates: (sourceIds: string[]) =>
+    request<DuplicatesReport>('POST', '/api/duplicates/dismiss', { source_ids: sourceIds }),
   maintenance: () => request<MaintenanceOverview>('GET', '/api/maintenance'),
   setMaintenanceSchedule: (hour: number, nightly: string[]) =>
     request<{ hour: number; nightly: string[] }>('PUT', '/api/maintenance/schedule', { hour, nightly }),

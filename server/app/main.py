@@ -32,6 +32,7 @@ from .routes import (
     annotations,
     authors,
     backup,
+    duplicates,
     exports,
     feed,
     graph,
@@ -236,6 +237,7 @@ def create_app(
     app.include_router(exports.router, dependencies=guarded)
     app.include_router(system.router, dependencies=admin_only)
     app.include_router(maintenance.router, dependencies=admin_only)
+    app.include_router(duplicates.router, dependencies=guarded)
     app.include_router(authors.router, dependencies=guarded)
     app.include_router(feed.router, dependencies=guarded)
     app.include_router(backup.router, dependencies=guarded)

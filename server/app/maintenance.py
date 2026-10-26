@@ -16,9 +16,11 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import os
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from .cli import CLIError
@@ -36,6 +38,7 @@ SCHEDULE_SETTING = "web_maint_schedule"
 STATUS_SETTING = "web_maint_status"
 DEFAULT_HOUR = 3
 MAX_WAIT = 3600  # schedule re-read at least hourly (PUT /schedule wakes it sooner)
+MAINT_DIR = "maintenance"
 SHARED = "shared"
 ROOT = "root"
 
@@ -71,6 +74,28 @@ def _parse(raw: Any) -> dict:
     except ValueError:
         data = None
     return data if isinstance(data, dict) else {}
+
+
+def report_path(lib: Library, name: str) -> Path:
+    """`<library data dir>/maintenance/<name>`: where operations keep their results."""
+    folder = lib.data_dir / MAINT_DIR
+    folder.mkdir(mode=0o700, exist_ok=True)
+    return folder / name
+
+
+def read_report(path: Path) -> dict:
+    try:
+        data = json.loads(path.read_text())
+    except (OSError, ValueError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def write_report(path: Path, data: dict) -> None:
+    """Whole-file replace, so a reader never sees half a report."""
+    tmp = path.with_suffix(".tmp")
+    tmp.write_text(json.dumps(data))
+    os.replace(tmp, path)
 
 
 def library_keys(app: FastAPI) -> list[str]:

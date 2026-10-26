@@ -512,6 +512,37 @@ def test_real_cli_pdf_folder_layout(settings):
         assert not any(settings.pdf_dir.rglob("*.pdf"))
 
 
+def test_real_cli_duplicates_scan_and_merge(settings):
+    with TestClient(create_app(replace(settings, linxiv_bin=BIN))) as c:
+        a = c.post("/api/pdfs/import", files={"file": ("a.pdf", _tiny_pdf("Dup A"))}).json()
+        b = c.post("/api/pdfs/import", files={"file": ("b.pdf", _tiny_pdf("Dup B"))}).json()
+        keep, drop = a["source_id"], b["source_id"]
+        assert c.post(f"/api/papers/{keep}/tags", json={"tags": ["kept"]}).status_code == 200
+        assert c.post(f"/api/papers/{drop}/tags", json={"tags": ["moved"]}).status_code == 200
+        # Same bytes under two papers (e.g. one file imported twice under other ids).
+        files = {p.name: p for p in settings.pdf_dir.rglob("*.pdf")}
+        drop_file = files[f"{drop.replace(':', '_')}v1.pdf"]
+        drop_file.write_bytes(files[f"{keep.replace(':', '_')}v1.pdf"].read_bytes())
+
+        job = c.post("/api/maintenance/duplicates/run").json()
+        for _ in range(200):
+            job = c.get(f"/api/jobs/{job['id']}").json()
+            if job["state"] != "running":
+                break
+            time.sleep(0.05)
+        assert job["state"] == "done", job
+        assert job["result"]["duplicate_groups"] == 1
+        [group] = c.get("/api/duplicates").json()["groups"]
+        assert {p["source_id"] for p in group["papers"]} == {keep, drop}
+
+        r = c.post("/api/duplicates/merge", json={"winner": keep, "loser": drop})
+        assert r.status_code == 200, r.text
+        assert r.json()["groups"] == []
+        assert c.get(f"/api/papers/{drop}").status_code == 404
+        assert set(c.get(f"/api/papers/{keep}").json()["tags"]) == {"kept", "moved"}
+        assert c.get(f"/api/papers/{keep}/pdf").content.startswith(b"%PDF-")
+
+
 def test_real_cli_ncbi_api_key_setting(settings, monkeypatch):
     monkeypatch.delenv("NCBI_API_KEY", raising=False)
     c = TestClient(create_app(replace(settings, linxiv_bin=BIN)))

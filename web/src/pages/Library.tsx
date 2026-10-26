@@ -180,12 +180,17 @@ export default function Library() {
   const [reload, setReload] = useState(0)
   const [total, setTotal] = useState(NaN)
   const [seen, setSeen] = useState<Record<string, string>>({})
+  const [duplicates, setDuplicates] = useState(0)
 
   useEffect(() => {
     api
       .allTags()
       .then(setTags)
       .catch(() => setTags([]))
+    api
+      .duplicates()
+      .then((d) => setDuplicates(d.groups.length))
+      .catch(() => {})
   }, [])
 
   // Deleting or untagging papers can shrink the result below the current page.
@@ -257,7 +262,17 @@ export default function Library() {
   return (
     <section>
       <h2>Library</h2>
-      <p className="muted small library-count">{papers ? `${count} paper${count === 1 ? '' : 's'}` : '\u00a0'}</p>
+      <p className="muted small library-count">
+        {papers ? `${count} paper${count === 1 ? '' : 's'}` : '\u00a0'}
+        {duplicates > 0 && (
+          <>
+            {' \u00b7 '}
+            <Link to="/duplicates">
+              {duplicates} duplicate group{duplicates === 1 ? '' : 's'}
+            </Link>
+          </>
+        )}
+      </p>
       <div className="toolbar">
         <div className="chips" role="group" aria-label="PDF filter">
           {PDF_FILTERS.map((f) => (

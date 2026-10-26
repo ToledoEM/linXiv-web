@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { api } from './api'
 import { ErrorText } from './components'
 import ConfirmDialog from './ConfirmDialog'
@@ -8,6 +9,10 @@ import type { MaintenanceOp, MaintenanceOverview } from './types'
 const POLL_MS = 1000
 const HOURS = Array.from({ length: 24 }, (_, h) => h)
 const pad = (n: number) => String(n).padStart(2, '0')
+// Pages that show what an operation found, for the library in view.
+const REPORT_PAGES: Record<string, { to: string; label: string } | undefined> = {
+  duplicates: { to: '/duplicates', label: 'Show duplicates' },
+}
 
 const when = (iso: string) => iso.replace('T', ' ').slice(0, 16)
 
@@ -102,6 +107,7 @@ export default function MaintenanceSettings() {
             <tbody>
               {data.ops.map((op) => {
                 const nightly = data.nightly.includes(op.id)
+                const report = REPORT_PAGES[op.id]
                 return (
                   <tr key={op.id}>
                     <td>
@@ -120,6 +126,11 @@ export default function MaintenanceSettings() {
                         </div>
                       ) : (
                         <div className="muted small">Never run</div>
+                      )}
+                      {report && (
+                        <Link className="small" to={report.to}>
+                          {report.label}
+                        </Link>
                       )}
                     </td>
                     <td className="nowrap">
