@@ -35,6 +35,8 @@ Deleting an account removes the login only. Its library stays on disk, and the p
 | Change the shared library | No | Yes |
 | Change own password | Yes | Yes |
 | Server Admin: multi-user mode and accounts | No | Yes |
+| Maintenance operations and server backups | No | Yes |
+| Duplicates page: merge or dismiss in own library | Yes | Yes |
 | App logs, activity log | No | Yes |
 | Update check, health, disk space, diagnostics | No | Yes |
 | MCP server and its token | No | Yes |
@@ -119,6 +121,32 @@ Either one logs that account out of every browser.
 Libraries are created the first time they are opened. To keep the PDFs of the shared and per-account libraries on another disk, set `LINXIV_WEB_LIBRARIES_PDF_DIR`; each library then links its `pdfs/` to `<that folder>/<library>`. The folder must not be inside `LINXIV_WEB_PDF_DIR`.
 
 **Settings → Server & data → Backup** backs up, imports and restores the library you are looking at. Copying the whole `data/` and `pdfs/` folders, as in [Backups](self-hosting.md#backups), covers every library and every account.
+
+## Maintenance operations
+
+**Settings → Server Admin → Maintenance operations** lists jobs that look after every library on the server: the owner's, the shared one and each account's. Each row has a **Run** button, the result of its last run, and a **Nightly** box. Ticked operations run one after another once a night at the hour picked at the top of the card. The hour is the server's local time; set `TZ` on the container (for example `TZ=Europe/London`) when the server should not use UTC. A running operation shows its progress in the activity tray and can be cancelled.
+
+| Operation | What it does |
+|---|---|
+| Find duplicate papers | Reads every saved PDF and lists papers whose files are byte for byte the same on the **Duplicates** page. Only new or changed files are read again on later runs. |
+| Complete metadata of new papers | For papers added since its last run that have a junk title, or no authors, date, abstract, journal or DOI, it looks the paper up by its own DOI or arXiv id (never by title) and fills the empty fields. Stored values are kept. Lookup sources switched off in Settings are not asked. |
+| Check PDF files | Reports papers whose PDF file is missing on disk, and PDF files in the PDF folder that no paper points at. It changes nothing. **Show report** lists them. |
+| Back up databases | Saves a copy of each library's database on the server and keeps the newest ones (7 unless you change it below the table). PDF files are not included. |
+| Clean up | Deletes database restore snapshots beyond the newest 3, and papers and projects that have been in the trash longer than the days set on its row (0, the default, leaves the trash alone). It asks before running. |
+
+The first run of "Complete metadata of new papers" looks at papers added in the last 30 days.
+
+### Duplicates
+
+The **Duplicates** page (sidebar) shows the groups the last "Find duplicate papers" run found in the library you are looking at. Pick the paper to keep and click **Merge into kept paper**: linXiv moves the other papers' notes, highlights, projects, tags and PDFs to it, then deletes them. **Not duplicates** hides a group from later runs. The Library header links to the page while there are groups. In the shared library only admins can merge or dismiss.
+
+### Papers left incomplete
+
+Papers that "Complete metadata of new papers" could not finish are listed per library. The Library header shows **N to complete**; the link, or **Review papers left incomplete** in the operation's row, selects them and opens batch edit metadata. Saving fixes a paper and drops it from the list; **Skip** takes it off the list too.
+
+### Database backups on the server
+
+Below the operations, **Database backups on the server** lists the copies "Back up databases" made, per library, with **Download** and **Delete**. To restore one, download it, switch to that library and use **Restore** in Settings → Server & data → Backup. Backups and the other operation results live in `maintenance/` inside each library's data folder.
 
 ## Background jobs and MCP
 

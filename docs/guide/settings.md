@@ -26,7 +26,7 @@ Theme, light/dark/system mode, zoom and density. Display turns TeX rendering in 
 
 ## Server & data
 
-Storage sets a cap on total PDF size; downloads and imports stop once saved PDFs reach it. Login changes your password and can log out every other session. Backup downloads, imports or restores the database of the library you are looking at. Logs shows the server log, and Activity lists every change made through the API, with the account that made it in multi-user mode.
+Storage sets a cap on total PDF size; downloads and imports stop once saved PDFs reach it. Login changes your password and can log out every other session. Backup downloads, imports or restores the database of the library you are looking at, and exports or imports its settings as a JSON file. Logs shows the server log, and Activity lists every change made through the API, with the account that made it in multi-user mode.
 
 ![Server and data settings](../assets/screenshots/settings-server.png)
 
@@ -46,7 +46,7 @@ The MCP server for Claude Code, Codex and OpenCode: switch it on, choose the too
 
 ## Server Admin
 
-Admins only. Multi-user mode turns named accounts and the shared library on or off, and Users adds, edits and deletes accounts. See [Server Admin](../server-admin.md).
+Admins only. Multi-user mode turns named accounts and the shared library on or off, and Users adds, edits and deletes accounts. Maintenance operations finds duplicate papers, completes metadata of new papers, checks PDF files, backs up the databases and cleans up old files and trash, on demand or nightly. See [Server Admin](../server-admin.md) and [Maintenance operations](../server-admin.md#maintenance-operations).
 
 In multi-user mode, accounts that are not admins see fewer settings: no Integrations or Server Admin group, no Logs or Activity card, and About shows the version only. Their AI keys, contacts, feeds and lookup choices belong to their own library.
 
