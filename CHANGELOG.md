@@ -27,6 +27,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Built against linXiv v0.7.1 (was v0.7.0). CLI commands and MCP tools are unchanged. Project BibTeX export now includes authors and, for arXiv papers, `eprint`/`archivePrefix`; BibTeX import keeps arXiv ids and versions, so an exported project re-imports as the same papers. A broken full-text index now shows as a Library search error instead of returning fewer results.
 - Background jobs belong to the library they run on and the account that started them: the same job can run in two libraries at once, and users see only their own jobs. The full-text indexer runs once per library, one arXiv fetch at a time across all of them.
 - Activity log entries name the account that made the change.
+- Batch edit metadata: Approve all reloads the list once at the end instead of after every paper, and each save no longer reads the paper again first, so a save costs one CLI call instead of three or four. `PUT /api/papers/{id}/metadata` accepts the paper's current `tags`; when they are sent the server skips its own `paper get`.
 
 ### Security
 - In multi-user mode, app logs, the activity log, the update check, system status and diagnostics, and MCP settings are admin only, as are the server-wide settings (log level, update check, `GHCR_TOKEN`, MCP). The MCP endpoint keeps serving the owner's library.

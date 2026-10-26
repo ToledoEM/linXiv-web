@@ -366,6 +366,8 @@ export interface MetadataInput {
   category: string | null
   doi: string | null
   url: string | null
+  /** Current tags, kept by the save; omitted = the server reads them. */
+  tags?: string[]
 }
 
 /** 'ai' = AI metadata cleanup (POST /api/ai/cleanup), same candidate shape. */
