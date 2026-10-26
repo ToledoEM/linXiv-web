@@ -180,13 +180,60 @@ export default function Library() {
   const [reload, setReload] = useState(0)
   const [total, setTotal] = useState(NaN)
   const [seen, setSeen] = useState<Record<string, string>>({})
+  const [duplicates, setDuplicates] = useState(0)
 
   useEffect(() => {
     api
       .allTags()
       .then(setTags)
       .catch(() => setTags([]))
+    api
+      .duplicates()
+      .then((d) => setDuplicates(d.groups.length))
+      .catch(() => {})
   }, [])
+
+  // Papers "Complete metadata of new papers" could not complete; a save may fix one.
+  const [review, setReview] = useState<string[]>([])
+  useEffect(() => {
+    api
+      .metadataReview()
+      .then((r) => setReview(r.papers.map((p) => p.source_id)))
+      .catch(() => {})
+  }, [reload])
+
+  // ?review=metadata (link from the header or Settings): select those papers and
+  // open batch edit metadata on them, then drop the parameter.
+  const reviewParam = params.get('review') === 'metadata'
+  useEffect(() => {
+    if (!reviewParam) return
+    let live = true
+    api
+      .metadataReview()
+      .then((r) => {
+        if (!live) return
+        const ids = r.papers.map((p) => p.source_id)
+        setReview(ids)
+        setSelected(new Set(ids))
+        setBatchMode('metadata')
+        setBatch(true)
+        const next = new URLSearchParams(window.location.search)
+        next.delete('review')
+        setParams(next, { replace: true })
+      })
+      .catch((err) => setError((err as Error).message))
+    return () => {
+      live = false
+    }
+  }, [reviewParam, setParams])
+
+  const skip = (sid: string) => {
+    setSelected((s) => toggled(s, sid))
+    if (review.includes(sid)) {
+      setReview((r) => r.filter((x) => x !== sid))
+      api.removeMetadataReview([sid]).catch(() => {})
+    }
+  }
 
   // Deleting or untagging papers can shrink the result below the current page.
   const lastPage = Number.isFinite(total) ? Math.max(1, Math.ceil(total / size)) : Infinity
@@ -257,7 +304,25 @@ export default function Library() {
   return (
     <section>
       <h2>Library</h2>
-      <p className="muted small library-count">{papers ? `${count} paper${count === 1 ? '' : 's'}` : '\u00a0'}</p>
+      <p className="muted small library-count">
+        {papers ? `${count} paper${count === 1 ? '' : 's'}` : '\u00a0'}
+        {duplicates > 0 && (
+          <>
+            {' \u00b7 '}
+            <Link to="/duplicates">
+              {duplicates} duplicate group{duplicates === 1 ? '' : 's'}
+            </Link>
+          </>
+        )}
+        {library.canWrite && review.length > 0 && (
+          <>
+            {' · '}
+            <Link to="/library?review=metadata" title="Papers whose metadata could not be completed automatically">
+              {review.length} to complete
+            </Link>
+          </>
+        )}
+      </p>
       <div className="toolbar">
         <div className="chips" role="group" aria-label="PDF filter">
           {PDF_FILTERS.map((f) => (
@@ -477,7 +542,7 @@ export default function Library() {
             selected={batchIds}
             titles={titles}
             onSaved={() => setReload((n) => n + 1)}
-            onSkip={(sid) => setSelected((s) => toggled(s, sid))}
+            onSkip={skip}
           />
         )}
       </div>

@@ -7,12 +7,17 @@ import type {
   Author,
   AuthorDetail,
   AuthorUpdate,
+  DuplicatesReport,
   FeedResponse,
+  FillOptions,
   FeedRule,
   Job,
   LogsResponse,
   LogWindow,
   LookupSource,
+  MaintenanceOverview,
+  MaintenanceSchedule,
+  MaintenanceScheduleInput,
   McpStatus,
   Me,
   MergeCandidates,
@@ -23,12 +28,14 @@ import type {
   Note,
   Paper,
   PdfLayout,
+  PdfCheckReport,
   PdfLayoutPreview,
   PaperVersions,
   Project,
   ProjectInput,
   SavedPdf,
   SavedPdfView,
+  ServerBackup,
   SystemStatus,
   UpdateStatus,
   SearchResult,
@@ -92,7 +99,12 @@ export const graphExportUrl = (format: 'graphml' | 'csv', excludeSingleAuthors: 
   withLibrary(`/api/graph/export${qs({ format, exclude_single_authors: excludeSingleAuthors || undefined })}`)
 /** Database snapshot download of the library in view. */
 export const backupUrl = () => withLibrary(BACKUP_URL)
+/** Settings of the library in view as a JSON file (no API keys). */
+export const settingsExportUrl = () => withLibrary('/api/settings/export')
 export const DIAGNOSTICS_URL = '/api/system/diagnostics'
+/** A database backup kept on the server by the "backup" maintenance operation (GET downloads it). */
+export const serverBackupUrl = (b: ServerBackup) =>
+  `/api/maintenance/backups/${encodeURIComponent(b.library)}/${encodeURIComponent(b.name)}`
 
 /** Tell the activity tray a background job just started (it polls slowly when idle). */
 function started<T>(p: Promise<T>): Promise<T> {
@@ -433,6 +445,27 @@ export const api = {
   jobs: (kind?: string) => request<Job[]>('GET', `/api/jobs${qs({ kind })}`),
   job: (id: number) => request<Job>('GET', `/api/jobs/${id}`),
   cancelJob: (id: number) => request<Job>('POST', `/api/jobs/${id}/cancel`),
+  duplicates: () => request<DuplicatesReport>('GET', '/api/duplicates'),
+  mergeDuplicate: (winner: string, loser: string) =>
+    request<DuplicatesReport>('POST', '/api/duplicates/merge', { winner, loser }),
+  dismissDuplicates: (sourceIds: string[]) =>
+    request<DuplicatesReport>('POST', '/api/duplicates/dismiss', { source_ids: sourceIds }),
+  metadataReview: () =>
+    request<{ papers: { source_id: string; title: string; missing: string[] }[] }>('GET', '/api/metadata-review'),
+  removeMetadataReview: (sourceIds: string[]) =>
+    request<{ ok: boolean }>('POST', '/api/metadata-review/remove', { source_ids: sourceIds }),
+  maintenance: () => request<MaintenanceOverview>('GET', '/api/maintenance'),
+  /** Omitted keep_backups / trash_days keep their stored values. */
+  setMaintenanceSchedule: (body: MaintenanceScheduleInput) =>
+    request<MaintenanceSchedule>('PUT', '/api/maintenance/schedule', body),
+  fillOptions: () => request<FillOptions>('GET', '/api/maintenance/complete-metadata/options'),
+  setFillOptions: (gaps: string[], sources: string[]) =>
+    request<FillOptions>('PUT', '/api/maintenance/complete-metadata/options', { gaps, sources }),
+  pdfCheck: () => request<{ libraries: PdfCheckReport[] }>('GET', '/api/maintenance/pdf-check'),
+  maintenanceBackups: () =>
+    request<{ backups: ServerBackup[] }>('GET', '/api/maintenance/backups'),
+  deleteMaintenanceBackup: (b: ServerBackup) => request<{ ok: boolean }>('DELETE', serverBackupUrl(b)),
+  runMaintenance: (id: string) => started(request<Job>('POST', `/api/maintenance/${encodeURIComponent(id)}/run`)),
 
   stats: () => request<Stats>('GET', '/api/stats'),
   storage: () => request<{ storage_mb: number; pdf_dir: string }>('GET', '/api/pdfs/storage'),
@@ -444,6 +477,8 @@ export const api = {
   clearActivity: (confirm: string) => request<{ ok: boolean }>('DELETE', '/api/activity', { confirm }),
   updateSettings: (patch: Partial<UserSettings>) =>
     request<SettingsResponse>('PATCH', '/api/settings', patch),
+  /** `file`: a parsed settings export (only its `settings` object is applied). */
+  importSettings: (file: unknown) => request<SettingsResponse>('POST', '/api/settings/import', file),
   aiModels: () => request<{ provider: AiProvider; models: string[] }>('GET', '/api/ai/models'),
   aiTest: () => request<AiTestResult>('POST', '/api/ai/test'),
   aiSchemas: () => request<AiTask[]>('GET', '/api/ai/schemas'),

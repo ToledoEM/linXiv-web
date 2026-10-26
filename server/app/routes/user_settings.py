@@ -9,10 +9,12 @@ from __future__ import annotations
 import json
 import os
 import re
-from typing import Literal
+from datetime import UTC, datetime
+from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException, Request
-from pydantic import BaseModel, ConfigDict, Field
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from .. import logs
 from ..activity import note_fields
@@ -346,3 +348,55 @@ async def update_settings(request: Request, body: SettingsPatch):
     if "web_update_check" in patch or GHCR_KEY in patch:
         request.app.state.update_checker.wake()
     return await _current(request)
+
+
+# ---------------------------------------------------------------------------
+# Export / import (Settings → Server & data → Backup)
+
+EXPORT_FORMAT = 1
+
+
+@router.get("/settings/export")
+async def export_settings(request: Request):
+    """The settings a Save can change, as a JSON file, without API keys or
+    tokens. Admins also get the server-wide keys."""
+    current = (await _current(request))["settings"]
+    key = library(request).key
+    body = {
+        "linxiv_web_settings": EXPORT_FORMAT,
+        "exported_at": datetime.now(UTC).isoformat(timespec="seconds"),
+        "library": key,
+        # Only keys a Save can change (not e.g. the applied PDF folder layout).
+        "settings": {
+            k: v
+            for k, v in current.items()
+            if k in SettingsPatch.model_fields and k not in SECRET_KEYS
+        },
+    }
+    name = f"linxiv-web-settings-{key}-{datetime.now(UTC):%Y%m%d}.json"
+    return JSONResponse(body, headers={"Content-Disposition": f'attachment; filename="{name}"'})
+
+
+class SettingsImport(BaseModel):
+    # The exported file as a whole; only `settings` is read.
+    model_config = ConfigDict(extra="ignore")
+
+    settings: dict[str, Any] = Field(max_length=200)
+
+
+@router.post("/settings/import")
+async def import_settings(request: Request, body: SettingsImport):
+    """Apply an exported file through the same checks as a Save. API keys are
+    never imported; unknown keys fail the whole import."""
+    secrets = [k for k in body.settings if k in SECRET_KEYS]
+    if secrets:
+        raise HTTPException(
+            status_code=400, detail=f"API keys are not imported: {', '.join(secrets)}"
+        )
+    try:
+        patch = SettingsPatch.model_validate(body.settings)
+    except ValidationError as e:
+        first = e.errors()[0]
+        where = ".".join(str(p) for p in first.get("loc", ())) or "settings"
+        raise HTTPException(status_code=400, detail=f"{where}: {first.get('msg')}") from e
+    return await update_settings(request, patch)

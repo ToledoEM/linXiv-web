@@ -21,6 +21,8 @@ from .cli import CLIError, LinxivCLI, Runner
 from .fulltext_worker import FullTextWorker
 from .jobs import Jobs
 from .libraries import Libraries
+from .maintenance import Maintenance
+from .maintenance_ops import OPS as MAINTENANCE_OPS
 from .mcp_bridge import McpBridge
 from .netguard import ClientGuard, parse_networks
 from .routes import activity as activity_routes
@@ -30,13 +32,16 @@ from .routes import (
     annotations,
     authors,
     backup,
+    duplicates,
     exports,
     feed,
     graph,
     imports,
     library,
+    maintenance,
     mcp,
     metadata,
+    metadata_review,
     notes,
     pdfs,
     projects,
@@ -129,16 +134,17 @@ def create_app(
     async def lifespan(app: FastAPI):
         # The background indexer runs against the real CLI only; tests drive
         # FullTextWorker.step() directly.
-        task = update_task = None
+        task = update_task = maint_task = None
         if runner is None:
             await _stored_log_level(app.state.cli, settings.timeout_short)
             task = asyncio.create_task(app.state.fulltext_worker.run())
             update_task = asyncio.create_task(app.state.update_checker.run())
+            maint_task = asyncio.create_task(app.state.maintenance.run())
         log.info("linxiv-web %s started (log level %s)", __version__, logs.level_name())
         try:
             yield
         finally:
-            for t in (task, update_task):
+            for t in (task, update_task, maint_task):
                 if t:
                     t.cancel()
             app.state.libraries.close()
@@ -172,6 +178,7 @@ def create_app(
         start_workers=runner is None,
     )
     app.state.update_checker = UpdateChecker(app.state.cli, __version__, settings.timeout_short)
+    app.state.maintenance = Maintenance(app, MAINTENANCE_OPS)
     app.state.mcp = McpBridge(
         [settings.mcp_bin], {"LINXIV_DATA_DIR": str(settings.data_dir)}, settings.timeout_long * 2
     )
@@ -230,6 +237,9 @@ def create_app(
     app.include_router(imports.router, dependencies=guarded)
     app.include_router(exports.router, dependencies=guarded)
     app.include_router(system.router, dependencies=admin_only)
+    app.include_router(maintenance.router, dependencies=admin_only)
+    app.include_router(duplicates.router, dependencies=guarded)
+    app.include_router(metadata_review.router, dependencies=guarded)
     app.include_router(authors.router, dependencies=guarded)
     app.include_router(feed.router, dependencies=guarded)
     app.include_router(backup.router, dependencies=guarded)

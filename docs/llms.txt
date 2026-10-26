@@ -18,7 +18,8 @@ linXiv-web is a community project, not an official linXiv component. A FastAPI s
 - [Search and add papers](https://raw.githubusercontent.com/ToledoEM/linXiv-web/main/docs/guide/search-and-add.md): arXiv, OpenAlex, Crossref and local search; add by arXiv id, DOI or PDF link
 - [Authors, graph and tags](https://raw.githubusercontent.com/ToledoEM/linXiv-web/main/docs/guide/authors-graph-tags.md): author pages, merging, ORCID backfill, knowledge graph, tags
 - [Settings](https://raw.githubusercontent.com/ToledoEM/linXiv-web/main/docs/guide/settings.md): settings groups, browser-stored versus server-stored options
-- [Trash and backups](https://raw.githubusercontent.com/ToledoEM/linXiv-web/main/docs/guide/trash-backup.md): trash, restore, database backup and import
+- [Trash and backups](https://raw.githubusercontent.com/ToledoEM/linXiv-web/main/docs/guide/trash-backup.md): trash, restore, database backup and import, settings export and import
+- [Server Admin](https://raw.githubusercontent.com/ToledoEM/linXiv-web/main/docs/server-admin.md): multi-user mode, accounts, shared library, maintenance operations (duplicates, metadata of new papers, PDF check, server backups, authors without papers, empty trash)
 
 ## AI and agents
 

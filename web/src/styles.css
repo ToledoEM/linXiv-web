@@ -625,6 +625,15 @@ kbd { display: inline-block; margin-right: 0.25rem; padding: 0.05rem 0.4rem; fon
 .users-table th, .users-table td { text-align: left; padding: 0.35rem 0.5rem; border-bottom: 1px solid var(--border); vertical-align: top; }
 .users-table .actions { margin-top: 0; }
 .users-table .pill { margin-left: 0.4rem; }
+.dup-group { margin-bottom: 0.8rem; }
+.server-backups { margin-top: 1rem; }
+.pdf-check { margin-top: 0.5rem; }
+.days-input { width: 4.5rem; }
+.fill-options fieldset { border: none; padding: 0; margin: 0.5rem 0 0; display: flex; flex-wrap: wrap; gap: 0.2rem 1rem; }
+.fill-options legend { font-weight: 600; padding: 0; margin-bottom: 0.2rem; width: 100%; }
+.fill-options ol { padding-left: 0; margin: 0; width: 100%; }
+.fill-options li { display: flex; align-items: center; gap: 0.3rem; }
+.server-backups input[type="number"] { width: 4.5rem; }
 .users-add { display: grid; gap: 0.6rem; max-width: 24rem; margin-top: 1rem; }
 .users-add h4 { margin: 0; }
 /* Multi-user: library switch (sidebar) and shared-library banner */

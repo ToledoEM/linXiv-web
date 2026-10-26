@@ -228,7 +228,8 @@ To import a folder of PDFs that is already on the server, without the web UI, us
 
 ## Backups
 
-- Database only: Settings → Server & data → Backup downloads a copy of `papers.db` and can import or restore one. It does not include PDFs.
+- Database only: Settings → Server & data → Backup downloads a copy of `papers.db` and can import or restore one. It does not include PDFs. The same card exports and imports the settings (without API keys).
+- Database copies on the server: the "Back up databases" maintenance operation keeps the newest copies of every library database inside the data directory, nightly or on demand. See [Maintenance operations](server-admin.md#maintenance-operations). Set `TZ` on the container so the nightly hour is your local time.
 - Everything: stop the container and copy both directories:
 
   ```sh

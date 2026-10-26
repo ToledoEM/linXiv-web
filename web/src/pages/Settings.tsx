@@ -4,6 +4,7 @@ import AboutSettings, { AboutBasic } from '../AboutSettings'
 import ActivityLog from '../ActivityLog'
 import AiSettings from '../AiSettings'
 import AppLogs from '../AppLogs'
+import MaintenanceSettings from '../MaintenanceSettings'
 import McpSettings from '../McpSettings'
 import MultiUserSettings from '../MultiUserSettings'
 import { useAccount } from '../account'
@@ -175,6 +176,19 @@ export default function Settings() {
     setAiEnabled(r.settings.ai_enabled)
     setTexEnabled(r.settings.tex_rendering_enabled)
     setLookupPrefs(r.settings.web_lookup_source, r.settings.web_lookup_disabled)
+  }
+
+  // A settings file was imported: every card shows the stored values again.
+  const imported = (r: SettingsResponse) => {
+    setSaved(r.settings)
+    setDraft(r.settings)
+    setEnvOverrides(r.env_overrides)
+    setNcbi(r.ncbi_api_key)
+    setAiKeys(r.ai_keys)
+    setAiEnabled(r.settings.ai_enabled)
+    setTexEnabled(r.settings.tex_rendering_enabled)
+    setLookupPrefs(r.settings.web_lookup_source, r.settings.web_lookup_disabled)
+    setStatus({})
   }
 
   const run = async (id: SectionId, fn: () => Promise<SettingsResponse>, done: string) => {
@@ -492,7 +506,7 @@ export default function Settings() {
         </form>
 
         <LoginSettings />
-        <Backup />
+        <Backup onSettingsImported={imported} />
         {admin && (
           <>
             <form onSubmit={save('logs')} onKeyDown={formSubmitOnCtrlEnter}>
@@ -527,7 +541,12 @@ export default function Settings() {
         </form>
       </>
     ),
-    admin: <MultiUserSettings />,
+    admin: (
+      <>
+        <MultiUserSettings />
+        <MaintenanceSettings />
+      </>
+    ),
     shortcuts: (
       <>
         <div className="card settings-section">

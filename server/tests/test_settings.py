@@ -285,3 +285,52 @@ def test_ncbi_api_key_is_write_only(client, fake, monkeypatch):
     )
     for bad in ("short", "has space in it 12345678", "x" * 65, "abc$def0123456789abcdef"):
         assert client.patch("/api/settings", json={"NCBI_API_KEY": bad}).status_code == 422, bad
+
+
+def _parsing_store(fake, stored):
+    """Like the CLI: values arrive as JSON when they parse, else as plain text."""
+
+    def update(argv):
+        try:
+            stored[argv[-2]] = json.loads(argv[-1])
+        except ValueError:
+            stored[argv[-2]] = argv[-1]
+        return {}
+
+    fake.on("settings", "get", result=lambda _: stored)
+    fake.on("settings", "update", result=update)
+
+
+def test_settings_export_leaves_out_secrets(client, fake):
+    _parsing_store(
+        fake,
+        {"GEMINI_API_KEY": "secret-key-123", "web_lookup_source": "pubmed", "ai_enabled": True},
+    )
+    r = client.get("/api/settings/export")
+    assert r.status_code == 200
+    assert "attachment" in r.headers["content-disposition"]
+    assert "secret-key-123" not in r.text
+    body = r.json()
+    assert body["linxiv_web_settings"] == 1 and body["library"] == "root"
+    assert not any(k.endswith(("_API_KEY", "_TOKEN", "TAG_GEN")) for k in body["settings"])
+    assert body["settings"]["web_lookup_source"] == "pubmed"
+    assert body["settings"]["ai_enabled"] is True
+
+
+def test_settings_import_roundtrip_and_checks(client, fake):
+    _parsing_store(fake, {"web_lookup_source": "pubmed", "search_history_max": 50})
+    exported = client.get("/api/settings/export").json()
+    stored: dict = {}
+    _parsing_store(fake, stored)
+    r = client.post("/api/settings/import", json=exported)
+    assert r.status_code == 200, r.text
+    assert r.json()["settings"]["web_lookup_source"] == "pubmed"
+    assert stored["search_history_max"] == 50
+
+    bad = {"settings": {"OPENAI_API_KEY": "sk-whatever-1234"}}
+    r = client.post("/api/settings/import", json=bad)
+    assert r.status_code == 400 and "API keys" in r.json()["detail"]
+    r = client.post("/api/settings/import", json={"settings": {"no_such_key": 1}})
+    assert r.status_code == 400 and "no_such_key" in r.json()["detail"]
+    r = client.post("/api/settings/import", json={"settings": {"search_history_max": 0}})
+    assert r.status_code == 400 and "search_history_max" in r.json()["detail"]

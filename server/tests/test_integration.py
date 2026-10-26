@@ -512,6 +512,169 @@ def test_real_cli_pdf_folder_layout(settings):
         assert not any(settings.pdf_dir.rglob("*.pdf"))
 
 
+def test_real_cli_duplicates_scan_and_merge(settings):
+    with TestClient(create_app(replace(settings, linxiv_bin=BIN))) as c:
+        a = c.post("/api/pdfs/import", files={"file": ("a.pdf", _tiny_pdf("Dup A"))}).json()
+        b = c.post("/api/pdfs/import", files={"file": ("b.pdf", _tiny_pdf("Dup B"))}).json()
+        keep, drop = a["source_id"], b["source_id"]
+        assert c.post(f"/api/papers/{keep}/tags", json={"tags": ["kept"]}).status_code == 200
+        assert c.post(f"/api/papers/{drop}/tags", json={"tags": ["moved"]}).status_code == 200
+        # Same bytes under two papers (e.g. one file imported twice under other ids).
+        files = {p.name: p for p in settings.pdf_dir.rglob("*.pdf")}
+        drop_file = files[f"{drop.replace(':', '_')}v1.pdf"]
+        drop_file.write_bytes(files[f"{keep.replace(':', '_')}v1.pdf"].read_bytes())
+
+        job = c.post("/api/maintenance/duplicates/run").json()
+        for _ in range(200):
+            job = c.get(f"/api/jobs/{job['id']}").json()
+            if job["state"] != "running":
+                break
+            time.sleep(0.05)
+        assert job["state"] == "done", job
+        assert job["result"]["duplicate_groups"] == 1
+        [group] = c.get("/api/duplicates").json()["groups"]
+        assert {p["source_id"] for p in group["papers"]} == {keep, drop}
+
+        r = c.post("/api/duplicates/merge", json={"winner": keep, "loser": drop})
+        assert r.status_code == 200, r.text
+        assert r.json()["groups"] == []
+        assert c.get(f"/api/papers/{drop}").status_code == 404
+        assert set(c.get(f"/api/papers/{keep}").json()["tags"]) == {"kept", "moved"}
+        assert c.get(f"/api/papers/{keep}/pdf").content.startswith(b"%PDF-")
+
+
+def test_real_cli_complete_metadata_finds_new_papers(settings, monkeypatch):
+    from app import metadata_fill
+
+    monkeypatch.setattr(metadata_fill, "PACE_SECONDS", 0.0)
+    with TestClient(create_app(replace(settings, linxiv_bin=BIN))) as c:
+        bib = b"@misc{nm1, title={scan0001}, year={2021}}\n"
+        assert c.post("/api/import/bibtex", files={"file": ("a.bib", bib)}).status_code == 200
+        # arXiv only: never asked for a local paper, so no network.
+        opts = {"gaps": ["title", "authors"], "sources": ["arxiv"]}
+        url = "/api/maintenance/complete-metadata/options"
+        assert c.put(url, json=opts).status_code == 200
+        job = c.post("/api/maintenance/complete-metadata/run").json()
+        for _ in range(200):
+            job = c.get(f"/api/jobs/{job['id']}").json()
+            if job["state"] != "running":
+                break
+            time.sleep(0.05)
+        assert job["state"] == "done", job
+        assert job["result"] == {"new_papers": 1, "completed": 0, "to_review": 1}
+        [entry] = c.get("/api/metadata-review").json()["papers"]
+        assert entry["source_id"] == "local:nm1"
+        assert entry["missing"] == ["title", "authors"]  # only the ticked gaps
+
+
+def test_real_cli_backup_operation(settings):
+    with TestClient(create_app(replace(settings, linxiv_bin=BIN))) as c:
+        bib = b"@misc{bk1, title={Backed up paper}, author={Doe, Jane}, year={2021}}\n"
+        assert c.post("/api/import/bibtex", files={"file": ("a.bib", bib)}).status_code == 200
+        job = c.post("/api/maintenance/backup/run").json()
+        for _ in range(200):
+            job = c.get(f"/api/jobs/{job['id']}").json()
+            if job["state"] != "running":
+                break
+            time.sleep(0.05)
+        assert job["state"] == "done" and not job["errors"], job
+        [b] = c.get("/api/maintenance/backups").json()["backups"]
+        got = c.get(f"/api/maintenance/backups/root/{b['name']}")
+        assert got.content.startswith(b"SQLite format 3\x00")
+        assert len(got.content) == b["size"]
+
+
+def test_real_cli_pdf_check(settings):
+    with TestClient(create_app(replace(settings, linxiv_bin=BIN))) as c:
+        sid = c.post("/api/pdfs/import", files={"file": ("a.pdf", _tiny_pdf("Checked"))}).json()[
+            "source_id"
+        ]
+        (settings.pdf_dir / "stray.pdf").write_bytes(_tiny_pdf("Stray"))
+
+        def run() -> dict:
+            job = c.post("/api/maintenance/pdf-check/run").json()
+            for _ in range(200):
+                job = c.get(f"/api/jobs/{job['id']}").json()
+                if job["state"] != "running":
+                    return job["result"]
+                time.sleep(0.05)
+            raise AssertionError("check did not finish")
+
+        # linXiv's own file counts as linked, through the data dir's pdfs link
+        assert run() == {"pdfs_checked": 1, "missing_files": 0, "unlinked_files": 1}
+        next(p for p in settings.pdf_dir.glob("*.pdf") if p.name != "stray.pdf").unlink()
+        assert run() == {"pdfs_checked": 1, "missing_files": 1, "unlinked_files": 1}
+        [report] = c.get("/api/maintenance/pdf-check").json()["libraries"]
+        assert [m["source_id"] for m in report["missing"]] == [sid]
+
+
+def test_real_cli_empty_trash_deletes_old_papers(settings):
+    with TestClient(create_app(replace(settings, linxiv_bin=BIN))) as c:
+        bib = b"@misc{old1, title={Old One}, year={2020}}\n@misc{new1, title={New One}, year={2020}}\n"
+        assert c.post("/api/import/bibtex", files={"file": ("a.bib", bib)}).status_code == 200
+        for sid in ("local:old1", "local:new1"):
+            assert c.delete(f"/api/papers/{sid}").status_code == 200
+        with sqlite3.connect(settings.data_dir / "papers.db") as db:
+            db.execute(
+                "UPDATE PAPER_ROOTS SET DELETED_AT = '2020-01-01 00:00:00' WHERE SOURCE_ID = ?",
+                ("local:old1",),
+            )
+        body = {"hour": 3, "nightly": [], "trash_days": 30}
+        assert c.put("/api/maintenance/schedule", json=body).status_code == 200
+        job = c.post("/api/maintenance/empty-trash/run").json()
+        for _ in range(200):
+            job = c.get(f"/api/jobs/{job['id']}").json()
+            if job["state"] != "running":
+                break
+            time.sleep(0.05)
+        assert job["state"] == "done" and not job["errors"], job
+        assert job["result"]["papers_purged"] == 1
+        assert [p["source_id"] for p in c.get("/api/trash").json()["papers"]] == ["local:new1"]
+
+
+def test_real_cli_clean_authors(settings):
+    with TestClient(create_app(replace(settings, linxiv_bin=BIN))) as c:
+        bib = (
+            b"@misc{ka1, title={Kept Paper}, author={Keeper, Kim}, year={2020}}\n"
+            b"@misc{ga1, title={Gone Paper}, author={Orphan, Olga}, year={2020}}\n"
+        )
+        assert c.post("/api/import/bibtex", files={"file": ("a.bib", bib)}).status_code == 200
+        assert c.delete("/api/papers/local:ga1").status_code == 200
+        assert c.delete("/api/trash/papers/local:ga1").status_code == 200
+        before = {a["full_name"]: a["paper_count"] for a in c.get("/api/authors").json()}
+        assert before["Kim Keeper"] == 1
+        orphans = [name for name, n in before.items() if n == 0]
+        assert orphans == ["Olga Orphan"]  # linXiv keeps the author of a deleted paper
+        job = c.post("/api/maintenance/clean-authors/run").json()
+        for _ in range(200):
+            job = c.get(f"/api/jobs/{job['id']}").json()
+            if job["state"] != "running":
+                break
+            time.sleep(0.05)
+        assert job["state"] == "done" and not job["errors"], job
+        assert job["result"] == {"authors_removed": len(orphans), "skipped": 0}
+        after = {a["full_name"]: a["paper_count"] for a in c.get("/api/authors").json()}
+        assert all(n > 0 for n in after.values())
+        assert set(after) == set(before) - set(orphans)
+
+
+def test_real_cli_settings_export_import(settings, tmp_path):
+    with TestClient(create_app(replace(settings, linxiv_bin=BIN))) as c:
+        change = {"web_lookup_source": "pubmed", "search_history_max": 77}
+        assert c.patch("/api/settings", json=change).status_code == 200
+        exported = c.get("/api/settings/export").json()
+    # A fresh library takes the file as it is, defaults included.
+    data = tmp_path / "other"
+    data.mkdir()
+    (data / "pdfs").mkdir()
+    other = replace(settings, linxiv_bin=BIN, data_dir=data, pdf_dir=data / "pdfs")
+    with TestClient(create_app(other)) as c:
+        r = c.post("/api/settings/import", json=exported)
+        assert r.status_code == 200, r.text
+        got = c.get("/api/settings").json()["settings"]
+        assert (got["web_lookup_source"], got["search_history_max"]) == ("pubmed", 77)
+
+
 def test_real_cli_ncbi_api_key_setting(settings, monkeypatch):
     monkeypatch.delenv("NCBI_API_KEY", raising=False)
     c = TestClient(create_app(replace(settings, linxiv_bin=BIN)))

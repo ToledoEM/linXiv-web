@@ -16,6 +16,7 @@ import AddPaper from './pages/AddPaper'
 import Trash from './pages/Trash'
 import AuthorDetail from './pages/AuthorDetail'
 import Authors from './pages/Authors'
+import Duplicates from './pages/Duplicates'
 import Graph from './pages/Graph'
 import Projects from './pages/Projects'
 import ProjectDetail from './pages/ProjectDetail'
@@ -35,6 +36,7 @@ const NAV: NavItem[] = [
   { to: '/search', label: 'Search', icon: '⌕', pageKey: 'search' },
   { to: '/add', label: 'Add Paper', icon: '＋', pageKey: 'add' },
   { to: '/authors', label: 'Authors', icon: '◎' },
+  { to: '/duplicates', label: 'Duplicates', icon: '⧉', pageKey: 'duplicates' },
   { to: '/trash', label: 'Trash', icon: '⌫', pageKey: 'trash' },
   { to: '/settings', label: 'Settings', icon: '⚙' },
 ]
@@ -137,6 +139,7 @@ export default function App() {
           <Route path="/paper/*" element={<PaperDetail />} />
           <Route path="/add" element={<AddPaper />} />
           <Route path="/upload" element={<Navigate to="/add" replace />} />
+          <Route path="/duplicates" element={<Duplicates />} />
           <Route path="/trash" element={<Trash />} />
           <Route path="/authors" element={<Authors />} />
           <Route path="/authors/:id" element={<AuthorDetail />} />
