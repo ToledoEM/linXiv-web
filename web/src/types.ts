@@ -466,6 +466,14 @@ export interface ServerBackup {
   size: number
 }
 
+/** "Complete metadata of new papers" choices: ticked gaps, ticked sources in asking order. */
+export interface FillOptions {
+  gaps: string[]
+  sources: string[]
+  all_gaps: string[]
+  all_sources: string[]
+}
+
 /** Last "Check PDF files" result of one library; lists are capped, counts are not. */
 export interface PdfCheckReport {
   library: string

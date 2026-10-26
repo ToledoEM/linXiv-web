@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import sqlite3
 import time
@@ -156,9 +157,62 @@ def test_run_completes_by_doi_and_lists_the_rest(settings, fake, fast):
         assert c.get("/api/metadata-review").json()["papers"] == []
 
 
-def test_switched_off_sources_are_not_asked(settings, fake, fast):
-    _setup(settings, fake, {"web_lookup_disabled": "crossref,pubmed"})
+def test_options_default_and_validation(settings, fake):
+    _setup(settings, fake)
     with TestClient(create_app(settings, fake)) as c:
+        got = c.get("/api/maintenance/complete-metadata/options").json()
+        assert got["gaps"] == ["title", "authors", "date", "abstract", "journal", "doi"]
+        assert got["sources"] == ["arxiv", "biorxiv", "crossref", "pubmed"]
+        assert got["all_sources"] == ["arxiv", "biorxiv", "crossref", "pubmed"]
+        url = "/api/maintenance/complete-metadata/options"
+        assert c.put(url, json={"gaps": ["nope"], "sources": ["crossref"]}).status_code == 400
+        assert c.put(url, json={"gaps": ["doi"], "sources": ["openalex"]}).status_code == 400
+        assert c.put(url, json={"gaps": ["doi", "doi"], "sources": ["crossref"]}).status_code == 400
+        assert c.put(url, json={"gaps": [], "sources": ["crossref"]}).status_code == 422
+        r = c.put(url, json={"gaps": ["doi", "title"], "sources": ["pubmed", "crossref"]})
+        assert r.status_code == 200, r.text
+        # gaps come back in their fixed order, sources in the chosen one
+        assert (r.json()["gaps"], r.json()["sources"]) == (["title", "doi"], ["pubmed", "crossref"])
+
+
+def test_ticked_gaps_and_sources_drive_the_run(settings, fake, fast):
+    _setup(settings, fake)
+    with TestClient(create_app(settings, fake)) as c:
+        body = {"gaps": ["title", "doi"], "sources": ["arxiv"]}
+        assert c.put("/api/maintenance/complete-metadata/options", json=body).status_code == 200
         job = _run(c)
-    assert job["result"] == {"new_papers": 2, "completed": 0, "to_review": 2}
-    assert not any(a[:2] in (["doi", "resolve"], ["paper", "repair"]) for a in fake.calls)
+        # NEW misses authors, abstract and journal only: not counted now
+        assert job["result"] == {"new_papers": 2, "completed": 0, "to_review": 1}
+        # arXiv applies to arXiv papers only: no DOI source was asked
+        assert not any(a[:2] in (["doi", "resolve"], ["paper", "repair"]) for a in fake.calls)
+        [entry] = c.get("/api/metadata-review").json()["papers"]
+    assert (entry["source_id"], entry["missing"]) == ("local:x", ["title", "doi"])
+
+
+def test_match_by_id_follows_the_source_order(monkeypatch):
+    from app.routes import metadata
+
+    asked = []
+
+    async def pubmed(term, key=""):
+        asked.append("pubmed")
+        return []
+
+    async def crossref(call, doi):
+        asked.append("crossref")
+        return [{"doi": doi.upper(), "title": "Found"}]
+
+    async def biorxiv(doi):
+        asked.append("biorxiv")
+        return []
+
+    monkeypatch.setattr(metadata, "_pubmed", pubmed)
+    monkeypatch.setattr(metadata, "_crossref_doi", crossref)
+    monkeypatch.setattr(metadata, "_biorxiv", biorxiv)
+    paper = {"source_id": "doi:10.1/x", "doi": "10.1/x"}
+    hit = asyncio.run(metadata.match_by_id(None, paper, ["biorxiv", "pubmed", "crossref", "arxiv"]))
+    assert hit == {"doi": "10.1/X", "title": "Found"}
+    assert asked == ["pubmed", "crossref"]  # bioRxiv skipped: not a bioRxiv DOI
+    asked.clear()
+    assert asyncio.run(metadata.match_by_id(None, paper, ["arxiv"])) is None
+    assert asked == []

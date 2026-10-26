@@ -17,7 +17,9 @@ from ..maintenance import (
     read_report,
     report_path,
 )
+from ..metadata_fill import FILLS, OPTIONS_SETTING, options_from
 from ..pdf_check import REPORT as PDF_CHECK
+from .metadata import ID_SOURCES
 
 router = APIRouter(prefix="/api/maintenance", tags=["maintenance"])
 
@@ -116,3 +118,29 @@ async def pdf_check_report(request: Request):
         if report:
             out.append({"library": key, **report})
     return {"libraries": out}
+
+
+class FillOptionsIn(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    gaps: list[str] = Field(min_length=1, max_length=len(FILLS))
+    sources: list[str] = Field(min_length=1, max_length=len(ID_SOURCES))
+
+
+@router.get("/complete-metadata/options")
+async def fill_options(request: Request):
+    """Which gaps make a new paper incomplete, and which sources it is looked up
+    in, in order. `all_gaps` / `all_sources` list every choice."""
+    opts = options_from(await _maint(request).stored())
+    return {**opts, "all_gaps": list(FILLS), "all_sources": list(ID_SOURCES)}
+
+
+@router.put("/complete-metadata/options")
+async def set_fill_options(request: Request, body: FillOptionsIn):
+    bad = [g for g in body.gaps if g not in FILLS]
+    bad += [s for s in body.sources if s not in ID_SOURCES]
+    if bad or len(set(body.gaps)) != len(body.gaps) or len(set(body.sources)) != len(body.sources):
+        raise HTTPException(status_code=400, detail=f"unknown or repeated choice: {', '.join(bad)}")
+    value = {"gaps": [g for g in FILLS if g in body.gaps], "sources": body.sources}
+    await _maint(request).save_setting(OPTIONS_SETTING, value)
+    return await fill_options(request)

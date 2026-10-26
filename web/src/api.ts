@@ -9,6 +9,7 @@ import type {
   AuthorUpdate,
   DuplicatesReport,
   FeedResponse,
+  FillOptions,
   FeedRule,
   Job,
   LogsResponse,
@@ -457,6 +458,9 @@ export const api = {
   /** Omitted keep_backups / trash_days keep their stored values. */
   setMaintenanceSchedule: (body: MaintenanceScheduleInput) =>
     request<MaintenanceSchedule>('PUT', '/api/maintenance/schedule', body),
+  fillOptions: () => request<FillOptions>('GET', '/api/maintenance/complete-metadata/options'),
+  setFillOptions: (gaps: string[], sources: string[]) =>
+    request<FillOptions>('PUT', '/api/maintenance/complete-metadata/options', { gaps, sources }),
   pdfCheck: () => request<{ libraries: PdfCheckReport[] }>('GET', '/api/maintenance/pdf-check'),
   maintenanceBackups: () =>
     request<{ backups: ServerBackup[] }>('GET', '/api/maintenance/backups'),

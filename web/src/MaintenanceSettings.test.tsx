@@ -107,11 +107,11 @@ describe('MaintenanceSettings', () => {
     expect(await screen.findByText('None yet.')).toBeTruthy()
   })
 
-  it('saves the trash age on the cleanup row', async () => {
+  it('takes 0 to 120 trash days on the empty trash row', async () => {
     const data = overview()
     data.ops.push({
-      id: 'cleanup',
-      label: 'Clean up',
+      id: 'empty-trash',
+      label: 'Empty trash',
       description: 'Deletes.',
       destructive: true,
       last: null,
@@ -122,13 +122,17 @@ describe('MaintenanceSettings', () => {
       .spyOn(api, 'setMaintenanceSchedule')
       .mockImplementation((body) => Promise.resolve({ keep_backups: 7, trash_days: 0, ...body }))
     render(<MaintenanceSettings />)
-    const days = await screen.findByLabelText('Trash days')
-    fireEvent.change(days, { target: { value: '-1' } })
-    fireEvent.blur(days)
+    const days = (await screen.findByLabelText('Trash days')) as HTMLInputElement
+    for (const bad of ['-1', '121', 'abc', '2.5', '']) {
+      fireEvent.change(days, { target: { value: bad } })
+      fireEvent.blur(days)
+      expect(days.value).toBe('0')
+    }
+    expect(screen.getByText(/Enter 0 to 120/)).toBeTruthy()
     expect(save).not.toHaveBeenCalled()
-    expect((days as HTMLInputElement).value).toBe('0')
-    fireEvent.change(days, { target: { value: '30' } })
+    fireEvent.change(days, { target: { value: '120' } })
     fireEvent.blur(days)
-    await waitFor(() => expect(save).toHaveBeenCalledWith({ hour: 3, nightly: ['dup'], trash_days: 30 }))
+    await waitFor(() => expect(save).toHaveBeenCalledWith({ hour: 3, nightly: ['dup'], trash_days: 120 }))
+    expect(screen.queryByText(/Enter 0 to 120/)).toBeNull()
   })
 })

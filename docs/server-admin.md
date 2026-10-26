@@ -129,10 +129,11 @@ Libraries are created the first time they are opened. To keep the PDFs of the sh
 | Operation | What it does |
 |---|---|
 | Find duplicate papers | Reads every saved PDF and lists papers whose files are byte for byte the same on the **Duplicates** page. Only new or changed files are read again on later runs. |
-| Complete metadata of new papers | For papers added since its last run that have a junk title, or no authors, date, abstract, journal or DOI, it looks the paper up by its own DOI or arXiv id (never by title) and fills the empty fields. Stored values are kept. Lookup sources switched off in Settings are not asked. |
+| Complete metadata of new papers | For papers added since its last run that have one of the gaps ticked on its row (junk title, no authors, date, abstract, journal or DOI), it looks the paper up by its own DOI or arXiv id, never by title, in the sources ticked on its row and in their order, and fills those empty fields. Stored values are kept. arXiv is asked only for arXiv papers, bioRxiv only for bioRxiv/medRxiv DOIs, Crossref and PubMed for any DOI. OpenAlex is not offered: linXiv can't look it up by an exact DOI. |
 | Check PDF files | Reports papers whose PDF file is missing on disk, and PDF files in the PDF folder that no paper points at. It changes nothing. **Show report** lists them. |
 | Back up databases | Saves a copy of each library's database on the server and keeps the newest ones (7 unless you change it below the table). PDF files are not included. |
-| Clean up | Deletes database restore snapshots beyond the newest 3, and papers and projects that have been in the trash longer than the days set on its row (0, the default, leaves the trash alone). It asks before running. |
+| Clean authors without papers | Deletes author records that no paper uses any more, for example the authors of papers deleted from the trash. linXiv refuses to delete an author still linked to a paper, so those are kept. It asks before running. |
+| Empty trash | Deletes for good the papers that have been in the trash longer than the days typed on its row: 1 to 120, or 0 (the default) to never delete. Projects in the trash are left alone. It asks before running. |
 
 The first run of "Complete metadata of new papers" looks at papers added in the last 30 days.
 

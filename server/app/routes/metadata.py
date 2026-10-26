@@ -470,38 +470,38 @@ async def lookup(
 # ---------------------------------------------------------------------------
 # Identifier match (maintenance: complete metadata of new papers)
 
-# bioRxiv/medRxiv DOI prefixes: their own API knows these best.
+# bioRxiv/medRxiv DOI prefixes: their API only knows these.
 BIORXIV_PREFIXES = ("10.1101/", "10.64898/")
+# Sources that can look a paper up by its exact identifier. OpenAlex is not one:
+# the CLI only searches it by text or fetches it by OpenAlex work id.
+ID_SOURCES = ("arxiv", "biorxiv", "crossref", "pubmed")
 
 
 async def match_by_id(
-    call: Call, paper: dict, off: set[str], preferred: str = "crossref", ncbi_key: str = ""
+    call: Call, paper: dict, sources: list[str], ncbi_key: str = ""
 ) -> dict | None:
-    """The record a lookup source holds under this paper's own arXiv id or DOI, or
-    None. Never searches by title, so a hit is the same paper. Sources in `off`
-    (switched off in Settings) are skipped; `preferred` is tried first."""
+    """The record a source holds under this paper's own arXiv id or DOI, or None.
+    Never searches by title, so a hit is the same paper. `sources` are tried in
+    order; each is asked only when it applies: arXiv for arXiv papers, bioRxiv
+    for bioRxiv/medRxiv DOIs, Crossref and PubMed for any DOI."""
     sid = str(paper.get("source_id") or "")
-    if sid.startswith("arxiv:") and "arxiv" not in off:
-        arxiv_id = sid.removeprefix("arxiv:")
-        found = await _search(call, "arxiv", f"id:{arxiv_id}")
-        hit = next((c for c in found if (c.get("ref") or "").endswith(arxiv_id)), None)
-        if hit:
-            return hit
+    arxiv_id = sid.removeprefix("arxiv:") if sid.startswith("arxiv:") else None
     doi = clean_doi(paper.get("doi"))
-    if not doi:
-        return None
-    order = ["biorxiv"] if doi.startswith(BIORXIV_PREFIXES) else []
-    order += [preferred, "crossref", "pubmed"]
-    for source in dict.fromkeys(order):
-        if source in off or source not in ("crossref", "pubmed", "biorxiv"):
-            continue
-        if source == "crossref":
-            found = await _crossref_doi(call, doi)
-        elif source == "pubmed":
-            found = await _pubmed(f"{doi}[doi]", ncbi_key)
-        else:
+    for source in sources:
+        if source == "arxiv" and arxiv_id:
+            found = await _search(call, "arxiv", f"id:{arxiv_id}")
+            hit = next((c for c in found if (c.get("ref") or "").endswith(arxiv_id)), None)
+        elif source == "biorxiv" and doi and doi.startswith(BIORXIV_PREFIXES):
             found = await _biorxiv(doi)
-        hit = next((c for c in found if (c.get("doi") or "").lower() == doi.lower()), None)
+            hit = next((c for c in found if (c.get("doi") or "").lower() == doi.lower()), None)
+        elif source in ("crossref", "pubmed") and doi:
+            if source == "crossref":
+                found = await _crossref_doi(call, doi)
+            else:
+                found = await _pubmed(f"{doi}[doi]", ncbi_key)
+            hit = next((c for c in found if (c.get("doi") or "").lower() == doi.lower()), None)
+        else:
+            continue
         if hit:
             return hit
     return None

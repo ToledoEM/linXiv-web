@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { api } from './api'
 import { ErrorText } from './components'
 import ConfirmDialog from './ConfirmDialog'
+import FillOptions from './FillOptions'
 import PdfCheckReport from './PdfCheckReport'
 import ServerBackups from './ServerBackups'
 import { runSummary } from './maintenance'
@@ -117,7 +118,7 @@ export default function MaintenanceSettings() {
                     <td>
                       <strong>{op.label}</strong>
                       <div className="muted small">{op.description}</div>
-                      {op.id === 'cleanup' && (
+                      {op.id === 'empty-trash' && (
                         <TrashDays value={data.trash_days} onSave={(n) => void saveSchedule({ trash_days: n })} />
                       )}
                       {op.job ? (
@@ -140,6 +141,7 @@ export default function MaintenanceSettings() {
                         </Link>
                       )}
                       {op.id === 'pdf-check' && op.last && <PdfCheckReport />}
+                      {op.id === 'complete-metadata' && <FillOptions />}
                     </td>
                     <td className="nowrap">
                       <label className="check">
@@ -206,28 +208,39 @@ export default function MaintenanceSettings() {
   )
 }
 
-/** Days a paper or project stays in the trash before Clean up deletes it; 0 keeps them. */
+const MAX_TRASH_DAYS = 120
+
+/** Days a paper stays in the trash before Empty trash deletes it: a whole number
+ *  from 1 to 120, or 0 for never. Anything else goes back to the saved value. */
 function TrashDays({ value, onSave }: { value: number; onSave: (n: number) => void }) {
   const [draft, setDraft] = useState(String(value))
+  const [bad, setBad] = useState(false)
   const save = () => {
-    const n = Math.floor(Number(draft))
-    if (draft.trim() !== '' && n >= 0 && n <= 3650 && n !== value) onSave(n)
-    else setDraft(String(value))
+    const text = draft.trim()
+    const n = Number(text)
+    const ok = /^\d{1,3}$/.test(text) && n <= MAX_TRASH_DAYS
+    setBad(!ok)
+    if (!ok) setDraft(String(value))
+    else if (n !== value) onSave(n)
   }
   return (
-    <label className="check small">
-      Empty trash entries older than
-      <input
-        type="number"
-        className="days-input"
-        aria-label="Trash days"
-        min={0}
-        max={3650}
-        value={draft}
-        onChange={(e) => setDraft(e.target.value)}
-        onBlur={save}
-      />
-      days (0: keep the trash)
-    </label>
+    <div className="small">
+      <label className="check">
+        Delete papers in the trash for more than
+        <input
+          type="text"
+          inputMode="numeric"
+          className="days-input"
+          aria-label="Trash days"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={save}
+        />
+        days
+      </label>
+      <span className={bad ? 'error' : 'muted'}>
+        {bad ? `Enter 0 to ${MAX_TRASH_DAYS}. ` : ''}1 to {MAX_TRASH_DAYS} days; 0 never deletes.
+      </span>
+    </div>
   )
 }

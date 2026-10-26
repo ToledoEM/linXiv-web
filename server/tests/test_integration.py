@@ -550,9 +550,10 @@ def test_real_cli_complete_metadata_finds_new_papers(settings, monkeypatch):
     with TestClient(create_app(replace(settings, linxiv_bin=BIN))) as c:
         bib = b"@misc{nm1, title={scan0001}, year={2021}}\n"
         assert c.post("/api/import/bibtex", files={"file": ("a.bib", bib)}).status_code == 200
-        # Every source that answers by DOI or arXiv id switched off: no network.
-        off = {"web_lookup_disabled": "crossref,pubmed,biorxiv,arxiv"}
-        assert c.patch("/api/settings", json=off).status_code == 200
+        # arXiv only: never asked for a local paper, so no network.
+        opts = {"gaps": ["title", "authors"], "sources": ["arxiv"]}
+        url = "/api/maintenance/complete-metadata/options"
+        assert c.put(url, json=opts).status_code == 200
         job = c.post("/api/maintenance/complete-metadata/run").json()
         for _ in range(200):
             job = c.get(f"/api/jobs/{job['id']}").json()
@@ -563,7 +564,7 @@ def test_real_cli_complete_metadata_finds_new_papers(settings, monkeypatch):
         assert job["result"] == {"new_papers": 1, "completed": 0, "to_review": 1}
         [entry] = c.get("/api/metadata-review").json()["papers"]
         assert entry["source_id"] == "local:nm1"
-        assert "title" in entry["missing"] and "authors" in entry["missing"]
+        assert entry["missing"] == ["title", "authors"]  # only the ticked gaps
 
 
 def test_real_cli_backup_operation(settings):
@@ -607,7 +608,7 @@ def test_real_cli_pdf_check(settings):
         assert [m["source_id"] for m in report["missing"]] == [sid]
 
 
-def test_real_cli_cleanup_empties_old_trash(settings):
+def test_real_cli_empty_trash_deletes_old_papers(settings):
     with TestClient(create_app(replace(settings, linxiv_bin=BIN))) as c:
         bib = b"@misc{old1, title={Old One}, year={2020}}\n@misc{new1, title={New One}, year={2020}}\n"
         assert c.post("/api/import/bibtex", files={"file": ("a.bib", bib)}).status_code == 200
@@ -620,7 +621,7 @@ def test_real_cli_cleanup_empties_old_trash(settings):
             )
         body = {"hour": 3, "nightly": [], "trash_days": 30}
         assert c.put("/api/maintenance/schedule", json=body).status_code == 200
-        job = c.post("/api/maintenance/cleanup/run").json()
+        job = c.post("/api/maintenance/empty-trash/run").json()
         for _ in range(200):
             job = c.get(f"/api/jobs/{job['id']}").json()
             if job["state"] != "running":
@@ -629,6 +630,32 @@ def test_real_cli_cleanup_empties_old_trash(settings):
         assert job["state"] == "done" and not job["errors"], job
         assert job["result"]["papers_purged"] == 1
         assert [p["source_id"] for p in c.get("/api/trash").json()["papers"]] == ["local:new1"]
+
+
+def test_real_cli_clean_authors(settings):
+    with TestClient(create_app(replace(settings, linxiv_bin=BIN))) as c:
+        bib = (
+            b"@misc{ka1, title={Kept Paper}, author={Keeper, Kim}, year={2020}}\n"
+            b"@misc{ga1, title={Gone Paper}, author={Orphan, Olga}, year={2020}}\n"
+        )
+        assert c.post("/api/import/bibtex", files={"file": ("a.bib", bib)}).status_code == 200
+        assert c.delete("/api/papers/local:ga1").status_code == 200
+        assert c.delete("/api/trash/papers/local:ga1").status_code == 200
+        before = {a["full_name"]: a["paper_count"] for a in c.get("/api/authors").json()}
+        assert before["Kim Keeper"] == 1
+        orphans = [name for name, n in before.items() if n == 0]
+        assert orphans == ["Olga Orphan"]  # linXiv keeps the author of a deleted paper
+        job = c.post("/api/maintenance/clean-authors/run").json()
+        for _ in range(200):
+            job = c.get(f"/api/jobs/{job['id']}").json()
+            if job["state"] != "running":
+                break
+            time.sleep(0.05)
+        assert job["state"] == "done" and not job["errors"], job
+        assert job["result"] == {"authors_removed": len(orphans), "skipped": 0}
+        after = {a["full_name"]: a["paper_count"] for a in c.get("/api/authors").json()}
+        assert all(n > 0 for n in after.values())
+        assert set(after) == set(before) - set(orphans)
 
 
 def test_real_cli_settings_export_import(settings, tmp_path):

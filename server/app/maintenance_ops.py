@@ -2,7 +2,14 @@
 
 from __future__ import annotations
 
-from . import cleanup, db_backup, duplicates, metadata_fill, pdf_check
+from . import authors_clean, db_backup, duplicates, metadata_fill, pdf_check, trash_empty
 from .maintenance import Op
 
-OPS: list[Op] = [duplicates.OP, metadata_fill.OP, pdf_check.OP, db_backup.OP, cleanup.OP]
+OPS: list[Op] = [
+    duplicates.OP,
+    metadata_fill.OP,
+    pdf_check.OP,
+    db_backup.OP,
+    authors_clean.OP,
+    trash_empty.OP,
+]

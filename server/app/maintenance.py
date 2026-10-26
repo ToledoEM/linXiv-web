@@ -41,8 +41,8 @@ DEFAULT_HOUR = 3
 # Database backups kept per library by the backup operation.
 DEFAULT_KEEP_BACKUPS = 7
 MAX_KEEP_BACKUPS = 100
-# Cleanup empties trash entries older than this many days (0: never).
-MAX_TRASH_DAYS = 3650
+# `trash_days` range: "Empty trash" deletes papers trashed longer ago (0: never).
+MAX_TRASH_DAYS = 120
 MAX_WAIT = 3600  # schedule re-read at least hourly (PUT /schedule wakes it sooner)
 MAINT_DIR = "maintenance"
 SHARED = "shared"
@@ -74,7 +74,7 @@ def _now() -> datetime:
     return datetime.now().astimezone()
 
 
-def _parse(raw: Any) -> dict:
+def parse_setting(raw: Any) -> dict:
     try:
         data = json.loads(raw) if isinstance(raw, str) else None
     except ValueError:
@@ -152,8 +152,13 @@ class Maintenance:
             ["settings", "update", "--", key, json.dumps(json.dumps(value))], self._timeout
         )
 
+    async def save_setting(self, key: str, value: dict) -> None:
+        """Store an operation's own options (a JSON web-only key of the root library)."""
+        async with self._write:
+            await self._save(key, value)
+
     def schedule_from(self, stored: dict) -> dict:
-        raw = _parse(stored.get(SCHEDULE_SETTING))
+        raw = parse_setting(stored.get(SCHEDULE_SETTING))
         hour = raw.get("hour")
         nightly = raw.get("nightly")
         keep = raw.get("keep_backups")
@@ -194,7 +199,7 @@ class Maintenance:
         return self.status_from(await self.stored())
 
     def status_from(self, stored: dict) -> dict:
-        return _parse(stored.get(STATUS_SETTING))
+        return parse_setting(stored.get(STATUS_SETTING))
 
     async def _update_status(self, change: Callable[[dict], None]) -> None:
         # Read-modify-write: two operations may finish at the same time.
