@@ -13,6 +13,7 @@ import type {
   LogsResponse,
   LogWindow,
   LookupSource,
+  MaintenanceOverview,
   McpStatus,
   Me,
   MergeCandidates,
@@ -433,6 +434,10 @@ export const api = {
   jobs: (kind?: string) => request<Job[]>('GET', `/api/jobs${qs({ kind })}`),
   job: (id: number) => request<Job>('GET', `/api/jobs/${id}`),
   cancelJob: (id: number) => request<Job>('POST', `/api/jobs/${id}/cancel`),
+  maintenance: () => request<MaintenanceOverview>('GET', '/api/maintenance'),
+  setMaintenanceSchedule: (hour: number, nightly: string[]) =>
+    request<{ hour: number; nightly: string[] }>('PUT', '/api/maintenance/schedule', { hour, nightly }),
+  runMaintenance: (id: string) => started(request<Job>('POST', `/api/maintenance/${encodeURIComponent(id)}/run`)),
 
   stats: () => request<Stats>('GET', '/api/stats'),
   storage: () => request<{ storage_mb: number; pdf_dir: string }>('GET', '/api/pdfs/storage'),

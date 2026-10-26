@@ -4,6 +4,7 @@ import AboutSettings, { AboutBasic } from '../AboutSettings'
 import ActivityLog from '../ActivityLog'
 import AiSettings from '../AiSettings'
 import AppLogs from '../AppLogs'
+import MaintenanceSettings from '../MaintenanceSettings'
 import McpSettings from '../McpSettings'
 import MultiUserSettings from '../MultiUserSettings'
 import { useAccount } from '../account'
@@ -527,7 +528,12 @@ export default function Settings() {
         </form>
       </>
     ),
-    admin: <MultiUserSettings />,
+    admin: (
+      <>
+        <MultiUserSettings />
+        <MaintenanceSettings />
+      </>
+    ),
     shortcuts: (
       <>
         <div className="card settings-section">

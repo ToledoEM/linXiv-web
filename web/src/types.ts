@@ -421,6 +421,33 @@ export interface Job {
   cancel_requested: boolean
 }
 
+/** Last run of one maintenance operation; `libraries` maps library key to what it did there. */
+export interface MaintenanceRun {
+  started_at: string
+  finished_at: string
+  state: 'done' | 'cancelled'
+  errors: number
+  libraries: Record<string, Record<string, unknown>>
+}
+
+export interface MaintenanceOp {
+  id: string
+  label: string
+  description: string
+  destructive: boolean
+  last: MaintenanceRun | null
+  job: Job | null
+}
+
+/** GET /api/maintenance: nightly schedule (server local hour) and the operations. */
+export interface MaintenanceOverview {
+  hour: number
+  nightly: string[]
+  timezone: string | null
+  nightly_on: string | null
+  ops: MaintenanceOp[]
+}
+
 /** `annotation list` row; `anchor` is the raw JSON string (parse with parseAnchor). */
 export interface Annotation {
   id: number

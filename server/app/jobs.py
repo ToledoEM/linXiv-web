@@ -87,6 +87,12 @@ class Jobs:
         log.info("job %d %s started", job.id, job.kind)
         return job
 
+    async def wait(self, job_id: int) -> None:
+        """Return once the job has finished (at once if it is not running)."""
+        task = self._tasks.get(job_id)
+        if task is not None:
+            await asyncio.wait({task})
+
     def cancel(self, job_id: int) -> Job | None:
         job = self._jobs.get(job_id)
         if job and job.state == "running":
