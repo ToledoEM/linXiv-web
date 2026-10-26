@@ -9,7 +9,14 @@ from pydantic import BaseModel, ConfigDict, Field
 from ..auth import current_user
 from ..db_backup import NAME, backups
 from ..jobs import JobBusy
-from ..maintenance import MAX_KEEP_BACKUPS, Maintenance, library_keys
+from ..maintenance import (
+    MAX_KEEP_BACKUPS,
+    Maintenance,
+    library_keys,
+    read_report,
+    report_path,
+)
+from ..pdf_check import REPORT as PDF_CHECK
 
 router = APIRouter(prefix="/api/maintenance", tags=["maintenance"])
 
@@ -95,3 +102,15 @@ async def download_backup(request: Request, key: str, name: str):
 async def delete_backup(request: Request, key: str, name: str):
     _backup(request, key, name).unlink(missing_ok=True)
     return {"ok": True}
+
+
+@router.get("/pdf-check")
+async def pdf_check_report(request: Request):
+    """Last "Check PDF files" result of every library that has one."""
+    out = []
+    for key in library_keys(request.app):
+        lib = request.app.state.libraries.get(key)
+        report = read_report(report_path(lib, PDF_CHECK))
+        if report:
+            out.append({"library": key, **report})
+    return {"libraries": out}

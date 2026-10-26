@@ -34,31 +34,46 @@ CACHE = "pdf-hashes.json"
 CHUNK = 1024 * 1024
 
 
-def saved_pdfs(db_path: Path, pdf_dir: Path) -> list[dict[str, Any]]:
-    """Every saved PDF of a paper not in the trash: source_id, version, title, file."""
+def pdf_records(db_path: Path, pdf_dir: Path) -> list[dict[str, Any]]:
+    """Every paper version that has (or should have) a PDF: source_id, version,
+    title, path (the stored one when it exists, else linXiv's managed name in the
+    PDF folder), exists, trashed."""
     if not db_path.is_file():
         return []
     conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True, timeout=10)
     try:
         rows = conn.execute(
-            "SELECT p.SOURCE_ID, p.VERSION, p.TITLE, m.PDF_PATH FROM PAPER p "
-            "JOIN PAPER_META m ON m.PAPER_ID = p.PAPER_ID "
+            "SELECT p.SOURCE_ID, p.VERSION, p.TITLE, m.PDF_PATH, r.DELETED_AT IS NOT NULL "
+            "FROM PAPER p JOIN PAPER_META m ON m.PAPER_ID = p.PAPER_ID "
             "JOIN PAPER_ROOTS r ON r.SOURCE_FK = p.SOURCE_FK "
-            "WHERE r.DELETED_AT IS NULL AND (p.HAS_PDF = 1 OR coalesce(m.PDF_PATH, '') <> '') "
+            "WHERE p.HAS_PDF = 1 OR coalesce(m.PDF_PATH, '') <> '' "
             "ORDER BY p.SOURCE_ID, p.VERSION"
         ).fetchall()
     finally:
         conn.close()
     out = []
-    for sid, version, title, stored in rows:
+    for sid, version, title, stored, trashed in rows:
         path = (
             Path(stored)
             if stored and Path(stored).is_file()
             else pdf_dir / safe_file_name(sid, version)
         )
-        if path.is_file():
-            out.append({"source_id": sid, "version": version, "title": title or "", "path": path})
+        out.append(
+            {
+                "source_id": sid,
+                "version": version,
+                "title": title or "",
+                "path": path,
+                "exists": path.is_file(),
+                "trashed": bool(trashed),
+            }
+        )
     return out
+
+
+def saved_pdfs(db_path: Path, pdf_dir: Path) -> list[dict[str, Any]]:
+    """Every saved PDF file of a paper not in the trash."""
+    return [r for r in pdf_records(db_path, pdf_dir) if r["exists"] and not r["trashed"]]
 
 
 def sha256(path: Path) -> str:

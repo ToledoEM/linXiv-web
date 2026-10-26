@@ -457,6 +457,17 @@ export interface ServerBackup {
   size: number
 }
 
+/** Last "Check PDF files" result of one library; lists are capped, counts are not. */
+export interface PdfCheckReport {
+  library: string
+  checked_at: string
+  pdfs: number
+  missing_count: number
+  unlinked_count: number
+  missing: { source_id: string; version: number; title: string }[]
+  unlinked: { file: string; size: number }[]
+}
+
 export interface DuplicatePaper {
   source_id: string
   version: number

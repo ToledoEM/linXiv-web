@@ -583,6 +583,30 @@ def test_real_cli_backup_operation(settings):
         assert len(got.content) == b["size"]
 
 
+def test_real_cli_pdf_check(settings):
+    with TestClient(create_app(replace(settings, linxiv_bin=BIN))) as c:
+        sid = c.post("/api/pdfs/import", files={"file": ("a.pdf", _tiny_pdf("Checked"))}).json()[
+            "source_id"
+        ]
+        (settings.pdf_dir / "stray.pdf").write_bytes(_tiny_pdf("Stray"))
+
+        def run() -> dict:
+            job = c.post("/api/maintenance/pdf-check/run").json()
+            for _ in range(200):
+                job = c.get(f"/api/jobs/{job['id']}").json()
+                if job["state"] != "running":
+                    return job["result"]
+                time.sleep(0.05)
+            raise AssertionError("check did not finish")
+
+        # linXiv's own file counts as linked, through the data dir's pdfs link
+        assert run() == {"pdfs_checked": 1, "missing_files": 0, "unlinked_files": 1}
+        next(p for p in settings.pdf_dir.glob("*.pdf") if p.name != "stray.pdf").unlink()
+        assert run() == {"pdfs_checked": 1, "missing_files": 1, "unlinked_files": 1}
+        [report] = c.get("/api/maintenance/pdf-check").json()["libraries"]
+        assert [m["source_id"] for m in report["missing"]] == [sid]
+
+
 def test_real_cli_ncbi_api_key_setting(settings, monkeypatch):
     monkeypatch.delenv("NCBI_API_KEY", raising=False)
     c = TestClient(create_app(replace(settings, linxiv_bin=BIN)))

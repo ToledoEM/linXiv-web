@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { api } from './api'
 import { ErrorText } from './components'
 import ConfirmDialog from './ConfirmDialog'
+import PdfCheckReport from './PdfCheckReport'
 import ServerBackups from './ServerBackups'
 import { runSummary } from './maintenance'
 import type { MaintenanceOp, MaintenanceOverview } from './types'
@@ -134,6 +135,7 @@ export default function MaintenanceSettings() {
                           {report.label}
                         </Link>
                       )}
+                      {op.id === 'pdf-check' && op.last && <PdfCheckReport />}
                     </td>
                     <td className="nowrap">
                       <label className="check">

@@ -25,6 +25,7 @@ import type {
   Note,
   Paper,
   PdfLayout,
+  PdfCheckReport,
   PdfLayoutPreview,
   PaperVersions,
   Project,
@@ -455,6 +456,7 @@ export const api = {
       nightly,
       keep_backups: keepBackups,
     }),
+  pdfCheck: () => request<{ libraries: PdfCheckReport[] }>('GET', '/api/maintenance/pdf-check'),
   maintenanceBackups: () =>
     request<{ backups: ServerBackup[] }>('GET', '/api/maintenance/backups'),
   deleteMaintenanceBackup: (b: ServerBackup) => request<{ ok: boolean }>('DELETE', serverBackupUrl(b)),
