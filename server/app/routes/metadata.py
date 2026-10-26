@@ -50,6 +50,7 @@ BIORXIV_SERVERS = ("biorxiv", "medrxiv")
 BIORXIV_JOURNAL = {"biorxiv": "bioRxiv", "medrxiv": "medRxiv"}
 DOI_RE = re.compile(r"^10\.\d{4,9}/\S+$")
 Author = Annotated[str, Field(min_length=1, max_length=500)]
+Tag = Annotated[str, Field(min_length=1, max_length=512)]
 _MONTHS = {
     m: i
     for i, m in enumerate(
@@ -74,6 +75,9 @@ class MetadataIn(BaseModel):
     category: str | None = Field(None, max_length=500)
     doi: str | None = Field(None, max_length=500)
     url: str | None = Field(None, max_length=2000)
+    # The paper's current tags, when the client already holds them (batch edit):
+    # saves the `paper get` round trip. Omitted = read them from the CLI.
+    tags: list[Tag] | None = Field(None, max_length=2000)
 
     @field_validator("title", "category", "doi", "url")
     @classmethod
@@ -93,6 +97,16 @@ class MetadataIn(BaseModel):
             raise ValueError("author names must not be blank")
         return names
 
+    @field_validator("tags")
+    @classmethod
+    def _tags(cls, v: list[str] | None) -> list[str] | None:
+        if v is None:
+            return None
+        tags = [_no_ctrl(t.strip()) for t in v]
+        if not all(tags):
+            raise ValueError("tags must not be blank")
+        return tags
+
     @field_validator("summary")
     @classmethod
     def _summary(cls, v: str) -> str:
@@ -109,8 +123,10 @@ async def save_metadata(request: Request, source_id: str, body: MetadataIn):
     sid = ident(source_id, "paper id")
     if not body.title:
         raise HTTPException(status_code=400, detail="title must not be blank")
-    paper = await run(request, ["paper", "get", "--", sid])
-    tags = (paper.get("tags") or []) if isinstance(paper, dict) else []
+    tags = body.tags
+    if tags is None:
+        paper = await run(request, ["paper", "get", "--", sid])
+        tags = (paper.get("tags") or []) if isinstance(paper, dict) else []
     args = ["paper", "repair", f"--title={body.title}"]
     args += [f"--authors={a}" for a in (body.authors or [UNKNOWN_AUTHOR])]
     args += [f"--published={body.published}", f"--summary={body.summary}"]

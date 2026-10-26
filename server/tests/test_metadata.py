@@ -43,6 +43,18 @@ def test_save_sends_full_record_and_keeps_tags(client, fake):
     ]
 
 
+def test_save_with_client_tags_skips_paper_get(client, fake):
+    fake.on("paper", "repair", result={"source_id": SID})
+    r = client.put(f"/api/papers/{SID}/metadata", json={**BODY, "tags": [" keep ", "-x"]})
+    assert r.status_code == 200, r.text
+    assert not any(c[:2] == ["paper", "get"] for c in fake.calls)
+    assert [a for a in fake.calls[-1] if a.startswith("--tags=")] == ["--tags=keep", "--tags=-x"]
+    r = client.put(f"/api/papers/{SID}/metadata", json={**BODY, "tags": []})
+    assert r.status_code == 200, r.text
+    assert not any(a.startswith("--tags=") for a in fake.calls[-1])
+    assert not any(c[:2] == ["paper", "get"] for c in fake.calls)
+
+
 def test_save_without_authors_sends_placeholder(client, fake):
     """`paper repair` requires --authors, so an empty list saves as "Unknown"."""
     fake.on("paper", "get", result={"source_id": SID, "tags": []})
@@ -61,6 +73,8 @@ def test_save_validation(client, fake):
         {**BODY, "summary": "x" * 100_001},
         {**BODY, "doi": "a\tb"},
         {**BODY, "extra": 1},
+        {**BODY, "tags": [" "]},
+        {**BODY, "tags": ["a\nb"]},
     ]
     fake.on("paper", "get", result={"source_id": SID, "tags": []})
     for body in bad:
