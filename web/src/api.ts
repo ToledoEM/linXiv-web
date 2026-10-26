@@ -440,6 +440,10 @@ export const api = {
     request<DuplicatesReport>('POST', '/api/duplicates/merge', { winner, loser }),
   dismissDuplicates: (sourceIds: string[]) =>
     request<DuplicatesReport>('POST', '/api/duplicates/dismiss', { source_ids: sourceIds }),
+  metadataReview: () =>
+    request<{ papers: { source_id: string; title: string; missing: string[] }[] }>('GET', '/api/metadata-review'),
+  removeMetadataReview: (sourceIds: string[]) =>
+    request<{ ok: boolean }>('POST', '/api/metadata-review/remove', { source_ids: sourceIds }),
   maintenance: () => request<MaintenanceOverview>('GET', '/api/maintenance'),
   setMaintenanceSchedule: (hour: number, nightly: string[]) =>
     request<{ hour: number; nightly: string[] }>('PUT', '/api/maintenance/schedule', { hour, nightly }),

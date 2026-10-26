@@ -543,6 +543,29 @@ def test_real_cli_duplicates_scan_and_merge(settings):
         assert c.get(f"/api/papers/{keep}/pdf").content.startswith(b"%PDF-")
 
 
+def test_real_cli_complete_metadata_finds_new_papers(settings, monkeypatch):
+    from app import metadata_fill
+
+    monkeypatch.setattr(metadata_fill, "PACE_SECONDS", 0.0)
+    with TestClient(create_app(replace(settings, linxiv_bin=BIN))) as c:
+        bib = b"@misc{nm1, title={scan0001}, year={2021}}\n"
+        assert c.post("/api/import/bibtex", files={"file": ("a.bib", bib)}).status_code == 200
+        # Every source that answers by DOI or arXiv id switched off: no network.
+        off = {"web_lookup_disabled": "crossref,pubmed,biorxiv,arxiv"}
+        assert c.patch("/api/settings", json=off).status_code == 200
+        job = c.post("/api/maintenance/complete-metadata/run").json()
+        for _ in range(200):
+            job = c.get(f"/api/jobs/{job['id']}").json()
+            if job["state"] != "running":
+                break
+            time.sleep(0.05)
+        assert job["state"] == "done", job
+        assert job["result"] == {"new_papers": 1, "completed": 0, "to_review": 1}
+        [entry] = c.get("/api/metadata-review").json()["papers"]
+        assert entry["source_id"] == "local:nm1"
+        assert "title" in entry["missing"] and "authors" in entry["missing"]
+
+
 def test_real_cli_ncbi_api_key_setting(settings, monkeypatch):
     monkeypatch.delenv("NCBI_API_KEY", raising=False)
     c = TestClient(create_app(replace(settings, linxiv_bin=BIN)))

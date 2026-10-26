@@ -12,6 +12,7 @@ const pad = (n: number) => String(n).padStart(2, '0')
 // Pages that show what an operation found, for the library in view.
 const REPORT_PAGES: Record<string, { to: string; label: string } | undefined> = {
   duplicates: { to: '/duplicates', label: 'Show duplicates' },
+  'complete-metadata': { to: '/library?review=metadata', label: 'Review papers left incomplete' },
 }
 
 const when = (iso: string) => iso.replace('T', ' ').slice(0, 16)

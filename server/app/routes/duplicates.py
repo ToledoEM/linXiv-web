@@ -6,8 +6,8 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field
 
-from ..duplicates import REPORT, group_key, lock_for
-from ..maintenance import read_report, report_path, write_report
+from ..duplicates import REPORT, group_key
+from ..maintenance import read_report, report_lock, report_path, write_report
 from .common import ident, library, run
 
 router = APIRouter(prefix="/api/duplicates", tags=["duplicates"])
@@ -43,7 +43,7 @@ async def merge(request: Request, body: MergeIn):
     if winner == loser:
         raise HTTPException(status_code=400, detail="pick two different papers")
     path = report_path(library(request), REPORT)
-    async with lock_for(path):
+    async with report_lock(path):
         report = read_report(path)
         groups = report.get("groups") or []
         group = next(
@@ -65,7 +65,7 @@ async def dismiss(request: Request, body: DismissIn):
     the same."""
     key = group_key([ident(s, "paper id") for s in body.source_ids])
     path = report_path(library(request), REPORT)
-    async with lock_for(path):
+    async with report_lock(path):
         report = read_report(path)
         groups = [
             g

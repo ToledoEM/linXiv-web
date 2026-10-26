@@ -76,6 +76,15 @@ def _parse(raw: Any) -> dict:
     return data if isinstance(data, dict) else {}
 
 
+_report_locks: dict[Path, asyncio.Lock] = {}
+
+
+def report_lock(path: Path) -> asyncio.Lock:
+    """One read-modify-write at a time per report file (an operation's run and the
+    page acting on its result)."""
+    return _report_locks.setdefault(path, asyncio.Lock())
+
+
 def report_path(lib: Library, name: str) -> Path:
     """`<library data dir>/maintenance/<name>`: where operations keep their results."""
     folder = lib.data_dir / MAINT_DIR

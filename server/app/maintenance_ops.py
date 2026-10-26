@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from . import duplicates
+from . import duplicates, metadata_fill
 from .maintenance import Op
 
-OPS: list[Op] = [duplicates.OP]
+OPS: list[Op] = [duplicates.OP, metadata_fill.OP]

@@ -41,6 +41,7 @@ from .routes import (
     maintenance,
     mcp,
     metadata,
+    metadata_review,
     notes,
     pdfs,
     projects,
@@ -238,6 +239,7 @@ def create_app(
     app.include_router(system.router, dependencies=admin_only)
     app.include_router(maintenance.router, dependencies=admin_only)
     app.include_router(duplicates.router, dependencies=guarded)
+    app.include_router(metadata_review.router, dependencies=guarded)
     app.include_router(authors.router, dependencies=guarded)
     app.include_router(feed.router, dependencies=guarded)
     app.include_router(backup.router, dependencies=guarded)

@@ -17,7 +17,8 @@ from __future__ import annotations
 import json
 import re
 import xml.etree.ElementTree as ET
-from typing import Annotated, Literal
+from collections.abc import Awaitable, Callable
+from typing import Annotated, Any, Literal
 from urllib.parse import quote
 
 import httpx
@@ -33,6 +34,8 @@ from .common import ident, library, run
 from .user_settings import disabled_sources, ncbi_api_key
 
 router = APIRouter(prefix="/api", tags=["metadata"])
+# A library CLI call with the timeout already chosen: argv -> parsed JSON.
+Call = Callable[[list[str]], Awaitable[Any]]
 
 # One argv string is capped at 128 KiB on Linux.
 MAX_TEXT_BYTES = 100_000
@@ -158,15 +161,20 @@ def _from_search(source: str, r: dict) -> dict:
     )
 
 
-async def _search(request: Request, source: str, query: str) -> list[dict]:
+def cli_call(request: Request) -> Call:
+    """The library's CLI with the long timeout (lookups reach outside services)."""
+    return lambda args: run(request, args, long=True)
+
+
+async def _search(call: Call, source: str, query: str) -> list[dict]:
     args = ["search", "--source", source, "--max", str(MAX_RESULTS), "--", ident(query, "query")]
-    results = await run(request, args, long=True)
+    results = await call(args)
     return [_from_search(source, r) for r in results or [] if isinstance(r, dict)]
 
 
-async def _crossref_doi(request: Request, doi: str) -> list[dict]:
+async def _crossref_doi(call: Call, doi: str) -> list[dict]:
     try:
-        d = await run(request, ["doi", "resolve", "--", ident(doi, "DOI")], long=True)
+        d = await call(["doi", "resolve", "--", ident(doi, "DOI")])
     except CLIError as e:
         if e.status == 404:
             return []
@@ -396,7 +404,7 @@ async def _by_filename(request: Request, source: str, paper: dict) -> dict:
     if source == "pubmed":
         found = await _pubmed(f"{title}[title]", await _ncbi_key(request))
     else:
-        found = await _search(request, source, title)
+        found = await _search(cli_call(request), source, title)
     year = year_from_file(rel)
     published = paper.get("published")
     if year and not str(published or "").startswith(str(year)):
@@ -437,9 +445,10 @@ async def lookup(
     arxiv_id = sid.removeprefix("arxiv:") if sid.startswith("arxiv:") else None
 
     if source == "crossref" and doi:
-        return {"match": "doi", "candidates": await _crossref_doi(request, doi)}
+        return {"match": "doi", "candidates": await _crossref_doi(cli_call(request), doi)}
     if source == "arxiv" and arxiv_id:
-        return {"match": "arxiv", "candidates": await _search(request, "arxiv", f"id:{arxiv_id}")}
+        found = await _search(cli_call(request), "arxiv", f"id:{arxiv_id}")
+        return {"match": "arxiv", "candidates": found}
     if source == "biorxiv":
         if not doi:
             raise HTTPException(
@@ -455,4 +464,56 @@ async def lookup(
         return {"match": "title", "candidates": await _pubmed(f"{title}[title]", key)}
     if not title:
         raise HTTPException(status_code=400, detail="paper has no title to search by")
-    return {"match": "title", "candidates": await _search(request, source, title)}
+    return {"match": "title", "candidates": await _search(cli_call(request), source, title)}
+
+
+# ---------------------------------------------------------------------------
+# Identifier match (maintenance: complete metadata of new papers)
+
+# bioRxiv/medRxiv DOI prefixes: their own API knows these best.
+BIORXIV_PREFIXES = ("10.1101/", "10.64898/")
+
+
+async def match_by_id(
+    call: Call, paper: dict, off: set[str], preferred: str = "crossref", ncbi_key: str = ""
+) -> dict | None:
+    """The record a lookup source holds under this paper's own arXiv id or DOI, or
+    None. Never searches by title, so a hit is the same paper. Sources in `off`
+    (switched off in Settings) are skipped; `preferred` is tried first."""
+    sid = str(paper.get("source_id") or "")
+    if sid.startswith("arxiv:") and "arxiv" not in off:
+        arxiv_id = sid.removeprefix("arxiv:")
+        found = await _search(call, "arxiv", f"id:{arxiv_id}")
+        hit = next((c for c in found if (c.get("ref") or "").endswith(arxiv_id)), None)
+        if hit:
+            return hit
+    doi = clean_doi(paper.get("doi"))
+    if not doi:
+        return None
+    order = ["biorxiv"] if doi.startswith(BIORXIV_PREFIXES) else []
+    order += [preferred, "crossref", "pubmed"]
+    for source in dict.fromkeys(order):
+        if source in off or source not in ("crossref", "pubmed", "biorxiv"):
+            continue
+        if source == "crossref":
+            found = await _crossref_doi(call, doi)
+        elif source == "pubmed":
+            found = await _pubmed(f"{doi}[doi]", ncbi_key)
+        else:
+            found = await _biorxiv(doi)
+        hit = next((c for c in found if (c.get("doi") or "").lower() == doi.lower()), None)
+        if hit:
+            return hit
+    return None
+
+
+def repair_args(sid: str, body: MetadataIn, tags: list[str]) -> list[str]:
+    """`paper repair` argv for a full record (see save_metadata: omitted options
+    are cleared, so every field and the current tags go along)."""
+    args = ["paper", "repair", f"--title={body.title}"]
+    args += [f"--authors={a}" for a in (body.authors or [UNKNOWN_AUTHOR])]
+    args += [f"--published={body.published}", f"--summary={body.summary}"]
+    for flag, value in (("category", body.category), ("doi", body.doi), ("url", body.url)):
+        if value:
+            args.append(f"--{flag}={value}")
+    return [*args, *(f"--tags={t}" for t in tags), "--", sid]

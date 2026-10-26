@@ -193,6 +193,48 @@ export default function Library() {
       .catch(() => {})
   }, [])
 
+  // Papers "Complete metadata of new papers" could not complete; a save may fix one.
+  const [review, setReview] = useState<string[]>([])
+  useEffect(() => {
+    api
+      .metadataReview()
+      .then((r) => setReview(r.papers.map((p) => p.source_id)))
+      .catch(() => {})
+  }, [reload])
+
+  // ?review=metadata (link from the header or Settings): select those papers and
+  // open batch edit metadata on them, then drop the parameter.
+  const reviewParam = params.get('review') === 'metadata'
+  useEffect(() => {
+    if (!reviewParam) return
+    let live = true
+    api
+      .metadataReview()
+      .then((r) => {
+        if (!live) return
+        const ids = r.papers.map((p) => p.source_id)
+        setReview(ids)
+        setSelected(new Set(ids))
+        setBatchMode('metadata')
+        setBatch(true)
+        const next = new URLSearchParams(window.location.search)
+        next.delete('review')
+        setParams(next, { replace: true })
+      })
+      .catch((err) => setError((err as Error).message))
+    return () => {
+      live = false
+    }
+  }, [reviewParam, setParams])
+
+  const skip = (sid: string) => {
+    setSelected((s) => toggled(s, sid))
+    if (review.includes(sid)) {
+      setReview((r) => r.filter((x) => x !== sid))
+      api.removeMetadataReview([sid]).catch(() => {})
+    }
+  }
+
   // Deleting or untagging papers can shrink the result below the current page.
   const lastPage = Number.isFinite(total) ? Math.max(1, Math.ceil(total / size)) : Infinity
   const page = Math.min(Math.max(1, Math.floor(Number(params.get('page'))) || 1), lastPage)
@@ -269,6 +311,14 @@ export default function Library() {
             {' \u00b7 '}
             <Link to="/duplicates">
               {duplicates} duplicate group{duplicates === 1 ? '' : 's'}
+            </Link>
+          </>
+        )}
+        {library.canWrite && review.length > 0 && (
+          <>
+            {' · '}
+            <Link to="/library?review=metadata" title="Papers whose metadata could not be completed automatically">
+              {review.length} to complete
             </Link>
           </>
         )}
@@ -492,7 +542,7 @@ export default function Library() {
             selected={batchIds}
             titles={titles}
             onSaved={() => setReload((n) => n + 1)}
-            onSkip={(sid) => setSelected((s) => toggled(s, sid))}
+            onSkip={skip}
           />
         )}
       </div>

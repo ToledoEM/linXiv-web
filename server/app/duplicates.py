@@ -20,7 +20,7 @@ import sqlite3
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from .maintenance import Op, read_report, report_path, write_report
+from .maintenance import Op, read_report, report_lock, report_path, write_report
 from .pdf_layout import safe_file_name
 
 if TYPE_CHECKING:
@@ -32,12 +32,6 @@ if TYPE_CHECKING:
 REPORT = "duplicates.json"
 CACHE = "pdf-hashes.json"
 CHUNK = 1024 * 1024
-# One write at a time per report file (merge / dismiss / scan).
-_locks: dict[Path, asyncio.Lock] = {}
-
-
-def lock_for(path: Path) -> asyncio.Lock:
-    return _locks.setdefault(path, asyncio.Lock())
 
 
 def saved_pdfs(db_path: Path, pdf_dir: Path) -> list[dict[str, Any]]:
@@ -127,7 +121,7 @@ async def scan(app: FastAPI, lib: Library, job: Job) -> dict:
         )
     write_report(cache_path, fresh)
     report = report_path(lib, REPORT)
-    async with lock_for(report):
+    async with report_lock(report):
         dismissed = set(read_report(report).get("dismissed") or [])
         groups = groups_of(files, dismissed)
         write_report(
