@@ -7,8 +7,9 @@ demand or each night at the configured hour. Times are the server's local time
 
 The schedule and the last result per operation live in two web-only settings of
 the root library, JSON strings that are never PATCHable through /api/settings:
-`web_maint_schedule` ({hour, nightly: [op ids], keep_backups}) and `web_maint_status`
-({op id: {started_at, finished_at, state, libraries: {key: summary}}, nightly_on}).
+`web_maint_schedule` ({hour, nightly: [op ids], keep_backups, trash_days}) and
+`web_maint_status` ({op id: {started_at, finished_at, state, libraries: {key:
+summary}}, nightly_on}).
 """
 
 from __future__ import annotations
@@ -40,6 +41,8 @@ DEFAULT_HOUR = 3
 # Database backups kept per library by the backup operation.
 DEFAULT_KEEP_BACKUPS = 7
 MAX_KEEP_BACKUPS = 100
+# Cleanup empties trash entries older than this many days (0: never).
+MAX_TRASH_DAYS = 3650
 MAX_WAIT = 3600  # schedule re-read at least hourly (PUT /schedule wakes it sooner)
 MAINT_DIR = "maintenance"
 SHARED = "shared"
@@ -154,25 +157,33 @@ class Maintenance:
         hour = raw.get("hour")
         nightly = raw.get("nightly")
         keep = raw.get("keep_backups")
+        days = raw.get("trash_days")
         return {
             "hour": hour if isinstance(hour, int) and 0 <= hour <= 23 else DEFAULT_HOUR,
             "nightly": [i for i in self.ops if isinstance(nightly, list) and i in nightly],
             "keep_backups": keep
             if isinstance(keep, int) and 1 <= keep <= MAX_KEEP_BACKUPS
             else DEFAULT_KEEP_BACKUPS,
+            "trash_days": days if isinstance(days, int) and 0 <= days <= MAX_TRASH_DAYS else 0,
         }
 
     async def schedule(self) -> dict:
         return self.schedule_from(await self.stored())
 
     async def set_schedule(
-        self, hour: int, nightly: list[str], keep_backups: int | None = None
+        self,
+        hour: int,
+        nightly: list[str],
+        keep_backups: int | None = None,
+        trash_days: int | None = None,
     ) -> dict:
-        keep = keep_backups or (await self.schedule())["keep_backups"]
+        """None keeps the stored value of `keep_backups` / `trash_days`."""
+        current = await self.schedule()
         value = {
             "hour": hour,
             "nightly": [i for i in self.ops if i in nightly],
-            "keep_backups": keep,
+            "keep_backups": keep_backups or current["keep_backups"],
+            "trash_days": current["trash_days"] if trash_days is None else trash_days,
         }
         async with self._write:
             await self._save(SCHEDULE_SETTING, value)

@@ -628,6 +628,7 @@ kbd { display: inline-block; margin-right: 0.25rem; padding: 0.05rem 0.4rem; fon
 .dup-group { margin-bottom: 0.8rem; }
 .server-backups { margin-top: 1rem; }
 .pdf-check { margin-top: 0.5rem; }
+.days-input { width: 4.5rem; }
 .server-backups input[type="number"] { width: 4.5rem; }
 .users-add { display: grid; gap: 0.6rem; max-width: 24rem; margin-top: 1rem; }
 .users-add h4 { margin: 0; }

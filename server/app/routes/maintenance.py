@@ -11,6 +11,7 @@ from ..db_backup import NAME, backups
 from ..jobs import JobBusy
 from ..maintenance import (
     MAX_KEEP_BACKUPS,
+    MAX_TRASH_DAYS,
     Maintenance,
     library_keys,
     read_report,
@@ -27,6 +28,7 @@ class ScheduleIn(BaseModel):
     hour: int = Field(ge=0, le=23)
     nightly: list[str] = Field(max_length=50)
     keep_backups: int | None = Field(None, ge=1, le=MAX_KEEP_BACKUPS)
+    trash_days: int | None = Field(None, ge=0, le=MAX_TRASH_DAYS)
 
 
 def _maint(request: Request) -> Maintenance:
@@ -56,7 +58,7 @@ async def set_schedule(request: Request, body: ScheduleIn):
     unknown = [i for i in body.nightly if i not in m.ops]
     if unknown:
         raise HTTPException(status_code=400, detail=f"unknown operation: {', '.join(unknown)}")
-    return await m.set_schedule(body.hour, body.nightly, body.keep_backups)
+    return await m.set_schedule(body.hour, body.nightly, body.keep_backups, body.trash_days)
 
 
 @router.post("/{op_id}/run")

@@ -440,13 +440,22 @@ export interface MaintenanceOp {
 }
 
 /** GET /api/maintenance: nightly schedule (server local hour) and the operations. */
-export interface MaintenanceOverview {
+export interface MaintenanceSchedule {
+  /** Nightly run hour, server local time. */
   hour: number
   nightly: string[]
-  timezone: string | null
-  nightly_on: string | null
   /** Database backups kept per library by the "backup" operation. */
   keep_backups: number
+  /** Cleanup empties trash entries older than this many days; 0 keeps the trash. */
+  trash_days: number
+}
+
+export type MaintenanceScheduleInput = Pick<MaintenanceSchedule, 'hour' | 'nightly'> &
+  Partial<Pick<MaintenanceSchedule, 'keep_backups' | 'trash_days'>>
+
+export interface MaintenanceOverview extends MaintenanceSchedule {
+  timezone: string | null
+  nightly_on: string | null
   ops: MaintenanceOp[]
 }
 

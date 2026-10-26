@@ -6,7 +6,7 @@ import ConfirmDialog from './ConfirmDialog'
 import PdfCheckReport from './PdfCheckReport'
 import ServerBackups from './ServerBackups'
 import { runSummary } from './maintenance'
-import type { MaintenanceOp, MaintenanceOverview } from './types'
+import type { MaintenanceOp, MaintenanceOverview, MaintenanceSchedule } from './types'
 
 const POLL_MS = 1000
 const HOURS = Array.from({ length: 24 }, (_, h) => h)
@@ -42,12 +42,13 @@ export default function MaintenanceSettings() {
     return () => clearInterval(t)
   }, [busy, load])
 
-  const saveSchedule = async (hour: number, nightly: string[], keep?: number) => {
+  /** Save the schedule with `patch` applied (hour and nightly always go along). */
+  const saveSchedule = async (patch: Partial<MaintenanceSchedule>) => {
     if (!data) return
     setSaving(true)
     setError('')
     try {
-      const s = await api.setMaintenanceSchedule(hour, nightly, keep)
+      const s = await api.setMaintenanceSchedule({ hour: data.hour, nightly: data.nightly, ...patch })
       setData({ ...data, ...s })
     } catch (err) {
       setError((err as Error).message)
@@ -91,7 +92,7 @@ export default function MaintenanceSettings() {
           aria-label="Nightly hour"
           value={data.hour}
           disabled={saving}
-          onChange={(e) => void saveSchedule(Number(e.target.value), data.nightly)}
+          onChange={(e) => void saveSchedule({ hour: Number(e.target.value) })}
         >
           {HOURS.map((h) => (
             <option key={h} value={h}>
@@ -116,6 +117,9 @@ export default function MaintenanceSettings() {
                     <td>
                       <strong>{op.label}</strong>
                       <div className="muted small">{op.description}</div>
+                      {op.id === 'cleanup' && (
+                        <TrashDays value={data.trash_days} onSave={(n) => void saveSchedule({ trash_days: n })} />
+                      )}
                       {op.job ? (
                         <div className="small">
                           Running {op.job.done} / {op.job.total}
@@ -145,10 +149,9 @@ export default function MaintenanceSettings() {
                           checked={nightly}
                           disabled={saving}
                           onChange={() =>
-                            void saveSchedule(
-                              data.hour,
-                              nightly ? data.nightly.filter((i) => i !== op.id) : [...data.nightly, op.id],
-                            )
+                            void saveSchedule({
+                              nightly: nightly ? data.nightly.filter((i) => i !== op.id) : [...data.nightly, op.id],
+                            })
                           }
                         />
                         Nightly
@@ -185,7 +188,7 @@ export default function MaintenanceSettings() {
       {data.ops.some((o) => o.id === 'backup') && (
         <ServerBackups
           keep={data.keep_backups}
-          onKeep={(n) => void saveSchedule(data.hour, data.nightly, n)}
+          onKeep={(n) => void saveSchedule({ keep_backups: n })}
           version={data.ops.find((o) => o.id === 'backup')?.last?.finished_at ?? null}
         />
       )}
@@ -200,5 +203,31 @@ export default function MaintenanceSettings() {
         <p>{confirm?.description}</p>
       </ConfirmDialog>
     </div>
+  )
+}
+
+/** Days a paper or project stays in the trash before Clean up deletes it; 0 keeps them. */
+function TrashDays({ value, onSave }: { value: number; onSave: (n: number) => void }) {
+  const [draft, setDraft] = useState(String(value))
+  const save = () => {
+    const n = Math.floor(Number(draft))
+    if (draft.trim() !== '' && n >= 0 && n <= 3650 && n !== value) onSave(n)
+    else setDraft(String(value))
+  }
+  return (
+    <label className="check small">
+      Empty trash entries older than
+      <input
+        type="number"
+        className="days-input"
+        aria-label="Trash days"
+        min={0}
+        max={3650}
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={save}
+      />
+      days (0: keep the trash)
+    </label>
   )
 }

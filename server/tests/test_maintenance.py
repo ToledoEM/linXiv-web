@@ -111,7 +111,7 @@ def test_schedule_put(settings, fake):
     with TestClient(_app(settings, fake, [COUNT, FLAKY])) as c:
         r = c.put("/api/maintenance/schedule", json={"hour": 2, "nightly": ["flaky", "count"]})
         assert r.status_code == 200, r.text
-        want = {"hour": 2, "nightly": ["count", "flaky"], "keep_backups": 7}
+        want = {"hour": 2, "nightly": ["count", "flaky"], "keep_backups": 7, "trash_days": 0}
         assert r.json() == want
         assert json.loads(stored["web_maint_schedule"]) == want
         # keep_backups stays unless given

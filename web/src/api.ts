@@ -15,6 +15,8 @@ import type {
   LogWindow,
   LookupSource,
   MaintenanceOverview,
+  MaintenanceSchedule,
+  MaintenanceScheduleInput,
   McpStatus,
   Me,
   MergeCandidates,
@@ -450,12 +452,9 @@ export const api = {
   removeMetadataReview: (sourceIds: string[]) =>
     request<{ ok: boolean }>('POST', '/api/metadata-review/remove', { source_ids: sourceIds }),
   maintenance: () => request<MaintenanceOverview>('GET', '/api/maintenance'),
-  setMaintenanceSchedule: (hour: number, nightly: string[], keepBackups?: number) =>
-    request<{ hour: number; nightly: string[]; keep_backups: number }>('PUT', '/api/maintenance/schedule', {
-      hour,
-      nightly,
-      keep_backups: keepBackups,
-    }),
+  /** Omitted keep_backups / trash_days keep their stored values. */
+  setMaintenanceSchedule: (body: MaintenanceScheduleInput) =>
+    request<MaintenanceSchedule>('PUT', '/api/maintenance/schedule', body),
   pdfCheck: () => request<{ libraries: PdfCheckReport[] }>('GET', '/api/maintenance/pdf-check'),
   maintenanceBackups: () =>
     request<{ backups: ServerBackup[] }>('GET', '/api/maintenance/backups'),

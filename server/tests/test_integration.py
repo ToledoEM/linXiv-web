@@ -607,6 +607,30 @@ def test_real_cli_pdf_check(settings):
         assert [m["source_id"] for m in report["missing"]] == [sid]
 
 
+def test_real_cli_cleanup_empties_old_trash(settings):
+    with TestClient(create_app(replace(settings, linxiv_bin=BIN))) as c:
+        bib = b"@misc{old1, title={Old One}, year={2020}}\n@misc{new1, title={New One}, year={2020}}\n"
+        assert c.post("/api/import/bibtex", files={"file": ("a.bib", bib)}).status_code == 200
+        for sid in ("local:old1", "local:new1"):
+            assert c.delete(f"/api/papers/{sid}").status_code == 200
+        with sqlite3.connect(settings.data_dir / "papers.db") as db:
+            db.execute(
+                "UPDATE PAPER_ROOTS SET DELETED_AT = '2020-01-01 00:00:00' WHERE SOURCE_ID = ?",
+                ("local:old1",),
+            )
+        body = {"hour": 3, "nightly": [], "trash_days": 30}
+        assert c.put("/api/maintenance/schedule", json=body).status_code == 200
+        job = c.post("/api/maintenance/cleanup/run").json()
+        for _ in range(200):
+            job = c.get(f"/api/jobs/{job['id']}").json()
+            if job["state"] != "running":
+                break
+            time.sleep(0.05)
+        assert job["state"] == "done" and not job["errors"], job
+        assert job["result"]["papers_purged"] == 1
+        assert [p["source_id"] for p in c.get("/api/trash").json()["papers"]] == ["local:new1"]
+
+
 def test_real_cli_ncbi_api_key_setting(settings, monkeypatch):
     monkeypatch.delenv("NCBI_API_KEY", raising=False)
     c = TestClient(create_app(replace(settings, linxiv_bin=BIN)))
