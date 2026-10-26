@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-10-26
+
 ### Added
 - Live demo link in the README and the documentation home page.
 - Multi-user mode, off by default. Settings → **Server Admin** turns it on: you pick a username and keep the server password, and your library stays as it is. The login page then asks for a username. Turning it off again lets only the owner log in (password only) and keeps every account and library for later.

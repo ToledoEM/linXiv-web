@@ -57,7 +57,7 @@ from .routes import auth as auth_routes
 from .routes import logs as log_routes
 from .update_check import UpdateChecker
 
-__version__ = "0.1.2"
+__version__ = "0.1.3"
 log = logging.getLogger("app")
 access_log = logging.getLogger("app.access")
 # Polled or static: not worth a line each.

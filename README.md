@@ -6,6 +6,7 @@
 [![Release](https://img.shields.io/github/v/release/ToledoEM/linXiv-web)](https://github.com/ToledoEM/linXiv-web/releases)
 [![License](https://img.shields.io/github/license/ToledoEM/linXiv-web)](LICENSE)
 [![Image](https://img.shields.io/badge/ghcr.io-linxiv--web-blue?logo=docker)](https://github.com/ToledoEM/linXiv-web/pkgs/container/linxiv-web)
+[![linXiv](https://img.shields.io/badge/linXiv-v0.7.1-informational)](https://github.com/linxiv-dev/linXiv/releases/tag/v0.7.1)
 
 linXiv-web is a browser UI for [linXiv](https://github.com/linxiv-dev/linXiv). You can search arXiv, OpenAlex and Crossref, add papers to a library, tag them, organize them into projects and reading lists, read and highlight their PDFs, and take notes.
 
