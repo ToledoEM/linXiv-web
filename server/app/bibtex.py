@@ -1,7 +1,7 @@
 """BibTeX entries for papers (`linxiv list` JSON).
 
-linXiv's own `project export-bibtex` writes no `author` field and works per
-project only, so selections are formatted here. arXiv papers become `@misc`
+linXiv's own `project export-bibtex` works per project only, so selections
+are formatted here. arXiv papers become `@misc`
 with `eprint`/`archivePrefix`/`primaryClass` (or `@article` when they carry a
 journal reference); everything else is `@article`.
 """

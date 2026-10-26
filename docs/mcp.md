@@ -108,7 +108,7 @@ Hints only advise the client; the profile decides what can be called. A reasonab
 
 ## Tool reference
 
-Descriptions come from `linxiv-mcp` (linXiv v0.7.0). Hints: read-only, edit (undoable), destructive (permanent), idempotent, open world (calls outside services).
+Descriptions come from `linxiv-mcp` (linXiv v0.7.1). Hints: read-only, edit (undoable), destructive (permanent), idempotent, open world (calls outside services).
 
 ### Read only (32 tools)
 

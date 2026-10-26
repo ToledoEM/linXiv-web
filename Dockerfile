@@ -7,7 +7,7 @@
 #   docker build --build-arg LINXIV_SRC=local \
 #     --build-context linxiv-local=../linXiv .
 
-ARG LINXIV_REF=v0.7.0
+ARG LINXIV_REF=v0.7.1
 ARG LINXIV_SRC=git
 
 # --- linXiv source: pinned upstream tag (default) ---

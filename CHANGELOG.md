@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - API: `GET/POST /api/users`, `PUT/DELETE /api/users/{id}`, `GET/POST /api/admin/multi-user`, `POST /api/shared/copy`. Requests choose the shared library with the `X-Linxiv-Library: shared` header or `?library=shared` on plain links. `/api/me` reports `multi_user`, `username`, `role` and `owner`.
 
 ### Changed
+- Built against linXiv v0.7.1 (was v0.7.0). CLI commands and MCP tools are unchanged. Project BibTeX export now includes authors and, for arXiv papers, `eprint`/`archivePrefix`; BibTeX import keeps arXiv ids and versions, so an exported project re-imports as the same papers. A broken full-text index now shows as a Library search error instead of returning fewer results.
 - Background jobs belong to the library they run on and the account that started them: the same job can run in two libraries at once, and users see only their own jobs. The full-text indexer runs once per library, one arXiv fetch at a time across all of them.
 - Activity log entries name the account that made the change.
 
