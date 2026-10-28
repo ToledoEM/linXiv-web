@@ -35,9 +35,9 @@ import type { Annotation } from './types'
 pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString()
 
 // Pages this far from the current one render; the rest are fixed-height spacers.
-const PAGE_WINDOW = 4
+const PAGE_WINDOW = 12
 // Quiet time after the last resize tick before pages re-render at the new width.
-const RESIZE_SETTLE_MS = 120
+const RESIZE_SETTLE_MS = 50
 // CSS zoom (A3) scales the finished raster, so the canvas backing grows with it;
 // capped so HiDPI × max zoom can't exceed browser canvas limits.
 const MAX_CANVAS_DPR = 3
@@ -521,6 +521,9 @@ export default function PdfReader({
         <Document
           file={file}
           options={pdfDocumentOptions}
+          // Suspense would bubble each page load to PaperDetail's boundary and
+          // hide the whole reader behind "Loading viewer…" while scrolling.
+          suspense={false}
           onLoadSuccess={onLoad}
           onLoadError={onLoadError}
           loading={<p className="muted center pdf-status">Loading PDF…</p>}
