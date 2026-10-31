@@ -133,6 +133,7 @@ Libraries are created the first time they are opened. To keep the PDFs of the sh
 | Check PDF files | Reports papers whose PDF file is missing on disk, and PDF files in the PDF folder that no paper points at. It changes nothing. **Show report** lists them. |
 | Back up databases | Saves a copy of each library's database on the server and keeps the newest ones (7 unless you change it below the table). PDF files are not included. |
 | Clean authors without papers | Deletes author records that no paper uses any more, for example the authors of papers deleted from the trash. linXiv refuses to delete an author still linked to a paper, so those are kept. It asks before running. |
+| Clean tags without papers | Deletes tags that no paper and no project uses. Tags on papers in the trash stay, so a restored paper keeps its tags, and so do project tags such as `reading-list`. A tag named Untagged is always kept. It asks before running. |
 | Empty trash | Deletes for good the papers that have been in the trash longer than the days typed on its row: 1 to 120, or 0 (the default) to never delete. Projects in the trash are left alone. It asks before running. |
 
 The first run of "Complete metadata of new papers" looks at papers added in the last 30 days.
