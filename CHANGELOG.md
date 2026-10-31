@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- Maintenance operation **Clean tags without papers** (admins): deletes tags that no paper (papers in the trash included) and no project uses. Project tags such as `reading-list` stay, and a tag named Untagged is always kept. It asks before running.
+- **Check PDF files** report now breaks the PDF folder down: files of any type, PDFs, files in each top-level subfolder, next to the number of papers, papers with a PDF, extra version files and PDFs of papers in the trash, so the file count on disk and the paper count can be compared. **Skip folders** lists subfolders (for example `dup, errors`) that are counted but never reported as unlinked. **Download full list (CSV)** has every unlinked file (the page lists 500). **Move to orphans/** checks again and moves each unlinked PDF to `orphans/` under the same path; files changed in the last hour stay, and nothing is deleted.
+- API: `GET/PUT /api/maintenance/pdf-check/options`, `GET /api/maintenance/pdf-check/{library}/unlinked.csv`, `POST /api/maintenance/pdf-check/{library}/move-orphans`.
+
+### Changed
+- Home: the tags panel is now **Most frequent tags**, the 8 most used tags in the whole library (was tags of the 10 recent papers).
+- DOI parsing: a DOI is pulled out of the text around it (`DOI: 10.1038/nature14539.`, `doi.org/…` links with or without `https://`, percent-encoded links, trailing words) and checked against Crossref's patterns (the modern form plus the older Wiley, SICI, ACS and 10.1207 forms). Add Paper and the metadata editor refuse a DOI that fails the check; a stored DOI that fails it is shown, linked, exported and looked up as no DOI.
+
 ## [0.1.3] - 2026-10-26
 
 ### Added
