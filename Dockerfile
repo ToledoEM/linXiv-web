@@ -42,7 +42,7 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
     && install -D src-tauri/vendor/pdfium/lib/libpdfium.so /out/libpdfium.so
 
 # Standalone CLI image, used for discovery and the real-CLI integration test.
-FROM debian:bookworm-slim@sha256:7ff6ba31527b9e336162fa061746c366c4b2032f4d2cff2078bea43f78efe3f8 AS cli
+FROM debian:bookworm-slim@sha256:99c0b25c46d0214d5a2091092e7908907dcaecd6a962cde0ac700acee222b6f3 AS cli
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates \
     && rm -rf /var/lib/apt/lists/*
@@ -55,7 +55,7 @@ ENTRYPOINT ["linxiv"]
 
 # --- Server tests + lint, with the real CLI for the integration test ---
 #   docker build --target server-test .
-FROM python:3.14-slim-bookworm@sha256:48b13b003dda20b16f9442b8475aa05fe21bf6579a8c881db92ffb4d8fd20f83 AS server-test
+FROM python:3.15-slim-bookworm@sha256:4e03260adeeebafccd084f3584e6b84823aba5651cfb53ef8a078ed441ddf9cd AS server-test
 COPY --from=ghcr.io/astral-sh/uv:0.8@sha256:1d31be550ff927957472b2a491dc3de1ea9b5c2d319a9cea5b6a48021e2990a6 /uv /usr/local/bin/uv
 COPY --from=cli-build /out/linxiv /usr/local/bin/linxiv
 COPY --from=cli-build /out/linxiv-mcp /usr/local/bin/linxiv-mcp
@@ -78,7 +78,7 @@ COPY web/ ./
 RUN npm run build
 
 # --- Stage 3: Python runtime ---
-FROM python:3.14-slim-bookworm@sha256:48b13b003dda20b16f9442b8475aa05fe21bf6579a8c881db92ffb4d8fd20f83 AS runtime
+FROM python:3.15-slim-bookworm@sha256:4e03260adeeebafccd084f3584e6b84823aba5651cfb53ef8a078ed441ddf9cd AS runtime
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates \
     && rm -rf /var/lib/apt/lists/*
