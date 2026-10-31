@@ -1,6 +1,6 @@
 # Settings
 
-Settings are split into groups listed on the left. Each card has its own Save button. You can link to a group directly, for example `/settings#ai`.
+Settings are split into groups listed on the left. The selected group lists its cards below it; click one to jump to it. Each card has its own Save button. You can link to a group directly, for example `/settings#ai`, or to a card in it, for example `/settings#server/backup`.
 
 Settings marked as stored in the browser (theme, zoom, density, sidebar pages, paper table columns) apply to that browser only. Everything else is stored on the server.
 
