@@ -1,21 +1,14 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api, paperPath } from '../api'
-import type { Paper, SavedPdf, SavedPdfView, Stats } from '../types'
+import type { SavedPdf, SavedPdfView, Stats } from '../types'
 import { Authors, ErrorText } from '../components'
 import { formatBytes } from '../format'
 import HomeFeed from '../HomeFeed'
 import { MathText } from '../tex'
 
-// Top tags across the recent papers, as on linXiv desktop's Home.
-function tagCounts(papers: Paper[]): { tag: string; count: number }[] {
-  const counts = new Map<string, number>()
-  for (const p of papers) for (const t of p.tags ?? []) counts.set(t, (counts.get(t) ?? 0) + 1)
-  return [...counts.entries()]
-    .map(([tag, count]) => ({ tag, count }))
-    .sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag))
-    .slice(0, 8)
-}
+// Most frequent tags across the whole library (server sorts count desc, then name).
+const TOP_TAGS = 8
 
 // Home's Saved PDFs slice: which papers and how many, kept per browser.
 const PDF_VIEWS: { value: SavedPdfView; label: string }[] = [
@@ -53,6 +46,8 @@ export default function Home() {
   const [pdfs, setPdfs] = useState<SavedPdf[] | null>(null)
   const [pdfPref, setPdfPref] = useState(loadPdfPref)
   const [pdfError, setPdfError] = useState('')
+  const [topTags, setTopTags] = useState<{ tag: string; count: number }[] | null>(null)
+  const [tagError, setTagError] = useState('')
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -60,6 +55,13 @@ export default function Home() {
       .stats()
       .then(setStats)
       .catch((err) => setError((err as Error).message))
+  }, [])
+
+  useEffect(() => {
+    api
+      .tagCounts()
+      .then((c) => setTopTags(c.tags.filter((t) => t.count > 0).slice(0, TOP_TAGS)))
+      .catch((err) => setTagError((err as Error).message))
   }, [])
 
   useEffect(() => {
@@ -89,8 +91,7 @@ export default function Home() {
     { label: 'Tags', value: stats.tag_count, hint: 'applied' },
   ]
   const recent = (stats.recent_papers ?? []).slice(0, 10)
-  const topTags = tagCounts(recent)
-  const maxTag = topTags[0]?.count ?? 0
+  const maxTag = topTags?.[0]?.count ?? 0
 
   return (
     <section className="home">
@@ -143,9 +144,12 @@ export default function Home() {
         </div>
 
         <div>
-          <h3>Tags: recent papers</h3>
-          {topTags.length === 0 ? (
-            <p className="card muted center">No tags on recent papers yet.</p>
+          <h3>Most frequent tags</h3>
+          <ErrorText error={tagError} />
+          {topTags === null ? (
+            !tagError && <p className="muted">Loading…</p>
+          ) : topTags.length === 0 ? (
+            <p className="card muted center">No tags yet.</p>
           ) : (
             <ul className="card tag-bars">
               {topTags.map(({ tag, count }) => (
