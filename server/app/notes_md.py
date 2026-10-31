@@ -8,7 +8,7 @@ import json
 import re
 from collections.abc import Callable
 
-from .doi import clean_doi
+from .doi import doi_or_none
 
 _BAD_NAME = re.compile(r'[\\/:*?"<>|#^\[\]]')
 
@@ -43,7 +43,7 @@ def render(paper: dict, notes: list[dict], scope_label: Callable[[int | None], s
     authors = [str(a) for a in paper.get("authors") or [] if str(a).strip()]
     if authors:
         lines += ["authors:", *(f"  - {_q(a)}" for a in authors)]
-    doi = clean_doi(paper.get("doi"))
+    doi = doi_or_none(paper.get("doi"))
     if doi:
         lines.append(f"doi: {_q(doi)}")
     lines.append(f"source_id: {_q(str(paper.get('source_id') or ''))}")

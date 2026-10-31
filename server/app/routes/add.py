@@ -17,7 +17,7 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from ..cli import CLIError
-from ..doi import clean_doi
+from ..doi import clean_doi, is_valid_doi
 from .common import ident, run, settings
 from .library import fetch
 
@@ -27,7 +27,6 @@ _ARXIV_ID = r"(\d{4}\.\d{4,5}|[a-z\-]+(?:\.[A-Z]{2})?/\d{7})(?:v\d+)?"
 _ARXIV_BARE = re.compile(rf"^(?:arxiv:)?{_ARXIV_ID}$", re.IGNORECASE)
 _ARXIV_PATH = re.compile(rf"^/(?:abs|pdf|html)/{_ARXIV_ID}(?:\.pdf)?/?$")
 _ARXIV_HOSTS = {"arxiv.org", "www.arxiv.org", "export.arxiv.org"}
-_DOI = re.compile(r"^10\.\d{4,9}/\S+$")
 _DOI_HOSTS = {"doi.org", "dx.doi.org", "www.doi.org"}
 _ARXIV_DOI = re.compile(r"^10\.48550/arxiv\.(.+)$", re.IGNORECASE)
 _MAX_REDIRECTS = 5
@@ -125,7 +124,7 @@ def classify(text: str) -> tuple[str, str]:
         else:
             return "pdf", text
     doi = clean_doi(doi)
-    if _DOI.match(doi):
+    if is_valid_doi(doi):
         # arXiv-minted DOIs (10.48550/arXiv.<id>) go through the arXiv fetch.
         if (m := _ARXIV_DOI.match(doi)) and (a := _ARXIV_BARE.match(m.group(1))):
             return "arxiv", a.group(1)

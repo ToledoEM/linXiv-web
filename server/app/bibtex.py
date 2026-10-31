@@ -11,7 +11,7 @@ from __future__ import annotations
 import re
 import unicodedata
 
-from .doi import clean_doi
+from .doi import doi_or_none
 
 _MATH = re.compile(r"(\$[^$]*\$)")
 _SPECIAL = re.compile(r"(?<!\\)([&%#_])")
@@ -74,7 +74,7 @@ def entry(paper: dict, key: str) -> str:
     year = str(paper.get("published") or "")[:4]
     if year.isdigit():
         fields.append(("year", year))
-    doi = clean_doi(paper.get("doi"))
+    doi = doi_or_none(paper.get("doi"))
     if doi:
         fields.append(("doi", doi))
     if arxiv:

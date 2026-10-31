@@ -28,7 +28,7 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from ..cli import CLIError
-from ..doi import clean_doi
+from ..doi import clean_doi, doi_or_none, is_valid_doi
 from ..pdf_name import pdf_file, title_from_file, year_from_file
 from .common import ident, library, run
 from .user_settings import disabled_sources, ncbi_api_key
@@ -90,7 +90,10 @@ class MetadataIn(BaseModel):
     @field_validator("doi")
     @classmethod
     def _doi(cls, v: str | None) -> str | None:
-        return clean_doi(v) or None
+        doi = clean_doi(v)
+        if doi and not is_valid_doi(doi):
+            raise ValueError(f"not a valid DOI: {doi}")
+        return doi or None
 
     @field_validator("authors")
     @classmethod
@@ -148,7 +151,7 @@ async def save_metadata(request: Request, source_id: str, body: MetadataIn):
 def _candidate(**kw) -> dict:
     keys = ("source", "ref", "title", "authors", "published", "summary", "category", "doi", "url")
     out = {k: kw.get(k) for k in keys}
-    out["doi"] = clean_doi(out["doi"]) or None
+    out["doi"] = doi_or_none(out["doi"])
     return out
 
 
@@ -456,7 +459,7 @@ async def lookup(
     paper = await run(request, ["paper", "get", "--", sid])
     if by == "filename":
         return await _by_filename(request, source, paper)
-    doi = clean_doi(paper.get("doi"))
+    doi = doi_or_none(paper.get("doi")) or ""
     title = (paper.get("title") or "").strip()
     arxiv_id = sid.removeprefix("arxiv:") if sid.startswith("arxiv:") else None
 
@@ -502,7 +505,7 @@ async def match_by_id(
     for bioRxiv/medRxiv DOIs, Crossref and PubMed for any DOI."""
     sid = str(paper.get("source_id") or "")
     arxiv_id = sid.removeprefix("arxiv:") if sid.startswith("arxiv:") else None
-    doi = clean_doi(paper.get("doi"))
+    doi = doi_or_none(paper.get("doi")) or ""
     for source in sources:
         if source == "arxiv" and arxiv_id:
             found = await _search(call, "arxiv", f"id:{arxiv_id}")

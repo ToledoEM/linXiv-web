@@ -1,4 +1,4 @@
-import { cleanDoi } from './format'
+import { validDoi } from './format'
 import { colRem, FIXED_REM, PAGE_SIZES, type TableColumns } from './tableColumns'
 
 export function Authors({ authors, max = 6 }: { authors: string[]; max?: number }) {
@@ -53,7 +53,7 @@ export function PaperColGroup({ cols }: { cols: TableColumns }) {
 
 /** DOI line under a paper title, linked to doi.org. */
 export function DoiLine({ doi: raw }: { doi?: string | null }) {
-  const doi = cleanDoi(raw)
+  const doi = validDoi(raw)
   if (!doi) return null
   return (
     <a className="muted small mono block doi-line" href={`https://doi.org/${doi}`} target="_blank" rel="noreferrer">
