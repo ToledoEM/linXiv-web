@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import csv
+import io
+
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..auth import current_user
@@ -12,12 +15,23 @@ from ..jobs import JobBusy
 from ..maintenance import (
     MAX_KEEP_BACKUPS,
     MAX_TRASH_DAYS,
+    ROOT,
     Maintenance,
     library_keys,
     read_report,
     report_path,
 )
 from ..metadata_fill import FILLS, OPTIONS_SETTING, options_from
+from ..pdf_check import (
+    MAX_LISTED,
+    MAX_SKIP,
+    ORPHAN_KIND,
+    ORPHANS,
+    move_orphans,
+    skip_from,
+    valid_folder,
+)
+from ..pdf_check import OPTIONS_SETTING as PDF_CHECK_OPTIONS
 from ..pdf_check import REPORT as PDF_CHECK
 from .metadata import ID_SOURCES
 
@@ -116,8 +130,80 @@ async def pdf_check_report(request: Request):
         lib = request.app.state.libraries.get(key)
         report = read_report(report_path(lib, PDF_CHECK))
         if report:
+            for name in ("missing", "unlinked"):
+                report[name] = (report.get(name) or [])[:MAX_LISTED]
             out.append({"library": key, **report})
     return {"libraries": out}
+
+
+class PdfCheckOptionsIn(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    skip: list[str] = Field(max_length=MAX_SKIP)
+
+
+@router.get("/pdf-check/options")
+async def pdf_check_options(request: Request):
+    """Top-level folders of the PDF folder the check skips; orphans/ always is."""
+    return {"skip": skip_from(await _maint(request).stored()), "always": [ORPHANS]}
+
+
+@router.put("/pdf-check/options")
+async def set_pdf_check_options(request: Request, body: PdfCheckOptionsIn):
+    bad = [s for s in body.skip if not valid_folder(s)]
+    if bad:
+        raise HTTPException(
+            status_code=400, detail=f"not a folder name inside the PDF folder: {', '.join(bad)}"
+        )
+    skip = [s for s in dict.fromkeys(body.skip) if s != ORPHANS]
+    await _maint(request).save_setting(PDF_CHECK_OPTIONS, {"skip": skip})
+    return await pdf_check_options(request)
+
+
+def _check_library(request: Request, key: str):
+    if key not in library_keys(request.app):
+        raise HTTPException(status_code=404, detail="library not found")
+    return request.app.state.libraries.get(key)
+
+
+@router.get("/pdf-check/{key}/unlinked.csv")
+async def pdf_check_unlinked_csv(request: Request, key: str):
+    """Every unlinked file of the library's last check (the API lists 500)."""
+    report = read_report(report_path(_check_library(request, key), PDF_CHECK))
+    buf = io.StringIO()
+    out = csv.writer(buf)
+    out.writerow(["file", "size", "modified"])
+    for row in report.get("unlinked") or []:
+        name = str(row.get("file", ""))
+        if name[:1] in ("=", "+", "-", "@"):
+            name = "'" + name  # no formulas when opened in a spreadsheet
+        out.writerow([name, row.get("size", ""), row.get("modified", "")])
+    return Response(
+        buf.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="unlinked-pdfs-{key}.csv"'},
+    )
+
+
+@router.post("/pdf-check/{key}/move-orphans")
+async def pdf_check_move_orphans(request: Request, key: str):
+    """Move the library's unlinked PDFs to orphans/ as job `pdf-orphans`. Refused
+    while any other job runs in that library or any maintenance job runs."""
+    lib = _check_library(request, key)
+    jobs = request.app.state.jobs
+    if busy := jobs.running(None, lib.key) or jobs.running(None, ROOT):
+        raise HTTPException(status_code=409, detail=f"a {busy.kind} job is running")
+    app = request.app
+    try:
+        job = jobs.start(
+            ORPHAN_KIND,
+            lambda job: move_orphans(app, lib, job),
+            lib.key,
+            current_user(request).get("id"),
+        )
+    except JobBusy as e:
+        raise HTTPException(status_code=409, detail=str(e)) from e
+    return job.public()
 
 
 class FillOptionsIn(BaseModel):

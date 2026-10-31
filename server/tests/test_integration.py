@@ -603,6 +603,20 @@ def test_real_cli_pdf_check(settings):
 
         # linXiv's own file counts as linked, through the data dir's pdfs link
         assert run() == {"pdfs_checked": 1, "missing_files": 0, "unlinked_files": 1}
+        stray = settings.pdf_dir / "stray.pdf"
+        old = time.time() - 7200
+        os.utime(stray, (old, old))
+        job = c.post("/api/maintenance/pdf-check/root/move-orphans").json()
+        for _ in range(200):
+            job = c.get(f"/api/jobs/{job['id']}").json()
+            if job["state"] != "running":
+                break
+            time.sleep(0.05)
+        assert job["result"] == {"moved": 1, "skipped_recent": 0, "failed": 0}, job
+        assert (settings.pdf_dir / "orphans" / "stray.pdf").is_file() and not stray.exists()
+        assert run() == {"pdfs_checked": 1, "missing_files": 0, "unlinked_files": 0}
+        assert c.get(f"/api/papers/{sid}/pdf").status_code == 200  # linXiv's file stayed
+        stray.write_bytes(_tiny_pdf("Stray"))
         next(p for p in settings.pdf_dir.glob("*.pdf") if p.name != "stray.pdf").unlink()
         assert run() == {"pdfs_checked": 1, "missing_files": 1, "unlinked_files": 1}
         [report] = c.get("/api/maintenance/pdf-check").json()["libraries"]
