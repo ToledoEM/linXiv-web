@@ -2,11 +2,8 @@
 
 from __future__ import annotations
 
-import csv
-import io
-
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..auth import current_user
@@ -33,6 +30,7 @@ from ..pdf_check import (
 )
 from ..pdf_check import OPTIONS_SETTING as PDF_CHECK_OPTIONS
 from ..pdf_check import REPORT as PDF_CHECK
+from ..tsv import tsv_response
 from .metadata import ID_SOURCES
 
 router = APIRouter(prefix="/api/maintenance", tags=["maintenance"])
@@ -166,23 +164,26 @@ def _check_library(request: Request, key: str):
     return request.app.state.libraries.get(key)
 
 
-@router.get("/pdf-check/{key}/unlinked.csv")
-async def pdf_check_unlinked_csv(request: Request, key: str):
+@router.get("/pdf-check/{key}/unlinked.tsv")
+async def pdf_check_unlinked_tsv(request: Request, key: str):
     """Every unlinked file of the library's last check (the API lists 500)."""
     report = read_report(report_path(_check_library(request, key), PDF_CHECK))
-    buf = io.StringIO()
-    out = csv.writer(buf)
-    out.writerow(["file", "size", "modified"])
-    for row in report.get("unlinked") or []:
-        name = str(row.get("file", ""))
-        if name[:1] in ("=", "+", "-", "@"):
-            name = "'" + name  # no formulas when opened in a spreadsheet
-        out.writerow([name, row.get("size", ""), row.get("modified", "")])
-    return Response(
-        buf.getvalue(),
-        media_type="text/csv",
-        headers={"Content-Disposition": f'attachment; filename="unlinked-pdfs-{key}.csv"'},
-    )
+    rows = [
+        (r.get("file", ""), r.get("size", ""), r.get("modified", ""))
+        for r in report.get("unlinked") or []
+    ]
+    return tsv_response(["file", "size", "modified"], rows, f"unlinked-pdfs-{key}.tsv")
+
+
+@router.get("/pdf-check/{key}/missing.tsv")
+async def pdf_check_missing_tsv(request: Request, key: str):
+    """Every paper of the library's last check whose PDF file is missing."""
+    report = read_report(report_path(_check_library(request, key), PDF_CHECK))
+    rows = [
+        (r.get("source_id", ""), r.get("version", ""), r.get("title", ""))
+        for r in report.get("missing") or []
+    ]
+    return tsv_response(["source_id", "version", "title"], rows, f"missing-pdfs-{key}.tsv")
 
 
 @router.post("/pdf-check/{key}/move-orphans")

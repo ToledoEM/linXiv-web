@@ -80,11 +80,16 @@ def test_pdf_check_reports_missing_unlinked_and_breakdown(settings, fake):
         assert report["disk"]["skipped_files"] == 1
         assert report["skip"] == ["dup", "orphans"]
 
-        csv = c.get("/api/maintenance/pdf-check/root/unlinked.csv")
-        assert csv.status_code == 200 and csv.headers["content-type"].startswith("text/csv")
-        lines = csv.text.strip().splitlines()
-        assert lines[0] == "file,size,modified" and lines[1].startswith("2021/stray.pdf,10,")
-        assert c.get("/api/maintenance/pdf-check/nope/unlinked.csv").status_code == 404
+        r = c.get("/api/maintenance/pdf-check/root/unlinked.tsv")
+        assert r.status_code == 200
+        assert r.headers["content-type"].startswith("text/tab-separated-values")
+        lines = r.text.strip().splitlines()
+        assert lines[0] == "file\tsize\tmodified" and lines[1].startswith("2021/stray.pdf\t10\t")
+        r = c.get("/api/maintenance/pdf-check/root/missing.tsv")
+        assert r.text == "source_id\tversion\ttitle\ndoi:10.1/gone\t1\tTitle doi:10.1/gone\n"
+        assert 'filename="missing-pdfs-root.tsv"' in r.headers["content-disposition"]
+        for name in ("unlinked", "missing"):
+            assert c.get(f"/api/maintenance/pdf-check/nope/{name}.tsv").status_code == 404
 
 
 def test_pdf_check_options_reject_paths(client):

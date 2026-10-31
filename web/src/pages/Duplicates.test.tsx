@@ -35,6 +35,7 @@ describe('Duplicates', () => {
     show()
     expect(await screen.findByText('Paper A')).toBeTruthy()
     expect(screen.getByText('local:c')).toBeTruthy() // no title: id shown
+    expect(screen.getByText('Download list (TSV)').getAttribute('href')).toBe('/api/duplicates/export.tsv')
     fireEvent.click(screen.getByLabelText('Keep local:b'))
     fireEvent.click(screen.getByRole('button', { name: 'Merge into kept paper' }))
     fireEvent.click(screen.getByRole('button', { name: 'Merge' }))
@@ -58,5 +59,6 @@ describe('Duplicates', () => {
     vi.spyOn(api, 'duplicates').mockResolvedValue({ scanned_at: null, groups: [] })
     show()
     expect(await screen.findByText(/Not checked yet/)).toBeTruthy()
+    expect(screen.queryByText('Download list (TSV)')).toBeNull()
   })
 })

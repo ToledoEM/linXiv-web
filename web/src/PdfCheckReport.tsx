@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { api, unlinkedCsvUrl } from './api'
+import { api, missingTsvUrl, unlinkedTsvUrl } from './api'
 import { ErrorText } from './components'
 import ConfirmDialog from './ConfirmDialog'
 import { formatBytes } from './format'
@@ -92,6 +92,9 @@ export default function PdfCheckReport() {
                     </li>
                   ))}
                 </ul>
+                <a href={missingTsvUrl(r.library)} download>
+                  Download full list (TSV)
+                </a>
               </>
             )}
             {r.unlinked.length > 0 && (
@@ -111,8 +114,8 @@ export default function PdfCheckReport() {
             )}
             {r.unlinked_count > 0 && (
               <div className="actions">
-                <a href={unlinkedCsvUrl(r.library)} download>
-                  Download full list (CSV)
+                <a href={unlinkedTsvUrl(r.library)} download>
+                  Download full list (TSV)
                 </a>
                 <button
                   type="button"

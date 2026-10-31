@@ -71,8 +71,11 @@ describe('PdfCheckReport', () => {
     expect(screen.getByText(/14 PDFs, 1 other files, 2 in skipped folders \(dup, orphans\)/)).toBeTruthy()
     expect(screen.getByText('dup/')).toBeTruthy()
     expect(screen.getByText('2 PDFs · skipped')).toBeTruthy()
-    const csv = screen.getByText('Download full list (CSV)')
-    expect(csv.getAttribute('href')).toBe('/api/maintenance/pdf-check/root/unlinked.csv')
+    const links = screen.getAllByText('Download full list (TSV)').map((a) => a.getAttribute('href'))
+    expect(links).toEqual([
+      '/api/maintenance/pdf-check/root/missing.tsv',
+      '/api/maintenance/pdf-check/root/unlinked.tsv',
+    ])
   })
 
   it('moves unlinked files after confirm and shows the result', async () => {
