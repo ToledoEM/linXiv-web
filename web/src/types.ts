@@ -411,6 +411,8 @@ export interface NewVersion {
 export interface Job {
   id: number
   kind: string
+  /** Library the job works in (root, shared, u<id>). */
+  library?: string
   state: 'running' | 'done' | 'failed' | 'cancelled'
   total: number
   done: number
@@ -477,14 +479,38 @@ export interface FillOptions {
 }
 
 /** Last "Check PDF files" result of one library; lists are capped, counts are not. */
+export interface PdfCheckFolder {
+  /** Top-level folder of the PDF folder; '.' = files directly in it. */
+  folder: string
+  files: number
+  pdfs: number
+  unlinked: number
+  skipped: boolean
+}
+
 export interface PdfCheckReport {
   library: string
   checked_at: string
+  /** Paper versions that have (or should have) a PDF. */
   pdfs: number
   missing_count: number
   unlinked_count: number
   missing: { source_id: string; version: number; title: string }[]
-  unlinked: { file: string; size: number }[]
+  /** First 500; the CSV has all. */
+  unlinked: { file: string; size: number; modified?: string }[]
+  // Breakdown (reports from before it was added lack these).
+  papers?: number
+  papers_with_pdf?: number
+  extra_versions?: number
+  trashed_pdfs?: number
+  skip?: string[]
+  disk?: { files: number; pdf_files: number; other_files: number; skipped_files: number; by_folder: PdfCheckFolder[] }
+}
+
+export interface PdfCheckOptions {
+  skip: string[]
+  /** Folders always skipped (orphans). */
+  always: string[]
 }
 
 export interface DuplicatePaper {

@@ -48,6 +48,10 @@ describe('toMetadataInput', () => {
   it('still requires a title and a date', () => {
     expect(toMetadataInput({ ...form, title: '  ' })).toHaveProperty('error')
     expect(toMetadataInput({ ...form, published: '2024-1-2' })).toHaveProperty('error')
+    expect(toMetadataInput({ ...form, doi: '10.12/x' })).toHaveProperty('error')
+    expect(toMetadataInput({ ...form, doi: 'DOI: 10.1038/nature14539.' })).toMatchObject({
+      input: { doi: '10.1038/nature14539' },
+    })
   })
 })
 

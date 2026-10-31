@@ -220,12 +220,20 @@ ul.plain { padding-left: 1.1rem; }
 .settings-nav button:hover:not(:disabled) { color: var(--text); filter: none; }
 .settings-nav button.active { background: var(--surface); color: var(--text); font-weight: 500; }
 .settings-nav-icon { width: 18px; text-align: center; }
+.settings-nav { max-height: calc(100vh - 2rem); overflow-y: auto; }
+.settings-subnav { list-style: none; margin: 0 0 0.35rem; padding: 0 0 0 1.9rem; display: grid; gap: 1px; }
+.settings-nav .settings-subnav button { width: 100%; padding: 0.28rem 0.6rem; font-size: 0.84rem; border-left: 2px solid transparent; border-radius: 0; }
+.settings-nav .settings-subnav button.current { color: var(--text); border-left-color: var(--accent); }
 .settings-panel { display: grid; gap: 1rem; max-width: 760px; }
 .settings-panel form { display: grid; gap: 1rem; }
 @media (max-width: 720px) {
   .settings-grid { grid-template-columns: 1fr; }
   .settings-nav { flex-direction: row; overflow-x: auto; position: static; }
   .settings-nav button { white-space: nowrap; }
+  .settings-nav { flex-wrap: wrap; max-height: none; }
+  .settings-subnav { order: 99; flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 0.3rem; padding: 0.4rem 0 0; margin: 0; border-top: 1px solid var(--border); }
+  .settings-nav .settings-subnav button { width: auto; border: 1px solid var(--border); border-radius: 999px; }
+  .settings-nav .settings-subnav button.current { border-color: var(--accent); }
 }
 .settings-section h3 { margin-top: 0; }
 .settings-section { display: grid; gap: 0.75rem; }
@@ -561,6 +569,13 @@ kbd { display: inline-block; margin-right: 0.25rem; padding: 0.05rem 0.4rem; fon
 .tray-head { display: flex; justify-content: space-between; gap: 0.5rem; align-items: baseline; }
 .tray-job progress { width: 100%; height: 0.4rem; margin: 0.35rem 0 0.2rem; accent-color: var(--accent); }
 .tray-current { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* The tray box spans its width; only its cards and the dot take clicks. */
+.activity-tray { pointer-events: none; }
+.activity-tray > * { pointer-events: auto; }
+.tray-dot { justify-self: end; min-width: 1.75rem; height: 1.75rem; padding: 0 0.45rem; border-radius: 999px; border: none; background: var(--danger); color: #fff; font-size: 0.8rem; font-weight: 600; line-height: 1; box-shadow: 0 2px 8px rgb(0 0 0 / 0.2); cursor: pointer; }
+.tray-dot:hover { filter: brightness(1.1); }
+.tray-finished-list { display: grid; gap: 0.4rem; max-height: min(60vh, 28rem); overflow-y: auto; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); padding: 0.5rem; box-shadow: 0 4px 16px rgb(0 0 0 / 0.12); }
+.tray-finished-list .tray-job { box-shadow: none; }
 
 /* Paper page (pages/PaperDetail.tsx): PDF pane left, resizable details rail right, full height. */
 .content:has(.paper-view) { max-width: none; padding: 0; }
@@ -628,6 +643,10 @@ kbd { display: inline-block; margin-right: 0.25rem; padding: 0.05rem 0.4rem; fon
 .dup-group { margin-bottom: 0.8rem; }
 .server-backups { margin-top: 1rem; }
 .pdf-check { margin-top: 0.5rem; }
+.pdf-check-breakdown { margin: 0.4rem 0; }
+.pdf-check-breakdown th, .pdf-check-breakdown td { padding: 0.15rem 0.6rem 0.15rem 0; text-align: left; font-weight: normal; }
+.pdf-check-breakdown td.num { text-align: right; }
+.skip-input { width: 16rem; max-width: 100%; }
 .days-input { width: 4.5rem; }
 .fill-options fieldset { border: none; padding: 0; margin: 0.5rem 0 0; display: flex; flex-wrap: wrap; gap: 0.2rem 1rem; }
 .fill-options legend { font-weight: 600; padding: 0; margin-bottom: 0.2rem; width: 100%; }

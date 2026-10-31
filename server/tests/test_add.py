@@ -28,6 +28,8 @@ from .conftest import fixture
         ("https://doi.org/10.1038/nature14539", ("doi", "10.1038/nature14539")),
         ("https://dx.doi.org/10.1000/a%2Fb", ("doi", "10.1000/a/b")),
         ("10.48550/arXiv.1706.03762", ("arxiv", "1706.03762")),
+        ("DOI: 10.1038/nature14539.", ("doi", "10.1038/nature14539")),
+        ("doi.org/10.1038/nature14539", ("doi", "10.1038/nature14539")),
         ("https://example.org/paper.pdf", ("pdf", "https://example.org/paper.pdf")),
     ],
 )
@@ -35,7 +37,9 @@ def test_classify(text, expected):
     assert classify(text) == expected
 
 
-@pytest.mark.parametrize("text", ["attention is all you need", "ftp://x.org/a.pdf", "10.12/x"])
+@pytest.mark.parametrize(
+    "text", ["attention is all you need", "ftp://x.org/a.pdf", "10.12/x", "10.1234/a#b"]
+)
 def test_classify_rejects(text):
     with pytest.raises(HTTPException) as e:
         classify(text)

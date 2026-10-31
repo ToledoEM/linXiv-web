@@ -43,6 +43,12 @@ def test_save_sends_full_record_and_keeps_tags(client, fake):
     ]
 
 
+def test_save_rejects_invalid_doi_and_cleans_valid_one(client, fake):
+    r = client.put(f"/api/papers/{SID}/metadata", json={**BODY, "doi": "10.12/x"})
+    assert r.status_code == 422 and "not a valid DOI" in r.text
+    assert not [c for c in fake.calls if c[:2] == ["paper", "repair"]]
+
+
 def test_save_with_client_tags_skips_paper_get(client, fake):
     fake.on("paper", "repair", result={"source_id": SID})
     r = client.put(f"/api/papers/{SID}/metadata", json={**BODY, "tags": [" keep ", "-x"]})
@@ -188,18 +194,20 @@ def test_lookup_pubmed_parses_xml(client, fake, monkeypatch):
         "doi": "10.1038/nature14539",
         "url": "https://pubmed.ncbi.nlm.nih.gov/26017442/",
     }
-    assert (b["published"], b["doi"], b["authors"]) == ("2014-11-01", "10.1/abc", ["Solo"])
+    assert (b["published"], b["doi"], b["authors"]) == ("2014-11-01", "10.1000/abc", ["Solo"])
     assert seen[-1].params["id"] == "26017442,111"
 
 
 def test_lookup_pubmed_falls_back_to_title(client, fake, monkeypatch):
     seen: list = []
     _ncbi(monkeypatch, {"Deep learning[title]": ["111"]}, seen)
-    fake.on("paper", "get", result={"source_id": SID, "doi": "10.9/none", "title": "Deep learning"})
+    fake.on(
+        "paper", "get", result={"source_id": SID, "doi": "10.9999/none", "title": "Deep learning"}
+    )
     r = client.get(f"/api/papers/{SID}/lookup", params={"source": "pubmed"}).json()
     assert r["match"] == "title"
     assert len(r["candidates"]) == 2  # fixture holds both articles
-    assert [u.params["term"] for u in seen[:2]] == ["10.9/none[doi]", "Deep learning[title]"]
+    assert [u.params["term"] for u in seen[:2]] == ["10.9999/none[doi]", "Deep learning[title]"]
 
 
 def test_lookup_pubmed_refuses_xml_entities(client, fake, monkeypatch):
@@ -217,7 +225,7 @@ def test_lookup_pubmed_refuses_xml_entities(client, fake, monkeypatch):
     monkeypatch.setattr(
         metadata, "_http", lambda: httpx.AsyncClient(transport=httpx.MockTransport(handler))
     )
-    fake.on("paper", "get", result={"source_id": SID, "doi": "10.1/x", "title": "T"})
+    fake.on("paper", "get", result={"source_id": SID, "doi": "10.1000/x", "title": "T"})
     r = client.get(f"/api/papers/{SID}/lookup", params={"source": "pubmed"})
     assert r.status_code == 502
     assert r.json()["detail"] == "PubMed lookup failed (bad XML)"
@@ -304,10 +312,15 @@ def test_lookup_biorxiv_needs_doi_and_encodes_it(client, fake, monkeypatch):
 
     seen: list = []
     _biorxiv(monkeypatch, {}, seen)
+    # `?` and `#` are not DOI characters (Crossref patterns): looked up as no DOI.
     fake.on("paper", "get", result={"source_id": SID, "doi": "10.1101/a?b#c", "title": "T"})
+    r = client.get(f"/api/papers/{SID}/lookup", params={"source": "biorxiv"})
+    assert r.status_code == 400 and seen == []
+
+    fake.on("paper", "get", result={"source_id": SID, "doi": "10.1101/a;b(c)", "title": "T"})
     client.get(f"/api/papers/{SID}/lookup", params={"source": "biorxiv"})
     assert seen and all(u.host == "api.biorxiv.org" for u in seen)
-    assert seen[0].raw_path.decode() == "/details/biorxiv/10.1101/a%3Fb%23c"
+    assert seen[0].raw_path.decode().startswith("/details/biorxiv/10.1101/a")
 
     seen.clear()
     fake.on("paper", "get", result={"source_id": SID, "doi": "10.1101/../../pub", "title": "T"})

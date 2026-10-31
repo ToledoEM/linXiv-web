@@ -14,6 +14,7 @@ from dataclasses import replace
 import pytest
 from fastapi.testclient import TestClient
 
+from app import tags_clean
 from app.main import create_app
 
 BIN = os.environ.get("LINXIV_BIN")
@@ -602,6 +603,20 @@ def test_real_cli_pdf_check(settings):
 
         # linXiv's own file counts as linked, through the data dir's pdfs link
         assert run() == {"pdfs_checked": 1, "missing_files": 0, "unlinked_files": 1}
+        stray = settings.pdf_dir / "stray.pdf"
+        old = time.time() - 7200
+        os.utime(stray, (old, old))
+        job = c.post("/api/maintenance/pdf-check/root/move-orphans").json()
+        for _ in range(200):
+            job = c.get(f"/api/jobs/{job['id']}").json()
+            if job["state"] != "running":
+                break
+            time.sleep(0.05)
+        assert job["result"] == {"moved": 1, "skipped_recent": 0, "failed": 0}, job
+        assert (settings.pdf_dir / "orphans" / "stray.pdf").is_file() and not stray.exists()
+        assert run() == {"pdfs_checked": 1, "missing_files": 0, "unlinked_files": 0}
+        assert c.get(f"/api/papers/{sid}/pdf").status_code == 200  # linXiv's file stayed
+        stray.write_bytes(_tiny_pdf("Stray"))
         next(p for p in settings.pdf_dir.glob("*.pdf") if p.name != "stray.pdf").unlink()
         assert run() == {"pdfs_checked": 1, "missing_files": 1, "unlinked_files": 1}
         [report] = c.get("/api/maintenance/pdf-check").json()["libraries"]
@@ -656,6 +671,39 @@ def test_real_cli_clean_authors(settings):
         after = {a["full_name"]: a["paper_count"] for a in c.get("/api/authors").json()}
         assert all(n > 0 for n in after.values())
         assert set(after) == set(before) - set(orphans)
+
+
+def test_real_cli_clean_tags(settings):
+    with TestClient(create_app(replace(settings, linxiv_bin=BIN))) as c:
+        bib = (
+            b"@misc{kt1, title={Kept Tags}, author={Keeper, Kim}, year={2020}}\n"
+            b"@misc{tt1, title={Trashed Tags}, author={Trash, Tom}, year={2020}}\n"
+        )
+        assert c.post("/api/import/bibtex", files={"file": ("a.bib", bib)}).status_code == 200
+        tags = ["kept", "dropped", "Untagged", "in-trash"]
+        assert c.post("/api/papers/local:kt1/tags", json={"tags": tags[:3]}).status_code == 200
+        assert c.post("/api/papers/local:tt1/tags", json={"tags": ["in-trash"]}).status_code == 200
+        r = c.delete("/api/papers/local:kt1/tags", params={"tag": ["dropped", "Untagged"]})
+        assert r.status_code == 200
+        assert c.delete("/api/papers/local:tt1").status_code == 200  # soft delete keeps links
+        r = c.post("/api/projects", json={"name": "RL", "project_tags": ["reading-list"]})
+        assert r.status_code == 200, r.text
+        job = c.post("/api/maintenance/clean-tags/run").json()
+        for _ in range(200):
+            job = c.get(f"/api/jobs/{job['id']}").json()
+            if job["state"] != "running":
+                break
+            time.sleep(0.05)
+        assert job["state"] == "done" and not job["errors"], job
+        assert job["result"] == {"tags_removed": 1, "skipped": 0}
+        lib = c.app.state.libraries.get("root")
+        left = {label for _, label in tags_clean.unused_tags(lib.data_dir / "papers.db")}
+        assert left == {"Untagged"}
+        assert c.get("/api/papers/local:kt1/tags").json()["tags"] == ["kept"]
+        projects = c.get("/api/projects").json()
+        assert projects[0]["project_tags"] == ["reading-list"]
+        assert c.post("/api/trash/papers/local:tt1/restore").status_code == 200
+        assert c.get("/api/papers/local:tt1/tags").json()["tags"] == ["in-trash"]
 
 
 def test_real_cli_settings_export_import(settings, tmp_path):

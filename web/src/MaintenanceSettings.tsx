@@ -4,6 +4,7 @@ import { api } from './api'
 import { ErrorText } from './components'
 import ConfirmDialog from './ConfirmDialog'
 import FillOptions from './FillOptions'
+import PdfCheckOptions from './PdfCheckOptions'
 import PdfCheckReport from './PdfCheckReport'
 import ServerBackups from './ServerBackups'
 import { runSummary } from './maintenance'
@@ -140,6 +141,7 @@ export default function MaintenanceSettings() {
                           {report.label}
                         </Link>
                       )}
+                      {op.id === 'pdf-check' && <PdfCheckOptions />}
                       {op.id === 'pdf-check' && op.last && <PdfCheckReport />}
                       {op.id === 'complete-metadata' && <FillOptions />}
                     </td>

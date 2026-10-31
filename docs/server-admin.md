@@ -130,16 +130,17 @@ Libraries are created the first time they are opened. To keep the PDFs of the sh
 |---|---|
 | Find duplicate papers | Reads every saved PDF and lists papers whose files are byte for byte the same on the **Duplicates** page. Only new or changed files are read again on later runs. |
 | Complete metadata of new papers | For papers added since its last run that have one of the gaps ticked on its row (junk title, no authors, date, abstract, journal or DOI), it looks the paper up by its own DOI or arXiv id, never by title, in the sources ticked on its row and in their order, and fills those empty fields. Stored values are kept. arXiv is asked only for arXiv papers, bioRxiv only for bioRxiv/medRxiv DOIs, Crossref and PubMed for any DOI. OpenAlex is not offered: linXiv can't look it up by an exact DOI. |
-| Check PDF files | Reports papers whose PDF file is missing on disk, and PDF files in the PDF folder that no paper points at. It changes nothing. **Show report** lists them. |
+| Check PDF files | Reports papers whose PDF file is missing on disk, and PDF files in the PDF folder that no paper points at. It changes nothing. **Show report** lists them and breaks the folder down: files of any type, PDFs, each top-level subfolder, next to the number of papers, papers with a PDF, extra version files and PDFs of papers in the trash. **Skip folders** lists subfolders (for example `dup, errors`) that are counted but never reported as unlinked. **Download full list (TSV)** under each list has every missing paper or unlinked file, tab separated. **Move to orphans/** checks again and moves each unlinked PDF to `orphans/` under the same path; files changed in the last hour stay, and nothing is deleted. |
 | Back up databases | Saves a copy of each library's database on the server and keeps the newest ones (7 unless you change it below the table). PDF files are not included. |
 | Clean authors without papers | Deletes author records that no paper uses any more, for example the authors of papers deleted from the trash. linXiv refuses to delete an author still linked to a paper, so those are kept. It asks before running. |
+| Clean tags without papers | Deletes tags that no paper and no project uses. Tags on papers in the trash stay, so a restored paper keeps its tags, and so do project tags such as `reading-list`. A tag named Untagged is always kept. It asks before running. |
 | Empty trash | Deletes for good the papers that have been in the trash longer than the days typed on its row: 1 to 120, or 0 (the default) to never delete. Projects in the trash are left alone. It asks before running. |
 
 The first run of "Complete metadata of new papers" looks at papers added in the last 30 days.
 
 ### Duplicates
 
-The **Duplicates** page (sidebar) shows the groups the last "Find duplicate papers" run found in the library you are looking at. Pick the paper to keep and click **Merge into kept paper**: linXiv moves the other papers' notes, highlights, projects, tags and PDFs to it, then deletes them. **Not duplicates** hides a group from later runs. The Library header links to the page while there are groups. In the shared library only admins can merge or dismiss.
+The **Duplicates** page (sidebar) shows the groups the last "Find duplicate papers" run found in the library you are looking at. Pick the paper to keep and click **Merge into kept paper**: linXiv moves the other papers' notes, highlights, projects, tags and PDFs to it, then deletes them. **Not duplicates** hides a group from later runs. **Download list (TSV)** saves every group, one row per paper, tab separated. The Library header links to the page while there are groups. In the shared library only admins can merge or dismiss.
 
 ### Papers left incomplete
 

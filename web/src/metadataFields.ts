@@ -1,7 +1,7 @@
 // Metadata form model shared by the single-paper editor (MetadataEditor) and
 // the Library batch edit panel (BatchMetadata).
 
-import { cleanDoi } from './format'
+import { cleanDoi, isValidDoi } from './format'
 import type { LookupPrefs } from './lookupSource'
 import type { DefaultLookupSource, LookupSource, MetadataCandidate, MetadataInput, Paper } from './types'
 
@@ -120,6 +120,8 @@ export function toMetadataInput(form: Form): { input: MetadataInput } | { error:
   if (!form.title.trim()) return { error: 'Title is required.' }
   // Authors may be empty: the server fills in a placeholder, since `paper repair` requires the flag.
   if (!/^\d{4}-\d{2}-\d{2}$/.test(form.published)) return { error: 'Published must be a date (YYYY-MM-DD).' }
+  const doi = cleanDoi(form.doi)
+  if (doi && !isValidDoi(doi)) return { error: `DOI "${doi}" is not a valid DOI.` }
   return {
     input: {
       title: form.title.trim(),
@@ -127,7 +129,7 @@ export function toMetadataInput(form: Form): { input: MetadataInput } | { error:
       published: form.published,
       summary: form.summary,
       category: form.category.trim() || null,
-      doi: cleanDoi(form.doi) || null,
+      doi: doi || null,
       url: form.url.trim() || null,
     },
   }

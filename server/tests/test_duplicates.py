@@ -144,3 +144,21 @@ def test_groups_of_ignores_versions_of_one_paper():
         {"source_id": "a", "version": 2, "title": "", "file": "a2", "size": 1, "sha256": "h"},
     ]
     assert groups_of(files, set()) == []
+
+
+def test_export_tsv_lists_groups_one_row_per_paper(settings, fake):
+    _library(settings.data_dir, settings.pdf_dir, PAPERS)
+    _store(fake)
+    with TestClient(create_app(settings, fake)) as c:
+        empty = c.get("/api/duplicates/export.tsv")
+        assert empty.status_code == 200
+        assert empty.text == "group\tsha256\tsource_id\tversion\ttitle\tfile\tsize\n"
+        _scan(c)
+        r = c.get("/api/duplicates/export.tsv")
+    assert r.headers["content-type"].startswith("text/tab-separated-values")
+    assert 'filename="duplicates-root.tsv"' in r.headers["content-disposition"]
+    header, *rows = [line.split("\t") for line in r.text.strip().split("\n")]
+    assert header == ["group", "sha256", "source_id", "version", "title", "file", "size"]
+    assert [(row[0], row[2]) for row in rows] == [("1", "doi:10.1/a"), ("1", "local:abc")]
+    assert rows[0][4] == "Title doi:10.1/a" and rows[0][6] == str(len(SAME))
+    assert len(rows[0][1]) == 64  # sha256 hex

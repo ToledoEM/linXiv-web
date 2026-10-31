@@ -28,6 +28,7 @@ import type {
   Note,
   Paper,
   PdfLayout,
+  PdfCheckOptions,
   PdfCheckReport,
   PdfLayoutPreview,
   PaperVersions,
@@ -105,6 +106,14 @@ export const DIAGNOSTICS_URL = '/api/system/diagnostics'
 /** A database backup kept on the server by the "backup" maintenance operation (GET downloads it). */
 export const serverBackupUrl = (b: ServerBackup) =>
   `/api/maintenance/backups/${encodeURIComponent(b.library)}/${encodeURIComponent(b.name)}`
+
+/** Every unlinked file / missing-PDF paper of a library's last PDF check, tab separated (GET downloads it). */
+export const unlinkedTsvUrl = (library: string) =>
+  `/api/maintenance/pdf-check/${encodeURIComponent(library)}/unlinked.tsv`
+export const missingTsvUrl = (library: string) =>
+  `/api/maintenance/pdf-check/${encodeURIComponent(library)}/missing.tsv`
+/** Duplicate groups of the library in view, one row per paper, tab separated. */
+export const duplicatesTsvUrl = () => withLibrary('/api/duplicates/export.tsv')
 
 /** Tell the activity tray a background job just started (it polls slowly when idle). */
 function started<T>(p: Promise<T>): Promise<T> {
@@ -462,6 +471,11 @@ export const api = {
   setFillOptions: (gaps: string[], sources: string[]) =>
     request<FillOptions>('PUT', '/api/maintenance/complete-metadata/options', { gaps, sources }),
   pdfCheck: () => request<{ libraries: PdfCheckReport[] }>('GET', '/api/maintenance/pdf-check'),
+  pdfCheckOptions: () => request<PdfCheckOptions>('GET', '/api/maintenance/pdf-check/options'),
+  setPdfCheckOptions: (skip: string[]) =>
+    request<PdfCheckOptions>('PUT', '/api/maintenance/pdf-check/options', { skip }),
+  moveOrphans: (library: string) =>
+    started(request<Job>('POST', `/api/maintenance/pdf-check/${encodeURIComponent(library)}/move-orphans`)),
   maintenanceBackups: () =>
     request<{ backups: ServerBackup[] }>('GET', '/api/maintenance/backups'),
   deleteMaintenanceBackup: (b: ServerBackup) => request<{ ok: boolean }>('DELETE', serverBackupUrl(b)),

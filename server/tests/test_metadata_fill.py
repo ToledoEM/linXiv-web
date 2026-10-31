@@ -44,7 +44,7 @@ PAPERS = [
         "authors": [],
         "published": None,
         "summary": "",
-        "doi": "10.1/old",
+        "doi": "10.1000/old",
         "tags": [],
     },
 ]
@@ -136,7 +136,7 @@ def test_run_completes_by_doi_and_lists_the_rest(settings, fake, fast):
         assert "--authors=Yann LeCun" in repair
         assert "--tags=keep" in repair
         # the old paper was never looked up
-        assert not any("10.1/old" in a for call in fake.calls for a in call)
+        assert not any("10.1000/old" in a for call in fake.calls for a in call)
 
         got = c.get("/api/metadata-review").json()
         assert got["papers"] == [
@@ -209,9 +209,9 @@ def test_match_by_id_follows_the_source_order(monkeypatch):
     monkeypatch.setattr(metadata, "_pubmed", pubmed)
     monkeypatch.setattr(metadata, "_crossref_doi", crossref)
     monkeypatch.setattr(metadata, "_biorxiv", biorxiv)
-    paper = {"source_id": "doi:10.1/x", "doi": "10.1/x"}
+    paper = {"source_id": "doi:10.1/x", "doi": "10.1000/x"}
     hit = asyncio.run(metadata.match_by_id(None, paper, ["biorxiv", "pubmed", "crossref", "arxiv"]))
-    assert hit == {"doi": "10.1/X", "title": "Found"}
+    assert hit == {"doi": "10.1000/X", "title": "Found"}
     assert asked == ["pubmed", "crossref"]  # bioRxiv skipped: not a bioRxiv DOI
     asked.clear()
     assert asyncio.run(metadata.match_by_id(None, paper, ["arxiv"])) is None
