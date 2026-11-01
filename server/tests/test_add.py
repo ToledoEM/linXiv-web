@@ -66,6 +66,7 @@ def test_add_doi_saves_then_gets(client, fake):
     assert fake.calls == [
         ["doi", "save", "--", "10.1038/x"],
         ["paper", "get", "--", "doi:10.1038/x"],
+        ["settings", "get"],  # CROSSREF_MAILTO for the BibTeX fields read
     ]
 
 

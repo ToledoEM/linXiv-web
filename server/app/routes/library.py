@@ -9,6 +9,7 @@ from typing import Annotated, Literal
 from fastapi import APIRouter, HTTPException, Query, Request, Response
 from pydantic import BaseModel, Field
 
+from .. import bib_store
 from ..cli import CLIError
 from ..pdf_name import pdf_file, title_from_file, title_suspect
 from .common import ident, library, run
@@ -290,7 +291,13 @@ async def remove_tags(
 
 @router.get("/papers/{source_id:path}")
 async def get_paper(request: Request, source_id: str):
-    return _annotate(request, await run(request, ["paper", "get", "--", ident(source_id)]))
+    """The CLI record, plus `bib` (BibTeX fields linXiv does not store) and
+    `metadata_source` ({source, ref} or null; app/bib_store.py)."""
+    paper = _annotate(request, await run(request, ["paper", "get", "--", ident(source_id)]))
+    if isinstance(paper, dict) and paper.get("source_id"):
+        extra = await bib_store.get(library(request), str(paper["source_id"]))
+        paper = {**paper, "bib": extra["bib"], "metadata_source": extra["metadata_source"]}
+    return paper
 
 
 @router.delete("/papers/{source_id:path}")

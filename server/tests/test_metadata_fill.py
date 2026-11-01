@@ -198,7 +198,7 @@ def test_match_by_id_follows_the_source_order(monkeypatch):
         asked.append("pubmed")
         return []
 
-    async def crossref(call, doi):
+    async def crossref(call, doi, mailto=""):
         asked.append("crossref")
         return [{"doi": doi.upper(), "title": "Found"}]
 

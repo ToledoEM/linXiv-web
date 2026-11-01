@@ -193,6 +193,7 @@ def test_lookup_pubmed_parses_xml(client, fake, monkeypatch):
         "category": "Nature",
         "doi": "10.1038/nature14539",
         "url": "https://pubmed.ncbi.nlm.nih.gov/26017442/",
+        "bib": {"entry_type": "article", "month": "may"},
     }
     assert (b["published"], b["doi"], b["authors"]) == ("2014-11-01", "10.1000/abc", ["Solo"])
     assert seen[-1].params["id"] == "26017442,111"

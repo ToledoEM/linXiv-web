@@ -6,8 +6,8 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import Response
 from pydantic import BaseModel, ConfigDict, Field
 
-from .. import bibtex
-from .common import run
+from .. import bib_store, bibtex
+from .common import library, run
 
 router = APIRouter(prefix="/api", tags=["exports"])
 
@@ -25,8 +25,10 @@ async def export_bibtex(request: Request, body: Selection):
     picked = [by_id[i] for i in dict.fromkeys(body.ids) if i in by_id]
     if not picked:
         raise HTTPException(404, "none of the selected papers were found")
+    rows = await bib_store.get_many(library(request), [p["source_id"] for p in picked])
+    bibs = {sid: row["bib"] for sid, row in rows.items()}
     return Response(
-        bibtex.render(picked),
+        bibtex.render(picked, bibs),
         media_type="application/x-bibtex; charset=utf-8",
         headers={"Content-Disposition": 'attachment; filename="linxiv-selection.bib"'},
     )
