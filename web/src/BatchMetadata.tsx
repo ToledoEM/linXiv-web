@@ -6,6 +6,8 @@ import { ErrorText } from './components'
 import { paperLabel } from './format'
 import { useLookupPrefs } from './lookupSource'
 import {
+  bibInput,
+  candidateSource,
   defaultPicked,
   diffFields,
   fromCandidate,
@@ -132,8 +134,14 @@ export default function BatchMetadata({
     }
     patch(sid, { status: 'saving', error: undefined })
     try {
-      // Tags as loaded for the diff, so the server skips its own `paper get`.
-      await api.saveMetadata(sid, { ...checked.input, tags: it.paper.tags })
+      // Tags as loaded for the diff, so the server skips its own `paper get`. The
+      // record's BibTeX fields and source go along (the list holds no stored ones to diff).
+      await api.saveMetadata(sid, {
+        ...checked.input,
+        tags: it.paper.tags,
+        bib: bibInput(c),
+        metadata_source: candidateSource(c),
+      })
       patch(sid, { status: 'saved' })
       if (notify) onSaved()
       return true

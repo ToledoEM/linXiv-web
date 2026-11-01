@@ -47,7 +47,12 @@ describe('BatchMetadata', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save 2 papers now' }))
     await screen.findByText('2 saved.')
     expect(save).toHaveBeenCalledTimes(2)
-    expect(save.mock.calls[0][1]).toMatchObject({ title: 'New a:1', tags: ['keep'] })
+    expect(save.mock.calls[0][1]).toMatchObject({
+      title: 'New a:1',
+      tags: ['keep'],
+      metadata_source: { source: 'crossref', ref: 'a:1' },
+    })
+    expect(save.mock.calls[0][1].bib).toBeUndefined() // none read yet: the server fetches them
     expect(onSaved).toHaveBeenCalledTimes(1)
   })
 

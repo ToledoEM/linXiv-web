@@ -45,6 +45,18 @@ class FakeCLI:
         raise CLIError(502, f"unexpected call {args}")
 
 
+@pytest.fixture(autouse=True)
+def _offline_bib_fields(monkeypatch):
+    """Lookups read Crossref / OpenAlex directly for BibTeX fields; keep every
+    test offline (tests of that path patch `_get_json` themselves)."""
+    from app.routes import metadata
+
+    async def nothing(url, params=None):
+        return None
+
+    monkeypatch.setattr(metadata, "_get_json", nothing)
+
+
 @pytest.fixture
 def dirs(tmp_path: Path) -> tuple[Path, Path]:
     data = tmp_path / "data"

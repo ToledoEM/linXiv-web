@@ -10,6 +10,8 @@ import type {
   DuplicatesReport,
   FeedResponse,
   FillOptions,
+  RefreshOptions,
+  RefreshScope,
   FeedRule,
   Job,
   LogsResponse,
@@ -464,12 +466,15 @@ export const api = {
   removeMetadataReview: (sourceIds: string[]) =>
     request<{ ok: boolean }>('POST', '/api/metadata-review/remove', { source_ids: sourceIds }),
   maintenance: () => request<MaintenanceOverview>('GET', '/api/maintenance'),
-  /** Omitted keep_backups / trash_days keep their stored values. */
+  /** Omitted monthly / keep_backups / trash_days keep their stored values. */
   setMaintenanceSchedule: (body: MaintenanceScheduleInput) =>
     request<MaintenanceSchedule>('PUT', '/api/maintenance/schedule', body),
   fillOptions: () => request<FillOptions>('GET', '/api/maintenance/complete-metadata/options'),
   setFillOptions: (gaps: string[], sources: string[]) =>
     request<FillOptions>('PUT', '/api/maintenance/complete-metadata/options', { gaps, sources }),
+  refreshOptions: () => request<RefreshOptions>('GET', '/api/maintenance/metadata-refresh/options'),
+  setRefreshOptions: (scope: RefreshScope) =>
+    request<RefreshOptions>('PUT', '/api/maintenance/metadata-refresh/options', { scope }),
   pdfCheck: () => request<{ libraries: PdfCheckReport[] }>('GET', '/api/maintenance/pdf-check'),
   pdfCheckOptions: () => request<PdfCheckOptions>('GET', '/api/maintenance/pdf-check/options'),
   setPdfCheckOptions: (skip: string[]) =>

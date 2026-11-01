@@ -21,10 +21,11 @@ def test_import_passes_temp_file_and_cleans_up(client, fake, kind, name, body, s
         return {"saved_count": 1, "source_ids": ["local:a"]}
 
     fake.on(kind, "import", result=imp)
+    fake.on("list", result=[])  # .bib import: titles of papers its DOIs didn't match
     r = client.post(f"/api/import/{kind}", files={"file": (name, body)})
     assert r.status_code == 200, r.text
     assert r.json() == {"saved_count": 1, "source_ids": ["local:a"]}
-    assert fake.calls[-1][:3] == [kind, "import", "--"]
+    assert fake.calls[0][:3] == [kind, "import", "--"]
     assert seen["body"] == body
     assert seen["path"].suffix == suffix
     assert not seen["path"].exists()

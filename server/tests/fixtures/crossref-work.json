@@ -1,0 +1,15 @@
+{
+  "status": "ok",
+  "message": {
+    "DOI": "10.1145/3292500.3330701",
+    "type": "proceedings-article",
+    "title": ["Optuna: A Next-generation Hyperparameter Optimization Framework"],
+    "container-title": ["Proceedings of the 25th ACM SIGKDD"],
+    "publisher": "ACM",
+    "publisher-location": "New York, NY, USA",
+    "page": "2623-2631",
+    "ISBN": ["9781450362016"],
+    "editor": [{"given": "Ann", "family": "Editor"}, {"name": "Committee"}],
+    "issued": {"date-parts": [[2019, 7, 25]]}
+  }
+}

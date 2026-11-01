@@ -6,6 +6,7 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field
 
+from .. import bib_store
 from ..duplicates import REPORT, group_key
 from ..maintenance import read_report, report_lock, report_path, write_report
 from ..tsv import tsv_response
@@ -68,6 +69,7 @@ async def merge(request: Request, body: MergeIn):
         if group is None:
             raise HTTPException(status_code=404, detail="these papers are not a duplicate group")
         await run(request, ["paper", "merge", "--", winner, loser])
+        await bib_store.move(library(request), loser, winner)
         group["papers"] = [p for p in group["papers"] if p["source_id"] != loser]
         if len({p["source_id"] for p in group["papers"]}) < 2:
             groups.remove(group)
