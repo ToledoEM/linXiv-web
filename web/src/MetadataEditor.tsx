@@ -5,6 +5,9 @@ import { ErrorText } from './components'
 import { useLookupPrefs } from './lookupSource'
 import { MathText } from './tex'
 import {
+  bibDiffs,
+  bibInput,
+  candidateSource,
   defaultPicked,
   diffFields,
   fromCandidate,
@@ -17,36 +20,45 @@ import {
   type Field,
   type Form,
 } from './metadataFields'
-import type { LookupSource, MetadataCandidate, Paper } from './types'
+import type { BibFields, BibKey, LookupSource, MetadataCandidate, MetadataInput, Paper } from './types'
 import { formSubmitOnCtrlEnter } from './submitShortcut'
+
+/** What a save adds beyond the form: the picked BibTeX fields and the record's source. */
+type Extra = Pick<MetadataInput, 'bib' | 'metadata_source'>
+
+function toggled<T>(set: Set<T>, k: T) {
+  const next = new Set(set)
+  if (next.has(k)) next.delete(k)
+  else next.add(k)
+  return next
+}
 
 /** Field-by-field diff with a checkbox per difference (Zotero-style "retrieve metadata"). */
 function Compare({
   current,
+  currentBib,
   candidate,
   saving,
   onApply,
   onClose,
 }: {
   current: Form
+  currentBib: BibFields | undefined
   candidate: MetadataCandidate
   saving: boolean
-  onApply: (patch: Partial<Form>) => Promise<void>
+  onApply: (patch: Partial<Form>, extra: Extra) => Promise<void>
   onClose: () => void
 }) {
   const found = fromCandidate(candidate)
   const diffs = diffFields(current, found)
+  const bibRows = bibDiffs(currentBib, candidate.bib)
   // Pre-tick fields where the source has a value; a blank found value would erase data.
   const [picked, setPicked] = useState<Set<Field>>(() => defaultPicked(current, found))
-  const toggle = (k: Field) =>
-    setPicked((s) => {
-      const next = new Set(s)
-      if (next.has(k)) next.delete(k)
-      else next.add(k)
-      return next
-    })
+  const [bibPicked, setBibPicked] = useState<Set<BibKey>>(() => new Set(bibRows.map((f) => f.key)))
+  const toggle = (k: Field) => setPicked((s) => toggled(s, k))
+  const toggleBib = (k: BibKey) => setBibPicked((s) => toggled(s, k))
 
-  if (diffs.length === 0) {
+  if (diffs.length === 0 && bibRows.length === 0) {
     return (
       <div className="card compare">
         <p className="success">This match agrees with the current metadata.</p>
@@ -85,13 +97,35 @@ function Compare({
                 <td className="diff-cell">{found[f.key] || <em className="muted">empty</em>}</td>
               </tr>
             ))}
+            {bibRows.map((f) => (
+              <tr key={`bib-${f.key}`}>
+                <td className="check-col">
+                  <input
+                    type="checkbox"
+                    aria-label={`Use found ${f.label}`}
+                    checked={bibPicked.has(f.key)}
+                    onChange={() => toggleBib(f.key)}
+                  />
+                </td>
+                <td className="nowrap">
+                  {f.label} <span className="muted small">(BibTeX)</span>
+                </td>
+                <td className="diff-cell muted">{currentBib?.[f.key] || <em>empty</em>}</td>
+                <td className="diff-cell">{candidate.bib?.[f.key]}</td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
       <div className="actions">
         <button
-          disabled={!picked.size || saving}
-          onClick={() => void onApply(Object.fromEntries([...picked].map((k) => [k, found[k]])) as Partial<Form>)}
+          disabled={(!picked.size && !bibPicked.size) || saving}
+          onClick={() =>
+            void onApply(Object.fromEntries([...picked].map((k) => [k, found[k]])) as Partial<Form>, {
+              bib: bibInput(candidate, bibPicked),
+              metadata_source: candidateSource(candidate),
+            })
+          }
         >
           {saving ? 'Saving…' : 'Apply and Save'}
         </button>
@@ -145,13 +179,13 @@ export default function MetadataEditor({
     }
   }
 
-  const persist = async (next: Form) => {
+  const persist = async (next: Form, extra: Extra = {}) => {
     const checked = toMetadataInput(next)
     if ('error' in checked) return setError(checked.error)
     setSaving(true)
     setError('')
     try {
-      await api.saveMetadata(paper.source_id, checked.input)
+      await api.saveMetadata(paper.source_id, { ...checked.input, ...extra })
       await onSaved()
     } catch (err) {
       setError((err as Error).message)
@@ -221,13 +255,14 @@ export default function MetadataEditor({
           <Compare
             key={`${comparing.ref}`}
             current={form}
+            currentBib={paper.bib}
             candidate={comparing}
             saving={saving}
-            onApply={async (patch) => {
+            onApply={async (patch, extra) => {
               const next = { ...form, ...patch }
               setForm(next)
               // On success the editor closes; on failure the error shows under the filled form.
-              await persist(next)
+              await persist(next, extra)
               setComparing(null)
             }}
             onClose={() => setComparing(null)}

@@ -8,7 +8,9 @@ operation asks the ticked sources, in their order, for the record under the
 paper's own arXiv id or DOI (never a title search, so a hit is the same paper)
 and fills only the ticked empty fields; what is already stored stays. Papers it
 cannot complete are listed for review in `maintenance/metadata-review.json`,
-which Library → batch edit opens.
+which Library → batch edit opens. A completed paper also gets the record's
+BibTeX fields that are still null, and its source when none is recorded
+(app/bib_store.py).
 
 The choices live in the root library's web-only setting `web_maint_fill`
 ({gaps, sources}), like the maintenance schedule.
@@ -25,6 +27,7 @@ from typing import TYPE_CHECKING
 from fastapi import HTTPException
 from pydantic import ValidationError
 
+from . import bib_store
 from .cli import CLIError
 from .maintenance import Op, parse_setting, read_report, report_lock, report_path, write_report
 from .pdf_name import pdf_file, title_from_file, title_suspect
@@ -155,7 +158,8 @@ async def complete_new(app: FastAPI, lib: Library, job: Job) -> dict:
     opts = options_from(await app.state.maintenance.stored()) if new else {}
     # The library's own settings: its NCBI key for PubMed.
     stored = await lib.cli(["settings", "get"], s.timeout_short) if new else {}
-    ncbi_key = ncbi_api_key(stored if isinstance(stored, dict) else {})[0]
+    stored = stored if isinstance(stored, dict) else {}
+    ncbi_key = ncbi_api_key(stored)[0]
     papers = await call(["list"]) if new else []
     bases = [str(lib.data_dir / "pdfs"), str(lib.pdf_dir)]
     todo = [
@@ -173,10 +177,13 @@ async def complete_new(app: FastAPI, lib: Library, job: Job) -> dict:
         sid = str(paper["source_id"])
         job.current = f"{lib.key}: {sid}"
         try:
-            found = await match_by_id(call, paper, opts["sources"], ncbi_key)
+            found = await match_by_id(call, paper, opts["sources"], ncbi_key, stored)
             fixed = completed(paper, found, missing) if found else None
             if fixed:
                 await call(repair_args(sid, fixed, paper.get("tags") or []))
+                await bib_store.upsert(
+                    lib, sid, found.get("bib"), found.get("source"), found.get("ref"), False
+                )
                 done += 1
                 continue
         except (CLIError, HTTPException) as e:

@@ -11,6 +11,7 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 
+from . import bib_store
 from .cli import CLIError
 from .maintenance import Op
 
@@ -53,6 +54,7 @@ async def empty_trash(app: FastAPI, lib: Library, job: Job) -> dict:
             if e.status != 404:
                 job.errors.append({"source_id": sid, "error": e.message})
                 continue
+        await bib_store.delete(lib, [sid])
         out["papers_purged"] += 1
     return out
 

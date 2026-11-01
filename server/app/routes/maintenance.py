@@ -19,6 +19,9 @@ from ..maintenance import (
     report_path,
 )
 from ..metadata_fill import FILLS, OPTIONS_SETTING, options_from
+from ..metadata_refresh import OPTIONS_SETTING as REFRESH_OPTIONS
+from ..metadata_refresh import SCOPES
+from ..metadata_refresh import options_from as refresh_options_from
 from ..pdf_check import (
     MAX_LISTED,
     MAX_SKIP,
@@ -41,6 +44,7 @@ class ScheduleIn(BaseModel):
 
     hour: int = Field(ge=0, le=23)
     nightly: list[str] = Field(max_length=50)
+    monthly: list[str] | None = Field(None, max_length=50)
     keep_backups: int | None = Field(None, ge=1, le=MAX_KEEP_BACKUPS)
     trash_days: int | None = Field(None, ge=0, le=MAX_TRASH_DAYS)
 
@@ -69,10 +73,12 @@ async def overview(request: Request):
 @router.put("/schedule")
 async def set_schedule(request: Request, body: ScheduleIn):
     m = _maint(request)
-    unknown = [i for i in body.nightly if i not in m.ops]
+    unknown = [i for i in (*body.nightly, *(body.monthly or [])) if i not in m.ops]
     if unknown:
         raise HTTPException(status_code=400, detail=f"unknown operation: {', '.join(unknown)}")
-    return await m.set_schedule(body.hour, body.nightly, body.keep_backups, body.trash_days)
+    return await m.set_schedule(
+        body.hour, body.nightly, body.keep_backups, body.trash_days, body.monthly
+    )
 
 
 @router.post("/{op_id}/run")
@@ -231,3 +237,24 @@ async def set_fill_options(request: Request, body: FillOptionsIn):
     value = {"gaps": [g for g in FILLS if g in body.gaps], "sources": body.sources}
     await _maint(request).save_setting(OPTIONS_SETTING, value)
     return await fill_options(request)
+
+
+class RefreshOptionsIn(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    scope: str = Field(min_length=1, max_length=40)
+
+
+@router.get("/metadata-refresh/options")
+async def refresh_options(request: Request):
+    """Which papers "Refresh metadata" asks again: `all`, or `recent_or_preprint`
+    (published within a year, or arXiv / bioRxiv / medRxiv)."""
+    return {**refresh_options_from(await _maint(request).stored()), "all_scopes": list(SCOPES)}
+
+
+@router.put("/metadata-refresh/options")
+async def set_refresh_options(request: Request, body: RefreshOptionsIn):
+    if body.scope not in SCOPES:
+        raise HTTPException(status_code=400, detail=f"unknown scope: {body.scope}")
+    await _maint(request).save_setting(REFRESH_OPTIONS, {"scope": body.scope})
+    return await refresh_options(request)

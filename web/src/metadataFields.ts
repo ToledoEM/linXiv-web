@@ -3,7 +3,16 @@
 
 import { cleanDoi, isValidDoi } from './format'
 import type { LookupPrefs } from './lookupSource'
-import type { DefaultLookupSource, LookupSource, MetadataCandidate, MetadataInput, Paper } from './types'
+import type {
+  BibFields,
+  BibKey,
+  DefaultLookupSource,
+  LookupSource,
+  MetadataCandidate,
+  MetadataInput,
+  MetadataSource,
+  Paper,
+} from './types'
 
 export type Form = {
   title: string
@@ -133,4 +142,50 @@ export function toMetadataInput(form: Form): { input: MetadataInput } | { error:
       url: form.url.trim() || null,
     },
   }
+}
+
+/** BibTeX fields beyond linXiv's own, in `.bib` order (server: app/bib_store.py BIB_FIELDS). */
+export const BIB_FIELDS: { key: BibKey; label: string }[] = [
+  { key: 'entry_type', label: 'Entry type' },
+  { key: 'booktitle', label: 'Book / proceedings title' },
+  { key: 'editor', label: 'Editor' },
+  { key: 'edition', label: 'Edition' },
+  { key: 'series', label: 'Series' },
+  { key: 'volume', label: 'Volume' },
+  { key: 'number', label: 'Number / issue' },
+  { key: 'chapter', label: 'Chapter' },
+  { key: 'pages', label: 'Pages' },
+  { key: 'month', label: 'Month' },
+  { key: 'publisher', label: 'Publisher' },
+  { key: 'address', label: 'Publisher address' },
+  { key: 'school', label: 'School' },
+  { key: 'institution', label: 'Institution' },
+  { key: 'organization', label: 'Organization' },
+  { key: 'howpublished', label: 'How published' },
+  { key: 'note', label: 'Note' },
+  { key: 'issn', label: 'ISSN' },
+  { key: 'isbn', label: 'ISBN' },
+  { key: 'eprint', label: 'E-print' },
+  { key: 'archive_prefix', label: 'Archive prefix' },
+  { key: 'primary_class', label: 'Primary class' },
+]
+
+/** BibTeX fields where the source has a value that differs from the stored one. */
+export const bibDiffs = (current: BibFields | undefined | null, found: BibFields | undefined | null) =>
+  BIB_FIELDS.filter((f) => {
+    const value = norm(found?.[f.key] ?? '')
+    return value !== '' && value !== norm(current?.[f.key] ?? '')
+  })
+
+/** Recorded with a saved candidate, so "Refresh metadata" can ask the same source again. */
+export const candidateSource = (c: MetadataCandidate): MetadataSource => ({ source: c.source, ref: c.ref })
+
+/** The BibTeX part of a save: the picked found values, or (`picked` omitted) all of them.
+ * Undefined when the candidate carries none, so the server reads them itself (title-search
+ * candidates from Crossref / OpenAlex). */
+export function bibInput(c: MetadataCandidate, picked?: ReadonlySet<BibKey>): MetadataInput['bib'] {
+  if (!c.bib) return undefined
+  return Object.fromEntries(
+    BIB_FIELDS.filter((f) => c.bib?.[f.key] && (!picked || picked.has(f.key))).map((f) => [f.key, c.bib?.[f.key]]),
+  )
 }
