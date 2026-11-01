@@ -130,7 +130,7 @@ When two of your files turn out to be the same paper (same DOI or arXiv id), the
 
 With `in-situ`, linXiv treats your files as its own:
 
-- Rename or move a file afterwards and its paper loses the PDF. Clean up file names before you import.
+- Rename or move a file afterwards and its paper loses the PDF. Clean up file names before you import, for example with [sanitize-pdf-names.py](sanitize-pdf-names.md).
 - Settings → Library → PDF folders moves the files into its year and journal folders when you apply a layout.
 - Deleting a paper's PDF in linXiv deletes your file.
 - The storage total in Settings only counts files at the top of the PDF folder.

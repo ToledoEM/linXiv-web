@@ -1,15 +1,24 @@
-# export-tags.sh
+# Exporting tags to a CSV
 
-Writes every paper's tags to a CSV with one row per paper per tag. Run it on the machine that hosts the linXiv-web container; it calls the server at `http://127.0.0.1:8086`, the port `docker-compose.yml` publishes.
+`scripts/export-tags.sh` writes every paper's tags to a CSV with one row per paper per tag. Run it on the machine that hosts the linXiv-web container; it calls the server at `http://127.0.0.1:8086`, the port `docker-compose.yml` publishes.
 
 Needs `curl` and `jq`.
+
+## Getting the script onto the server
+
+Copy it next to your `docker-compose.yml`:
+
+```sh
+scp scripts/export-tags.sh server:linxiv-web/
+ssh server 'chmod +x linxiv-web/export-tags.sh'
+```
 
 ## Usage
 
 ```sh
-scripts/export-tags.sh                     # writes ./paper-tags-<date>-<time>.csv
-scripts/export-tags.sh --out tags.csv      # writes tags.csv
-scripts/export-tags.sh --help
+./export-tags.sh                     # writes ./paper-tags-<date>-<time>.csv
+./export-tags.sh --out tags.csv      # writes tags.csv
+./export-tags.sh --help
 ```
 
 ## Output
@@ -27,7 +36,7 @@ source_id,tag
 When the server has auth off, the script does not log in. When it has a password, the script reads it from the file named in `LINXIV_WEB_PASSWORD_FILE`, or asks for it on the terminal:
 
 ```sh
-LINXIV_WEB_PASSWORD_FILE=/path/to/password.txt scripts/export-tags.sh
+LINXIV_WEB_PASSWORD_FILE=/path/to/password.txt ./export-tags.sh
 ```
 
 Without a terminal and without `LINXIV_WEB_PASSWORD_FILE`, the script stops. It also stops if first-run setup is not done; set the password in the web UI first.

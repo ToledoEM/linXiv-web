@@ -6,6 +6,8 @@
 #   Papers are read with GET /api/papers, 1000 at a time. source_id is the key
 #   the tag endpoints (/api/papers/{source_id}/tags) take, so the file can be
 #   used to put the tags back. Papers with no tags have no rows.
+#
+# See docs/export-tags.md.
 set -eu
 
 usage() {

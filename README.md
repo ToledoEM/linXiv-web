@@ -76,7 +76,7 @@ No CPU or memory limits were set.
 
 ## Run (Docker)
 
-To self-host from the prebuilt image (first-run setup, reverse proxy, backups, updates), see [docs/self-hosting.md](docs/self-hosting.md). To import a folder of PDFs already on the server without the web UI, see [docs/bulk-import.md](docs/bulk-import.md). The steps below build from this checkout.
+To self-host from the prebuilt image (first-run setup, reverse proxy, backups, updates), see [docs/self-hosting.md](docs/self-hosting.md). To import a folder of PDFs already on the server without the web UI, see [docs/bulk-import.md](docs/bulk-import.md); [docs/scripts.md](docs/scripts.md) lists every server script (sanitize PDF file names, bulk import, bulk AI tags, export tags). The steps below build from this checkout.
 
 ```sh
 cp .env.example .env

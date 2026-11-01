@@ -8,6 +8,8 @@ Each paper has its own page with metadata, abstract, tags, projects, notes, high
 
 The top block shows id, version, publication date, categories, journal and link. **Edit metadata** opens an editor that can look the paper up in Crossref, arXiv, OpenAlex, PubMed or bioRxiv/medRxiv and show the result next to the stored values. Pick the fields to take, then save. The default lookup source and which sources are on are set in **Settings → Library → Metadata lookup**.
 
+The diff also lists the BibTeX fields the source holds that linXiv has no column for, marked *(BibTeX)*: entry type, volume, issue, pages, month, publisher, ISSN and so on. Ticked ones are saved with the record, and the BibTeX export of a Library selection writes them. **BibTeX details** under the abstract shows the stored ones and the **Metadata source**: where the record you saved last came from (Crossref, PubMed, bioRxiv, arXiv, OpenAlex, a BibTeX import, the PDF file name or AI cleanup), or "not recorded". Papers saved before this feature, or edited by hand only, show no fields and no source until a looked-up record is saved. The maintenance operation [Refresh metadata](../server-admin.md#maintenance-operations) asks the recorded source again.
+
 A paper can be saved without authors; linXiv then stores the author as `Unknown`.
 
 ## PDF reader

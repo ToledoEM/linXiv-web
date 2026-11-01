@@ -34,6 +34,9 @@ linXiv-web is a community project, not an official linXiv component. A FastAPI s
 
 ## Optional
 
+- [Server scripts](https://raw.githubusercontent.com/ToledoEM/linXiv-web/main/docs/scripts.md): what each script in `scripts/` does, and the order to run them in
+- [Sanitize PDF file names](https://raw.githubusercontent.com/ToledoEM/linXiv-web/main/docs/sanitize-pdf-names.md): `scripts/sanitize-pdf-names.py` for renaming PDFs to plain ASCII names before an import
 - [Bulk PDF import](https://raw.githubusercontent.com/ToledoEM/linXiv-web/main/docs/bulk-import.md): `scripts/bulk-import.sh` for importing a server-side folder of PDFs
 - [Bulk AI tags](https://raw.githubusercontent.com/ToledoEM/linXiv-web/main/docs/bulk-ai-tags.md): `scripts/bulk-ai-tags.sh` for tagging every untagged paper
+- [Export tags](https://raw.githubusercontent.com/ToledoEM/linXiv-web/main/docs/export-tags.md): `scripts/export-tags.sh` for writing every paper's tags to a CSV
 - [Development](https://raw.githubusercontent.com/ToledoEM/linXiv-web/main/docs/development.md): containerised lint, tests and builds
