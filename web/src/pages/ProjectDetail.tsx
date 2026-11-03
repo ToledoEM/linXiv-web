@@ -167,6 +167,9 @@ export default function ProjectDetail() {
   const [batchMode, setBatchMode] = useState<'metadata' | 'tags'>('metadata')
   const aiOn = useAiEnabled()
   const mode = aiOn ? batchMode : 'metadata'
+  // The list browser add-on imports land in: its batch panel is the metadata check.
+  const [clipListId, setClipListId] = useState<number | null>(null)
+  const isClipList = clipListId === projectId
 
   useEffect(() => saveSort(SORT_KEY, sort), [sort])
   const shown = useMemo(() => (papers ? sortPapers(papers, sort) : null), [papers, sort])
@@ -194,6 +197,13 @@ export default function ProjectDetail() {
   useEffect(() => {
     void load()
   }, [load])
+
+  useEffect(() => {
+    api.clipList().then(
+      (r) => setClipListId(r.project_id),
+      () => setClipListId(null),
+    )
+  }, [])
 
   const run = async (fn: () => Promise<unknown>, after?: () => void) => {
     setBusy(true)
@@ -328,6 +338,18 @@ export default function ProjectDetail() {
       <div className="section-head">
         <h3>Papers in this project</h3>
         <div className="toolbar">
+          {isClipList && papers.length > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                setBatch(true)
+                setBatchMode('metadata')
+                setSelected(new Set(papers.map((p) => p.source_id)))
+              }}
+            >
+              Check metadata
+            </button>
+          )}
           {papers.length > 0 && (
             <button
               type="button"
@@ -472,6 +494,19 @@ export default function ProjectDetail() {
               titles={titles}
               onSaved={() => void load()}
               onSkip={(sid) => setSelected((s) => toggled(s, sid))}
+              {...(isClipList && {
+                defaultSource: 'crossref' as const,
+                guardTitleMatches: true,
+                onDone: async (sid: string) => {
+                  await api.removeProjectPaper(projectId, sid)
+                  setSelected((s) => {
+                    const next = new Set(s)
+                    next.delete(sid)
+                    return next
+                  })
+                  await load()
+                },
+              })}
             />
           )}
         </div>

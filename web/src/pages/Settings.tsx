@@ -18,6 +18,7 @@ import { serializeFeeds } from '../feeds'
 import FeedRules from '../FeedRules'
 import LoginSettings from '../LoginSettings'
 import FullTextIndex from '../FullTextIndex'
+import ClipTokenSettings from '../ClipTokenSettings'
 import OrcidBackfill from '../OrcidBackfill'
 import PaperTableSettings from '../PaperTableSettings'
 import PdfLayout from '../PdfLayout'
@@ -484,6 +485,7 @@ export default function Settings() {
         <PdfTextIndex />
         <VersionMonitor />
         <PdfLayout />
+        <ClipTokenSettings />
       </>
     ),
     server: (
