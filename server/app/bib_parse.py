@@ -100,6 +100,26 @@ def entries(text: str) -> list[dict]:
     return out
 
 
+def spans(text: str) -> list[dict]:
+    """Like `entries`, adding each entry's citation `key` and its `start`/`end` in `text`."""
+    out = []
+    for m in re.finditer(r"@\s*([A-Za-z]+)\s*([{(])", text):
+        kind = m.group(1).lower()
+        if kind in _SKIP:
+            continue
+        body, end = _body(text, m.end() - 1)
+        out.append(
+            {
+                "entry_type": kind,
+                "fields": _fields(body),
+                "key": body.split(",", 1)[0].strip(),
+                "start": m.start(),
+                "end": end,
+            }
+        )
+    return out
+
+
 def bib_fields(entry: dict) -> dict[str, str]:
     """The entry's values under bib_store names (not yet cleaned)."""
     fields = entry.get("fields") or {}

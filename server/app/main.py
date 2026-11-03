@@ -32,6 +32,7 @@ from .routes import (
     annotations,
     authors,
     backup,
+    clip,
     duplicates,
     exports,
     feed,
@@ -169,6 +170,8 @@ def create_app(
         return runner or LinxivCLI(settings.linxiv_bin, env={"LINXIV_DATA_DIR": str(data_dir)})
 
     # `app.state.cli` / `fulltext_worker` stay the root library's (MCP, update check).
+    # Throwaway library for a clip's trial import (routes/clip.py).
+    app.state.scratch_cli = _runner
     app.state.libraries = Libraries(
         settings,
         app.state.jobs,
@@ -221,6 +224,8 @@ def create_app(
     app.include_router(users.router)
     # /mcp has its own bearer-token auth (MCP clients have no browser session).
     app.include_router(mcp.endpoint)
+    # /api/clip/{ping,pdf,bibtex} have their own bearer-token auth (browser add-on).
+    app.include_router(clip.endpoint)
     guarded = [Depends(require_auth)]
     # Server-wide (logs, activity, updates, system, MCP): admins only. Every login
     # is admin in single-user mode.
@@ -235,6 +240,7 @@ def create_app(
     app.include_router(add.router, dependencies=guarded)
     app.include_router(trash.router, dependencies=guarded)
     app.include_router(imports.router, dependencies=guarded)
+    app.include_router(clip.router, dependencies=guarded)
     app.include_router(exports.router, dependencies=guarded)
     app.include_router(system.router, dependencies=admin_only)
     app.include_router(maintenance.router, dependencies=admin_only)
