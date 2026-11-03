@@ -1,10 +1,10 @@
 # HTTP API
 
-The web UI uses this API, and scripts can call it too. Every route except `/api/health`, `/api/login`, `/api/me` and `/mcp` needs a session when a password is set. Write requests also need the `X-CSRF-Token` header, which echoes the `lxw_csrf` cookie.
+The web UI uses this API, and scripts can call it too. Every route except `/api/health`, `/api/login`, `/api/me`, `/mcp` and the add-on routes `/api/clip/ping`, `/api/clip/pdf` and `/api/clip/bibtex` needs a session when a password is set. Write requests also need the `X-CSRF-Token` header, which echoes the `lxw_csrf` cookie.
 
 Most routes map to one `linxiv` CLI command. The right column names the command or describes what the server does.
 
-In multi-user mode (see [Server Admin](../server-admin.md)) each request works on the caller's own library, or on the shared library when it sends the header `X-Linxiv-Library: shared` (plain links such as a PDF or a download use `?library=shared` instead). Writes to the shared library by accounts that are not admins get 403, except `POST /api/shared/copy` and `POST /api/export/bibtex`. Logs, activity, update check, system status and diagnostics, and `/api/mcp` are admin only. `GET /api/jobs` lists only the caller's own jobs for accounts that are not admins.
+In multi-user mode (see [Server Admin](../server-admin.md)) each request works on the caller's own library, or on the shared library when it sends the header `X-Linxiv-Library: shared` (plain links such as a PDF or a download use `?library=shared` instead). Writes to the shared library by accounts that are not admins get 403, except `POST /api/shared/copy` and `POST /api/export/bibtex`. Logs, activity, update check, system status and diagnostics, and `/api/mcp` are admin only. Add-on routes with the bearer token always work on the token owner's own library and ignore this header. They accept requests with no `Origin` or a `moz-extension://` one, and answer 403 to any other `Origin`. `GET /api/jobs` lists only the caller's own jobs for accounts that are not admins.
 
 | Route | linxiv command / behaviour |
 |---|---|
@@ -75,6 +75,11 @@ In multi-user mode (see [Server Admin](../server-admin.md)) each request works o
 | `POST /api/ai/tags/{id}`, `POST /api/ai/summary/{id}?pdf=`, `POST /api/ai/cleanup/{id}` | AI tag suggestions, summary, metadata cleanup; previews only, nothing is written |
 | `GET /api/mcp`, `POST /api/mcp/token`, `DELETE /api/mcp/token` | MCP status, create (shown once) or revoke the access token |
 | `POST/GET/DELETE /mcp` | MCP Streamable HTTP endpoint (bearer token; see [MCP server](../mcp.md)) |
+| `GET /api/clip/token`, `POST /api/clip/token`, `DELETE /api/clip/token` | Browser add-on token of the caller's library: status, create (shown once; replaces any previous one) or revoke. Every account has its own |
+| `GET /api/clip/list` | `{project_id}` of the add-on's reading list in this library, null before the first clip |
+| `GET /api/clip/ping` | Add-on token. `{ok, version, username}` |
+| `POST /api/clip/pdf` (multipart `file`) | Add-on token. Trial `pdf import` in a throwaway library to learn the id. New paper or no PDF yet: `pdf import` (metadata of an existing paper put back with `paper repair`). Has a PDF: no import. Then `project add-papers` to the list. Answers `{source_ids, new, existing, attached, project_id, failed}`, plus `metadata_kept` when a PDF was attached to an existing paper |
+| `POST /api/clip/bibtex` (multipart `file`) | Add-on token. `bibtex import` of the entries not in the library, matched by DOI, arXiv id, else exact title, then `project add-papers` for all of them. Answers `{source_ids, new, existing, project_id, failed}` |
 
 
 Paper ids are linXiv source ids such as `arxiv:1706.03762`. Old-style arXiv ids keep their slash: `/api/papers/arxiv:hep-th/9901001`.

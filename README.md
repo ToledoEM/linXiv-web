@@ -274,6 +274,8 @@ All routes except `/api/health`, `/api/login`, `/api/me` and `/mcp` need a sessi
 | `POST /api/pdfs/import` (multipart `file`) | `pdf import` |
 | `GET /api/pdfs/layout/preview?layout=`, `POST /api/jobs/pdf-layout` | PDF folder layout (`none`, `year`, `journal`, `year/journal`, `journal/year`): preview, then a job that moves files and updates their stored path |
 | `POST /api/import/bibtex`, `POST /api/import/zotero` (multipart `file`) | `bibtex import`, `zotero import` (upsert: existing entries are updated) |
+| `GET/POST/DELETE /api/clip/token`, `GET /api/clip/list` | Browser add-on token of the caller's library; which project is the add-on's reading list |
+| `GET /api/clip/ping`, `POST /api/clip/pdf`, `POST /api/clip/bibtex` (multipart `file`) | Browser add-on, bearer token: imports that leave stored records as they are, then `project add-papers` to the reading list |
 | `POST /api/add` `{input}` | arXiv id/link: `fetch`; DOI or doi.org link: `doi save`; other http(s) link: server downloads the PDF (public hosts only, size-capped), then `pdf import` |
 | `GET /api/stats`, `/api/categories`, `/api/tags` | `stats`, `categories`, `tag list-all` |
 | `GET /api/authors?hide_single`, `GET/PATCH/DELETE /api/authors/{id}` | `author list`, `author get`, `author update`, `author delete` (409 while linked to papers) |

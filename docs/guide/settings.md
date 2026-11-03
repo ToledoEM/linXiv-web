@@ -38,6 +38,10 @@ Switch AI features on, choose a provider, model and key, and test the connection
 
 API keys are write-only. After saving, the page shows only their last 4 characters.
 
+## Browser add-on
+
+Under Library, the **Browser add-on** card creates the access token for the linXiv Firefox add-on. Each account has its own token, shown once. Papers it saves go to your library and onto the reading list **Imported - to check**.
+
 ## Integrations
 
 The MCP server for Claude Code, Codex and OpenCode: switch it on, choose the tool profile and create the access token. See [MCP server](../mcp.md).
