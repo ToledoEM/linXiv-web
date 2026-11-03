@@ -2,8 +2,8 @@
 
 Separate from linXiv's papers.db (which only the CLI touches) and from the
 linxiv settings store. Holds login failures for the throttle, sessions (by
-SHA-256 of their id), the session signing key, the multi-user switch and the
-user accounts. Opened per call (one short transaction each), so it is safe
+SHA-256 of their id), the session signing key, the multi-user switch, the
+user accounts and the clip tokens (by SHA-256, per library). Opened per call (one short transaction each), so it is safe
 from the threadpool.
 
 The server owner's account (`library = 'root'`) keeps no hash of its own: it
@@ -46,6 +46,12 @@ CREATE TABLE IF NOT EXISTS users (
     role TEXT NOT NULL CHECK (role IN ('admin', 'user')),
     library TEXT NOT NULL UNIQUE,
     created_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS clip_tokens (
+    library TEXT PRIMARY KEY,
+    token_hash TEXT NOT NULL UNIQUE,
+    hint TEXT NOT NULL,
+    created TEXT NOT NULL
 );
 """
 
@@ -263,10 +269,47 @@ class StateDB:
                 (*args, user_id),
             )
 
+    def user_by_library(self, library: str) -> dict[str, Any] | None:
+        with closing(self._rows()) as db:
+            row = db.execute("SELECT * FROM users WHERE library = ?", (library,)).fetchone()
+        return self._user(row)
+
     def delete_user(self, user_id: int) -> None:
         with closing(self._connect()) as db, db:
             db.execute("DELETE FROM sessions WHERE user_id = ?", (user_id,))
+            db.execute(
+                "DELETE FROM clip_tokens WHERE library = (SELECT library FROM users WHERE id = ?)",
+                (user_id,),
+            )
             db.execute("DELETE FROM users WHERE id = ?", (user_id,))
+
+    # --- clip tokens (browser add-on), one per library ---
+
+    def clip_token(self, library: str) -> dict[str, str] | None:
+        with closing(self._connect()) as db:
+            row = db.execute(
+                "SELECT hint, created FROM clip_tokens WHERE library = ?", (library,)
+            ).fetchone()
+        return {"hint": row[0], "created": row[1]} if row else None
+
+    def clip_token_library(self, token_hash: str) -> str | None:
+        with closing(self._connect()) as db:
+            row = db.execute(
+                "SELECT library FROM clip_tokens WHERE token_hash = ?", (token_hash,)
+            ).fetchone()
+        return row[0] if row else None
+
+    def set_clip_token(self, library: str, token_hash: str, hint: str, created: str) -> None:
+        with closing(self._connect()) as db, db:
+            db.execute(
+                "INSERT OR REPLACE INTO clip_tokens (library, token_hash, hint, created) "
+                "VALUES (?, ?, ?, ?)",
+                (library, token_hash, hint, created),
+            )
+
+    def drop_clip_token(self, library: str) -> None:
+        with closing(self._connect()) as db, db:
+            db.execute("DELETE FROM clip_tokens WHERE library = ?", (library,))
 
 
 def _now() -> str:
