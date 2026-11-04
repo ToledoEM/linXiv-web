@@ -14,6 +14,7 @@ from app.libraries import HEADER
 from app.main import create_app
 
 from .conftest import FakeCLI
+from .test_duplicates import _library as _papers_db
 from .test_libraries import PerLibrary
 from .test_users import ALICE_PW, OWNER_PW, _csrf, _login
 
@@ -267,6 +268,8 @@ def test_concurrent_clips_make_one_list(settings):
         if args[:2] == ["settings", "update"]:
             state[args[-2]] = int(args[-1])
             return None
+        if args[:1] == ["list"]:
+            return []
         if args[:2] == ["paper", "get"]:
             raise CLIError(404, "not found")
         if args[:2] == ["project", "create"]:
@@ -589,3 +592,85 @@ def test_unparsable_file_goes_to_the_cli(client, fake, token):
 def test_no_at_sign_refused(client, fake, token):
     assert _clip_bib(client, token, "not bibtex").status_code == 400
     assert not _calls(fake, "bibtex", "import")
+
+
+# --- the same file can get a different id: lookups online may fail ------------
+
+
+def _imports(fake: FakeCLI, *ids: str) -> None:
+    answers = iter(ids)
+    fake.on("pdf", "import", result=lambda _: {"source_id": next(answers), "title": "From PDF"})
+
+
+MINE = {
+    "source_id": "doi:10.1/a",
+    "title": "Mine",
+    "authors": ["Me"],
+    "published": "2001-02-03",
+    "summary": "S",
+    "doi": "10.1/a",
+    "tags": ["keep"],
+    "pdf_path": None,
+}
+
+
+def test_real_import_landing_on_a_stored_paper_restores_it(client, fake, token):
+    _imports(fake, "local:abc", "doi:10.1/a")
+    fake.on("list", result=[MINE])
+    fake.on("paper", "repair", result={"ok": True})
+    body = _clip_pdf(client, token).json()
+    assert body["new"] == []
+    assert body["existing"] == body["attached"] == body["source_ids"] == ["doi:10.1/a"]
+    assert body["metadata_kept"] is True
+    assert body["title"] == "Mine"
+    repair = _calls(fake, "paper", "repair")[0]
+    assert "--title=Mine" in repair
+    assert repair[-2:] == ["--", "doi:10.1/a"]
+
+
+def test_real_import_landing_on_a_paper_with_a_pdf_attaches_nothing(client, fake, token, tmp_path):
+    saved = tmp_path / "saved.pdf"
+    saved.write_bytes(PDF)
+    _imports(fake, "local:abc", "doi:10.1/a")
+    fake.on("list", result=[{**MINE, "pdf_path": str(saved)}])
+    fake.on("paper", "repair", result={"ok": True})
+    body = _clip_pdf(client, token).json()
+    assert body["existing"] == ["doi:10.1/a"]
+    assert body["attached"] == []
+    assert body["metadata_kept"] is True
+
+
+def test_real_import_landing_on_a_new_id_is_new(client, fake, token):
+    _imports(fake, "doi:10.1/a", "local:abc")
+    body = _clip_pdf(client, token).json()
+    assert body["new"] == body["source_ids"] == ["local:abc"]
+    assert body["existing"] == []
+    assert not _calls(fake, "paper", "repair")
+
+
+def test_real_import_elsewhere_leaves_the_trial_paper_alone(client, fake, token):
+    _imports(fake, "doi:10.1/a", "local:abc")
+    fake.on("paper", "get", result=MINE)
+    body = _clip_pdf(client, token).json()
+    assert body["new"] == ["local:abc"]
+    assert body["attached"] == []
+    assert body["title"] == "From PDF"
+    assert not _calls(fake, "paper", "repair")
+
+
+def test_file_already_saved_needs_no_import(client, fake, token, settings):
+    _papers_db(settings.data_dir, settings.pdf_dir, [("doi:10.1/held", 1, PDF, False)])
+    fake.on("paper", "get", result={"source_id": "doi:10.1/held", "title": "Held"})
+    body = _clip_pdf(client, token).json()
+    assert body["existing"] == body["source_ids"] == ["doi:10.1/held"]
+    assert body["new"] == body["attached"] == []
+    assert body["title"] == "Held"
+    assert not _calls(fake, "pdf", "import")
+    assert _calls(fake, "project", "add-papers")
+
+
+def test_saved_file_of_a_paper_now_gone_imports_as_usual(client, fake, token, settings):
+    _papers_db(settings.data_dir, settings.pdf_dir, [("doi:10.1/held", 1, PDF, False)])
+    body = _clip_pdf(client, token).json()
+    assert body["new"] == ["doi:10.1/a"]
+    assert len(_calls(fake, "pdf", "import")) == 2

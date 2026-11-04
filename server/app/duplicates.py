@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import logging
 import sqlite3
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -28,6 +29,8 @@ if TYPE_CHECKING:
 
     from .jobs import Job
     from .libraries import Library
+
+log = logging.getLogger(__name__)
 
 REPORT = "duplicates.json"
 CACHE = "pdf-hashes.json"
@@ -82,6 +85,33 @@ def sha256(path: Path) -> str:
         while chunk := f.read(CHUNK):
             h.update(chunk)
     return h.hexdigest()
+
+
+def owner_of(lib: Library, upload: Path) -> str | None:
+    """The paper, not in the trash, whose saved PDF is this very file. Only files of
+    the same size are compared, using a cached hash when it is still good. Reads the
+    cache only: `scan` is its one writer."""
+    try:
+        files = saved_pdfs(lib.data_dir / "papers.db", lib.pdf_dir)
+    except sqlite3.Error:
+        log.exception("could not read the saved PDFs of library %s", lib.key)
+        return None
+    size = upload.stat().st_size
+    digest = sha256(upload)
+    cache = read_report(report_path(lib, CACHE))
+    for f in files:
+        path: Path = f["path"]
+        try:
+            st = path.stat()
+            if st.st_size != size:
+                continue
+            hit = cache.get(str(path))
+            fresh = isinstance(hit, list) and hit[:-1] == [st.st_size, st.st_mtime_ns]
+            if (hit[2] if fresh else sha256(path)) == digest:
+                return f["source_id"]
+        except OSError:
+            continue
+    return None
 
 
 def group_key(source_ids: list[str]) -> str:

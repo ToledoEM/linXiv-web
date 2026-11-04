@@ -436,7 +436,8 @@ def _tiny_pdf(title: str) -> bytes:
         b"<< /Type /Catalog /Pages 2 0 R >>",
         b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
         b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 200] >>",
-        b"<< /Title (" + title.encode() + b") >>",
+        # An author too, or `pdf import` looks the title up online.
+        b"<< /Title (" + title.encode() + b") /Author (Jane Doe) >>",
     ]
     out, offs = b"%PDF-1.4\n", []
     for i, o in enumerate(objs, 1):
@@ -821,6 +822,7 @@ def test_real_cli_clip_keeps_stored_records(settings):
         assert r.status_code == 200, r.text
         body = r.json()
         sid = body["new"][0]
+        assert sid.startswith("local:")
         assert body["title"]
         listed = body["project_id"]
         project = c.get(f"/api/projects/{listed}").json()
@@ -878,6 +880,32 @@ def test_real_cli_clip_restores_trashed_paper(settings):
         r = c.post("/api/clip/pdf", files=files, headers=addon)
         assert r.json()["new"] == [sid]
         assert c.get(f"/api/papers/{sid}").status_code == 200
+
+
+def test_real_cli_clip_finds_a_saved_file_under_another_id(settings):
+    # As when the lookup worked for the first copy: the file is saved under a DOI id,
+    # and this upload's own id would be `local:`.
+    with TestClient(create_app(replace(settings, linxiv_bin=BIN))) as c:
+        token = c.post("/api/clip/token").json()["token"]
+        addon = {"Authorization": f"Bearer {token}", "Origin": "moz-extension://1234"}
+        bib = b"@article{h, title={Held}, author={Doe, Jane}, year={2020}, doi={10.1234/held}}\n"
+        send = {"file": ("a.bib", bib)}
+        sid = c.post("/api/clip/bibtex", files=send, headers=addon).json()["new"][0]
+        pdf = _tiny_pdf("Held Paper")
+        saved = settings.pdf_dir / "held.pdf"
+        saved.write_bytes(pdf)
+        with sqlite3.connect(settings.data_dir / "papers.db") as db:
+            db.execute(
+                "UPDATE PAPER_META SET PDF_PATH = ? WHERE PAPER_ID IN "
+                "(SELECT PAPER_ID FROM PAPER WHERE SOURCE_ID = ?)",
+                (str(saved), sid),
+            )
+        r = c.post("/api/clip/pdf", files={"file": ("a.pdf", pdf)}, headers=addon)
+        assert r.status_code == 200, r.text
+        assert r.json()["existing"] == [sid]
+        assert r.json()["new"] == []
+        assert r.json()["title"] == "Held"
+        assert [p["source_id"] for p in c.get("/api/papers").json()] == [sid]
 
 
 def test_real_cli_clip_bibtex(settings):

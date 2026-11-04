@@ -8,8 +8,11 @@ web UI which project is the list.
 
 A clip never changes a stored record: a paper already in the library only joins
 the list. `pdf import` would repoint its PDF, or replace its metadata when it has
-no PDF yet, and the paper's id is only known after an import, so a PDF is first
-imported into a throwaway library to learn the id.
+no PDF yet. A PDF is first looked for by content among the saved files. Failing
+that, its id is only known after an import, so it is imported into a throwaway
+library to learn the id. That id can differ from the real import's, because both
+depend on an online lookup that may fail, so the real import is checked against
+what the library held before it.
 """
 
 from __future__ import annotations
@@ -23,12 +26,12 @@ from urllib.parse import urlparse
 
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile
 
-from .. import bib_parse, clip_list
+from .. import bib_parse, clip_list, duplicates
 from ..auth import current_user
 from ..cli import CLIError
 from ..doi import doi_or_none
 from ..libraries import ROOT
-from .common import ident, run, save_upload, settings
+from .common import ident, library, run, save_upload, settings
 from .imports import check_bibtex, import_text, no_version, read_upload
 from .metadata import MetadataIn, repair_args
 
@@ -176,25 +179,52 @@ async def _join_list(request: Request, source_ids: list[str]) -> dict[str, Any]:
     return {"project_id": project_id, "failed": failed or []}
 
 
+def _has_pdf(paper: dict) -> bool:
+    path = paper.get("pdf_path")
+    return bool(path) and Path(path).is_file()
+
+
+async def _import_for_real(
+    request: Request, pdf: Path, trial: str, stored: dict | None
+) -> tuple[str, str | None, dict[str, Any]]:
+    """Import into the library: the paper's id and title, and the answer's fields."""
+    listed = await run(request, ["list"])
+    before = {p["source_id"]: p for p in listed or [] if isinstance(p, dict)}
+    out = await run(request, ["pdf", "import", "--", str(pdf)], long=True)
+    sid = out["source_id"]
+    title = out.get("title")
+    if sid != trial:
+        log.warning("clip: the trial import said %s, the real one %s", trial, sid)
+        stored = before.get(sid)
+        if stored is None:
+            return sid, title, {"new": [sid], "existing": [], "attached": []}
+        attached = [] if _has_pdf(stored) else [sid]
+    elif stored is None:
+        return sid, title, {"new": [sid], "existing": [], "attached": []}
+    else:
+        attached = [sid]
+    result = {"new": [], "existing": [sid], "attached": attached}
+    result["metadata_kept"] = await _restore(request, stored)
+    return sid, stored.get("title") or title, result
+
+
 @endpoint.post("/pdf")
 async def clip_pdf(request: Request, file: UploadFile):
     tmp = await save_upload(request, file, ".pdf", b"%PDF-", "not a PDF file")
     try:
-        sid = await _trial_id(request, tmp)
-        stored = await _paper(request, sid)
-        pdf_path = (stored or {}).get("pdf_path")
-        title = (stored or {}).get("title")
-        if stored and pdf_path and Path(pdf_path).is_file():
+        owner = await asyncio.to_thread(duplicates.owner_of, library(request), tmp)
+        saved = await _paper(request, owner) if owner else None
+        if owner and saved:
+            sid, title = owner, saved.get("title")
             result: dict[str, Any] = {"new": [], "existing": [sid], "attached": []}
         else:
-            out = await run(request, ["pdf", "import", "--", str(tmp)], long=True)
-            sid = out["source_id"]
-            title = title or out.get("title")
-            if stored is None:
-                result = {"new": [sid], "existing": [], "attached": []}
+            sid = await _trial_id(request, tmp)
+            stored = await _paper(request, sid)
+            if stored and _has_pdf(stored):
+                title = stored.get("title")
+                result = {"new": [], "existing": [sid], "attached": []}
             else:
-                result = {"new": [], "existing": [sid], "attached": [sid]}
-                result["metadata_kept"] = await _restore(request, stored)
+                sid, title, result = await _import_for_real(request, tmp, sid, stored)
     finally:
         tmp.unlink(missing_ok=True)
     answer = {"source_ids": [sid], **result, **await _join_list(request, [sid])}
