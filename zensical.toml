@@ -31,6 +31,7 @@ nav = [
     { "AI features" = "ai.md" },
     { "MCP server" = "mcp.md" },
   ] },
+  { "Browser add-on" = "browser-add-on.md" },
   { "Server scripts" = [
     "scripts.md",
     { "Sanitize PDF file names" = "sanitize-pdf-names.md" },
