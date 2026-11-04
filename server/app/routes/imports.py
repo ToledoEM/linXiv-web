@@ -27,7 +27,7 @@ log = logging.getLogger(__name__)
 _CHUNK = 1024 * 1024
 
 
-def _check_bibtex(data: bytes) -> None:
+def check_bibtex(data: bytes) -> None:
     if b"@" not in data:
         raise HTTPException(status_code=400, detail="no BibTeX entries (@type{...}) found")
 
@@ -41,9 +41,8 @@ def _check_csl_json(data: bytes) -> None:
         raise HTTPException(status_code=400, detail="CSL JSON must be an array of items")
 
 
-async def _import(
-    request: Request, file: UploadFile, cmd: str, suffix: str, check: Callable[[bytes], None]
-):
+async def read_upload(request: Request, file: UploadFile, check: Callable[[bytes], None]) -> bytes:
+    """The whole uploaded text file, capped at `max_upload_mb`, UTF-8 and passing `check`."""
     limit = settings(request).max_upload_mb * 1024 * 1024
     buf = bytearray()
     while chunk := await file.read(_CHUNK):
@@ -58,6 +57,13 @@ async def _import(
     except UnicodeDecodeError as e:
         raise HTTPException(status_code=400, detail="file is not UTF-8 text") from e
     check(data)
+    return data
+
+
+async def import_text(
+    request: Request, data: bytes, cmd: str, suffix: str, overwrite_bib: bool = True
+):
+    """Run `<cmd> import` on the text; a BibTeX import then stores its extra fields."""
     fd, tmp = tempfile.mkstemp(prefix="linxiv-web-", suffix=suffix)
     try:
         with os.fdopen(fd, "wb") as out:
@@ -67,17 +73,23 @@ async def _import(
         Path(tmp).unlink(missing_ok=True)
     if cmd == "bibtex":
         try:
-            await _store_bib_fields(request, data.decode("utf-8"), result)
+            await _store_bib_fields(request, data.decode("utf-8"), result, overwrite_bib)
         except Exception:  # the import itself worked
             log.exception("could not store BibTeX fields of the import")
     return result
 
 
-def _no_version(arxiv_id: str) -> str:
+async def _import(
+    request: Request, file: UploadFile, cmd: str, suffix: str, check: Callable[[bytes], None]
+):
+    return await import_text(request, await read_upload(request, file, check), cmd, suffix)
+
+
+def no_version(arxiv_id: str) -> str:
     return re.sub(r"v\d+$", "", arxiv_id.strip())
 
 
-async def _store_bib_fields(request: Request, text: str, result) -> None:
+async def _store_bib_fields(request: Request, text: str, result, overwrite: bool = True) -> None:
     sids = [s for s in (result or {}).get("source_ids") or [] if isinstance(s, str)]
     found = [e for e in bib_parse.entries(text) if e.get("fields")]
     if not sids or not found:
@@ -87,7 +99,7 @@ async def _store_bib_fields(request: Request, text: str, result) -> None:
     for e in found:
         f = e["fields"]
         if f.get("eprint") and (f.get("archiveprefix") or "").lower() in ("arxiv", ""):
-            by_arxiv[_no_version(f["eprint"])] = e
+            by_arxiv[no_version(f["eprint"])] = e
     by_title = {t: e for e in found if (t := bib_parse.norm_title(e["fields"].get("title")))}
     lib = library(request)
     unmatched = []
@@ -96,11 +108,11 @@ async def _store_bib_fields(request: Request, text: str, result) -> None:
         if sid.startswith("doi:"):
             e = by_doi.get(sid[4:].lower())
         elif sid.startswith("arxiv:"):
-            e = by_arxiv.get(_no_version(sid[6:]))
+            e = by_arxiv.get(no_version(sid[6:]))
         if e is None:
             unmatched.append(sid)
             continue
-        await bib_store.upsert(lib, sid, bib_parse.bib_fields(e), "bibtex", sid)
+        await bib_store.upsert(lib, sid, bib_parse.bib_fields(e), "bibtex", sid, overwrite)
     if not unmatched:
         return
     papers = await run(request, ["list"])
@@ -112,12 +124,12 @@ async def _store_bib_fields(request: Request, text: str, result) -> None:
     for sid in unmatched:
         e = by_title.get(titles.get(sid) or "")
         if e is not None:
-            await bib_store.upsert(lib, sid, bib_parse.bib_fields(e), "bibtex", sid)
+            await bib_store.upsert(lib, sid, bib_parse.bib_fields(e), "bibtex", sid, overwrite)
 
 
 @router.post("/import/bibtex")
 async def import_bibtex(request: Request, file: UploadFile):
-    return await _import(request, file, "bibtex", ".bib", _check_bibtex)
+    return await _import(request, file, "bibtex", ".bib", check_bibtex)
 
 
 @router.post("/import/zotero")

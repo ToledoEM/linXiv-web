@@ -44,6 +44,9 @@ export default function BatchMetadata({
   titles,
   onSaved,
   onSkip,
+  onDone,
+  defaultSource,
+  guardTitleMatches = false,
 }: {
   /** Selected source_ids, in table order. */
   selected: string[]
@@ -51,11 +54,17 @@ export default function BatchMetadata({
   titles: Record<string, string>
   onSaved: () => void
   onSkip: (sourceId: string) => void
+  /** Check workflow: takes a checked paper off the list, approved or kept as stored. */
+  onDone?: (sourceId: string) => Promise<void>
+  /** Lookup source until the user picks another (default: the Settings choice). */
+  defaultSource?: LookupSource
+  /** Leave title matches out of Approve all: the first candidate may be another paper. */
+  guardTitleMatches?: boolean
 }) {
   // Settings default ("auto" = Crossref for a batch) until the user picks another source.
   const lookupPrefs = useLookupPrefs()
   const [picked, setSource] = useState<LookupSource | null>(null)
-  const source = picked ?? initialSource(null, lookupPrefs)
+  const source = picked ?? defaultSource ?? initialSource(null, lookupPrefs)
   // Search by the title in each PDF's file name instead of the stored DOI/title.
   const [byFile, setByFile] = useState(false)
   const fileOk = byFileNameOk(source)
@@ -151,7 +160,19 @@ export default function BatchMetadata({
     }
   }
 
-  const ready = selected.filter((sid) => item(sid).status === 'match' && item(sid).picked.size > 0)
+  const approvable = selected.filter((sid) => item(sid).status === 'match' && item(sid).picked.size > 0)
+  const byTitle = (sid: string) => guardTitleMatches && item(sid).match === 'title'
+  const ready = approvable.filter((sid) => !byTitle(sid))
+  const heldBack = approvable.length - ready.length
+
+  const done = async (sid: string) => {
+    patch(sid, { error: undefined })
+    try {
+      await onDone?.(sid)
+    } catch (err) {
+      patch(sid, { error: (err as Error).message })
+    }
+  }
 
   const approveAll = async () => {
     if (!armedAll) return setArmedAll(true)
@@ -273,16 +294,28 @@ export default function BatchMetadata({
                 </table>
               )}
               <ErrorText error={it.error} />
-              {it.status !== 'saved' && (
+              {(it.status !== 'saved' || onDone) && (
                 <div className="actions">
                   {it.status === 'match' && (
                     <button type="button" disabled={!it.picked.size} onClick={() => approve(sid)}>
                       Approve
                     </button>
                   )}
-                  <button type="button" className="link" disabled={it.status === 'saving'} onClick={() => onSkip(sid)}>
-                    Skip
-                  </button>
+                  {onDone && (
+                    <button
+                      type="button"
+                      disabled={it.status === 'saving'}
+                      title="Take this paper off the list. It stays in the library."
+                      onClick={() => void done(sid)}
+                    >
+                      Done
+                    </button>
+                  )}
+                  {it.status !== 'saved' && (
+                    <button type="button" className="link" disabled={it.status === 'saving'} onClick={() => onSkip(sid)}>
+                      Skip
+                    </button>
+                  )}
                 </div>
               )}
             </li>
@@ -302,6 +335,11 @@ export default function BatchMetadata({
             {armedAll ? `Save ${ready.length} paper${ready.length === 1 ? '' : 's'} now` : `Approve all (${ready.length})`}
           </button>
           {summary && <span className="small">{summary}</span>}
+          {heldBack > 0 && (
+            <span className="muted small">
+              {heldBack} matched by title: check {heldBack === 1 ? 'it' : 'them'} and approve one at a time.
+            </span>
+          )}
         </div>
       )}
     </aside>

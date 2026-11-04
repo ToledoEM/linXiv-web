@@ -169,6 +169,13 @@ export interface McpStatus {
   tool_counts: Record<McpProfile, number>
 }
 
+/** `GET /api/clip/token`: the browser add-on token of the caller's library. */
+export interface ClipTokenStatus {
+  set: boolean
+  hint: string | null
+  created: string | null
+}
+
 export type AiProvider = 'gemini' | 'openai' | 'anthropic' | 'generic'
 export type AiKeyName = 'GEMINI_API_KEY' | 'OPENAI_API_KEY' | 'ANTHROPIC_API_KEY' | 'GENAI_API_KEY_TAG_GEN'
 

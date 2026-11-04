@@ -4,10 +4,11 @@ import json
 import sqlite3
 import time
 from pathlib import Path
+from types import SimpleNamespace
 
 from fastapi.testclient import TestClient
 
-from app.duplicates import groups_of
+from app.duplicates import CACHE, groups_of, owner_of, sha256
 from app.main import create_app
 from app.pdf_layout import safe_file_name
 
@@ -162,3 +163,48 @@ def test_export_tsv_lists_groups_one_row_per_paper(settings, fake):
     assert [(row[0], row[2]) for row in rows] == [("1", "doi:10.1/a"), ("1", "local:abc")]
     assert rows[0][4] == "Title doi:10.1/a" and rows[0][6] == str(len(SAME))
     assert len(rows[0][1]) == 64  # sha256 hex
+
+
+def _owner(settings, tmp_path: Path, upload: bytes) -> str | None:
+    lib = SimpleNamespace(key="root", data_dir=settings.data_dir, pdf_dir=settings.pdf_dir)
+    path = tmp_path / "upload.pdf"
+    path.write_bytes(upload)
+    return owner_of(lib, path)
+
+
+def test_owner_of_finds_identical_bytes(settings, tmp_path):
+    _library(settings.data_dir, settings.pdf_dir, [("doi:10.1/a", 1, SAME, False)])
+    assert _owner(settings, tmp_path, SAME) == "doi:10.1/a"
+
+
+def test_owner_of_ignores_other_bytes_of_the_same_size(settings, tmp_path):
+    _library(settings.data_dir, settings.pdf_dir, [("doi:10.1/a", 1, SAME, False)])
+    other = b"%PDF-1.4 sane"
+    assert len(other) == len(SAME)
+    assert _owner(settings, tmp_path, other) is None
+
+
+def test_owner_of_ignores_the_trash(settings, tmp_path):
+    _library(settings.data_dir, settings.pdf_dir, [("local:old", 1, SAME, True)])
+    assert _owner(settings, tmp_path, SAME) is None
+
+
+def test_owner_of_uses_a_cached_hash(settings, tmp_path):
+    saved = b"%PDF-1.4 sane"
+    _library(settings.data_dir, settings.pdf_dir, [("doi:10.1/a", 1, saved, False)])
+    path = settings.pdf_dir / safe_file_name("doi:10.1/a", 1)
+    st = path.stat()
+    upload = tmp_path / "wanted.pdf"
+    upload.write_bytes(SAME)
+    # The cache says the saved file hashes like SAME: only the cache can make this match.
+    folder = settings.data_dir / "maintenance"
+    folder.mkdir(exist_ok=True)
+    entry = [st.st_size, st.st_mtime_ns, sha256(upload)]
+    (folder / CACHE).write_text(json.dumps({str(path): entry}))
+    assert _owner(settings, tmp_path, SAME) == "doi:10.1/a"
+
+
+def test_owner_of_without_a_library_or_with_a_broken_one(settings, tmp_path):
+    assert _owner(settings, tmp_path, SAME) is None
+    (settings.data_dir / "papers.db").write_bytes(b"not a database, not even close")
+    assert _owner(settings, tmp_path, SAME) is None

@@ -20,6 +20,7 @@ import type {
   MaintenanceOverview,
   MaintenanceSchedule,
   MaintenanceScheduleInput,
+  ClipTokenStatus,
   McpStatus,
   Me,
   MergeCandidates,
@@ -504,6 +505,10 @@ export const api = {
   mcpStatus: () => request<McpStatus>('GET', '/api/mcp'),
   mcpCreateToken: () => request<{ token: string; hint: string; created: string }>('POST', '/api/mcp/token'),
   mcpRevokeToken: () => request('DELETE', '/api/mcp/token'),
+  clipTokenStatus: () => request<ClipTokenStatus>('GET', '/api/clip/token'),
+  clipCreateToken: () => request<{ token: string; hint: string; created: string }>('POST', '/api/clip/token'),
+  clipRevokeToken: () => request('DELETE', '/api/clip/token'),
+  clipList: () => request<{ project_id: number | null }>('GET', '/api/clip/list'),
   summarize: (id: string, pdf: boolean) =>
     request<SummaryResult>('POST', `/api/ai/summary/${idPath(id)}${qs({ pdf: pdf || undefined })}`),
   suggestTags: (id: string) =>

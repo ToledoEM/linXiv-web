@@ -7,6 +7,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **Browser add-on imports**: Settings → Integrations → **Browser add-on** creates a token per account, for the linXiv Firefox add-on. A clip saves to the token owner's library and adds the paper to the reading list **Imported - to check**, which is created on first use. Renaming the list keeps it; a deleted or archived list is replaced on the next clip. A clip leaves a stored record as it is: a paper with a PDF only joins the list, and a paper without one gets the PDF and keeps its metadata. A PDF clip of a new paper reads the file twice, so it takes about twice as long as a web UI import. A clip of a paper in the trash restores it. A PDF clip answers with the paper's title, and the add-on routes answer failures with plain messages. The nginx example in the self-hosting guide now has a 480 s read timeout, enough for two large PDF clips queued.
+- **Check metadata** on that reading list opens batch edit with every paper selected and Crossref as the source. **Done** takes a paper off the list and leaves it in the library. **Approve all** skips matches found by title, which need their own **Approve**.
+- API: `GET/POST/DELETE /api/clip/token`, `GET /api/clip/list`; with the bearer token, `GET /api/clip/ping`, `POST /api/clip/pdf`, `POST /api/clip/bibtex`.
 - Maintenance operation **Clean tags without papers** (admins): deletes tags that no paper (papers in the trash included) and no project uses. Project tags such as `reading-list` stay, and a tag named Untagged is always kept. It asks before running.
 - **Check PDF files** report now breaks the PDF folder down: files of any type, PDFs, files in each top-level subfolder, next to the number of papers, papers with a PDF, extra version files and PDFs of papers in the trash, so the file count on disk and the paper count can be compared. **Skip folders** lists subfolders (for example `dup, errors`) that are counted but never reported as unlinked. **Download full list (TSV)** under the missing and unlinked lists has every row, tab separated (the page lists 500). **Move to orphans/** checks again and moves each unlinked PDF to `orphans/` under the same path; files changed in the last hour stay, and nothing is deleted.
 - Duplicates page: **Download list (TSV)**, every group with one row per paper (`GET /api/duplicates/export.tsv`).
@@ -23,6 +26,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - API: `bib` and `metadata_source` on `GET /api/papers/{id}`, on lookup candidates (`bib`) and in the `PUT /api/papers/{id}/metadata` body; `monthly` in `PUT /api/maintenance/schedule`; `GET/PUT /api/maintenance/metadata-refresh/options`.
 
 ### Changed
+- A BibTeX file linXiv can't parse now answers 400 instead of 502, in the web UI import and the add-on route.
 - Home: the tags panel is now **Most frequent tags**, the 8 most used tags in the whole library (was tags of the 10 recent papers).
 - DOI parsing: a DOI is pulled out of the text around it (`DOI: 10.1038/nature14539.`, `doi.org/…` links with or without `https://`, percent-encoded links, trailing words) and checked against Crossref's patterns (the modern form plus the older Wiley, SICI, ACS and 10.1207 forms). Add Paper and the metadata editor refuse a DOI that fails the check; a stored DOI that fails it is shown, linked, exported and looked up as no DOI.
 

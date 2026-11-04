@@ -436,7 +436,8 @@ def _tiny_pdf(title: str) -> bytes:
         b"<< /Type /Catalog /Pages 2 0 R >>",
         b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
         b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 200] >>",
-        b"<< /Title (" + title.encode() + b") >>",
+        # An author too, or `pdf import` looks the title up online.
+        b"<< /Title (" + title.encode() + b") /Author (Jane Doe) >>",
     ]
     out, offs = b"%PDF-1.4\n", []
     for i, o in enumerate(objs, 1):
@@ -805,3 +806,133 @@ def test_real_cli_copy_from_shared(settings):
             assert c.get("/api/projects", headers=h).json() == []
             assert c.get("/api/trash", headers=h).json()["projects"] == []
         assert len(admin.get("/api/papers", headers=shared).json()) == 2
+
+
+def test_real_cli_clip_keeps_stored_records(settings):
+    with TestClient(create_app(replace(settings, linxiv_bin=BIN))) as c:
+        token = c.post("/api/clip/token").json()["token"]
+        addon = {"Authorization": f"Bearer {token}", "Origin": "moz-extension://1234"}
+
+        def clip():
+            pdf = _tiny_pdf("Clip Paper")
+            return c.post("/api/clip/pdf", files={"file": ("a.pdf", pdf)}, headers=addon)
+
+        # New paper: real id, on the list; the list is a reading list.
+        r = clip()
+        assert r.status_code == 200, r.text
+        body = r.json()
+        sid = body["new"][0]
+        assert sid.startswith("local:")
+        assert body["title"]
+        listed = body["project_id"]
+        project = c.get(f"/api/projects/{listed}").json()
+        assert project["project_tags"] == ["reading-list"]
+        assert project["name"] == "Imported - to check"
+        assert project["source_ids"] == [sid]
+        assert c.get("/api/clip/list").json() == {"project_id": listed}
+
+        # Clipped again after an edit: nothing changes, same list, one membership.
+        edit = {"title": "My own title", "authors": ["Me Myself"], "published": "2001-02-03"}
+        edit |= {"summary": "Mine", "doi": "10.1234/mine", "tags": ["kept"]}
+        assert c.put(f"/api/papers/{sid}/metadata", json=edit).status_code == 200
+        r = clip()
+        assert r.json()["existing"] == [sid]
+        assert r.json()["attached"] == []
+        assert r.json()["title"] == "My own title"
+        assert r.json()["project_id"] == listed
+        assert c.get(f"/api/projects/{listed}").json()["source_ids"] == [sid]
+        paper = c.get(f"/api/papers/{sid}").json()
+        assert paper["title"] == "My own title"
+
+        # PDF removed, clipped again: file back, metadata as edited.
+        assert c.delete(f"/api/papers/{sid}/pdf").status_code == 200
+        r = clip()
+        assert r.json()["attached"] == [sid], r.text
+        assert r.json()["metadata_kept"] is True
+        paper = c.get(f"/api/papers/{sid}").json()
+        assert paper["pdf_path"]
+        assert paper["title"] == "My own title"
+        assert paper["authors"] == ["Me Myself"]
+        assert paper["published"] == "2001-02-03"
+        assert paper["doi"] == "10.1234/mine"
+        assert paper["tags"] == ["kept"]
+
+        # Done: off the list, still in the library.
+        assert c.delete(f"/api/projects/{listed}/papers/{sid}").status_code == 200
+        assert c.get(f"/api/projects/{listed}").json()["source_ids"] == []
+        assert c.get(f"/api/papers/{sid}").status_code == 200
+
+        # Rename keeps the list; delete gets a new one.
+        assert c.patch(f"/api/projects/{listed}", json={"name": "Inbox"}).status_code == 200
+        assert clip().json()["project_id"] == listed
+        assert c.delete(f"/api/projects/{listed}").status_code < 300
+        assert clip().json()["project_id"] != listed
+
+
+def test_real_cli_clip_restores_trashed_paper(settings):
+    with TestClient(create_app(replace(settings, linxiv_bin=BIN))) as c:
+        token = c.post("/api/clip/token").json()["token"]
+        addon = {"Authorization": f"Bearer {token}", "Origin": "moz-extension://1234"}
+        files = {"file": ("a.pdf", _tiny_pdf("Trash Paper"))}
+        sid = c.post("/api/clip/pdf", files=files, headers=addon).json()["new"][0]
+        assert c.delete(f"/api/papers/{sid}").status_code < 300
+        assert c.get(f"/api/papers/{sid}").status_code == 404
+        r = c.post("/api/clip/pdf", files=files, headers=addon)
+        assert r.json()["new"] == [sid]
+        assert c.get(f"/api/papers/{sid}").status_code == 200
+
+
+def test_real_cli_clip_finds_a_saved_file_under_another_id(settings):
+    # As when the lookup worked for the first copy: the file is saved under a DOI id,
+    # and this upload's own id would be `local:`.
+    with TestClient(create_app(replace(settings, linxiv_bin=BIN))) as c:
+        token = c.post("/api/clip/token").json()["token"]
+        addon = {"Authorization": f"Bearer {token}", "Origin": "moz-extension://1234"}
+        bib = b"@article{h, title={Held}, author={Doe, Jane}, year={2020}, doi={10.1234/held}}\n"
+        send = {"file": ("a.bib", bib)}
+        sid = c.post("/api/clip/bibtex", files=send, headers=addon).json()["new"][0]
+        pdf = _tiny_pdf("Held Paper")
+        saved = settings.pdf_dir / "held.pdf"
+        saved.write_bytes(pdf)
+        with sqlite3.connect(settings.data_dir / "papers.db") as db:
+            db.execute(
+                "UPDATE PAPER_META SET PDF_PATH = ? WHERE PAPER_ID IN "
+                "(SELECT PAPER_ID FROM PAPER WHERE SOURCE_ID = ?)",
+                (str(saved), sid),
+            )
+        r = c.post("/api/clip/pdf", files={"file": ("a.pdf", pdf)}, headers=addon)
+        assert r.status_code == 200, r.text
+        assert r.json()["existing"] == [sid]
+        assert r.json()["new"] == []
+        assert r.json()["title"] == "Held"
+        assert [p["source_id"] for p in c.get("/api/papers").json()] == [sid]
+
+
+def test_real_cli_clip_bibtex(settings):
+    with TestClient(create_app(replace(settings, linxiv_bin=BIN))) as c:
+        token = c.post("/api/clip/token").json()["token"]
+        addon = {"Authorization": f"Bearer {token}", "Origin": "moz-extension://1234"}
+        bib = b"@misc{clip1, title={Clipped One}, author={Doe, Jane}, year={2021}}\n"
+        send = {"file": ("a.bib", bib)}
+        r = c.post("/api/clip/bibtex", files=send, headers=addon)
+        assert r.status_code == 200, r.text
+        sid = r.json()["new"][0]
+        edit = {"title": "Clipped One", "authors": ["Me"], "published": "2001-02-03"}
+        edit |= {"summary": "", "tags": []}
+        assert c.put(f"/api/papers/{sid}/metadata", json=edit).status_code == 200
+        r = c.post("/api/clip/bibtex", files=send, headers=addon)
+        assert r.json()["existing"] == [sid]
+        assert r.json()["new"] == []
+        assert c.get(f"/api/papers/{sid}").json()["authors"] == ["Me"]
+        listed = c.get(f"/api/projects/{r.json()['project_id']}").json()
+        assert listed["source_ids"] == [sid]
+
+
+def test_real_cli_clip_broken_bibtex(settings):
+    with TestClient(create_app(replace(settings, linxiv_bin=BIN))) as c:
+        token = c.post("/api/clip/token").json()["token"]
+        addon = {"Authorization": f"Bearer {token}", "Origin": "moz-extension://1234"}
+        send = {"file": ("a.bib", b"@article{broken")}
+        r = c.post("/api/clip/bibtex", files=send, headers=addon)
+        assert r.status_code == 400, r.text
+        assert r.json()["detail"] == "The server could not read this file."

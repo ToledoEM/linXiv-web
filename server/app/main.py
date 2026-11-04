@@ -7,7 +7,8 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, Request
-from fastapi.exception_handlers import http_exception_handler
+from fastapi.exception_handlers import http_exception_handler, request_validation_exception_handler
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -32,6 +33,7 @@ from .routes import (
     annotations,
     authors,
     backup,
+    clip,
     duplicates,
     exports,
     feed,
@@ -169,6 +171,8 @@ def create_app(
         return runner or LinxivCLI(settings.linxiv_bin, env={"LINXIV_DATA_DIR": str(data_dir)})
 
     # `app.state.cli` / `fulltext_worker` stay the root library's (MCP, update check).
+    # Throwaway library for a clip's trial import (routes/clip.py).
+    app.state.scratch_cli = _runner
     app.state.libraries = Libraries(
         settings,
         app.state.jobs,
@@ -195,8 +199,17 @@ def create_app(
     )
 
     @app.exception_handler(CLIError)
-    async def _cli_error(_: Request, exc: CLIError):
-        return JSONResponse({"detail": exc.message}, status_code=exc.status)
+    async def _cli_error(request: Request, exc: CLIError):
+        addon = clip.is_addon_route(request.url.path)
+        detail = clip.plain_detail(exc.status) if addon else exc.message
+        return JSONResponse({"detail": detail}, status_code=exc.status)
+
+    @app.exception_handler(RequestValidationError)
+    async def _invalid_request(request: Request, exc: RequestValidationError):
+        # The add-on routes take one field, so this always means no usable file.
+        if clip.is_addon_route(request.url.path):
+            return JSONResponse({"detail": "No file was sent."}, status_code=400)
+        return await request_validation_exception_handler(request, exc)
 
     @app.exception_handler(StarletteHTTPException)
     async def _http_error(request: Request, exc: StarletteHTTPException):
@@ -207,10 +220,12 @@ def create_app(
         return await http_exception_handler(request, exc)
 
     @app.exception_handler(Exception)
-    async def _unexpected(_: Request, exc: Exception):
+    async def _unexpected(request: Request, exc: Exception):
         # The traceback reaches the app log through uvicorn; the client gets JSON
         # (api.ts reads `detail`) and no internals.
-        return JSONResponse({"detail": "internal server error"}, status_code=500)
+        addon = clip.is_addon_route(request.url.path)
+        detail = clip.plain_detail(500) if addon else "internal server error"
+        return JSONResponse({"detail": detail}, status_code=500)
 
     @app.get("/api/health")
     async def health():
@@ -221,6 +236,8 @@ def create_app(
     app.include_router(users.router)
     # /mcp has its own bearer-token auth (MCP clients have no browser session).
     app.include_router(mcp.endpoint)
+    # /api/clip/{ping,pdf,bibtex} have their own bearer-token auth (browser add-on).
+    app.include_router(clip.endpoint)
     guarded = [Depends(require_auth)]
     # Server-wide (logs, activity, updates, system, MCP): admins only. Every login
     # is admin in single-user mode.
@@ -235,6 +252,7 @@ def create_app(
     app.include_router(add.router, dependencies=guarded)
     app.include_router(trash.router, dependencies=guarded)
     app.include_router(imports.router, dependencies=guarded)
+    app.include_router(clip.router, dependencies=guarded)
     app.include_router(exports.router, dependencies=guarded)
     app.include_router(system.router, dependencies=admin_only)
     app.include_router(maintenance.router, dependencies=admin_only)
