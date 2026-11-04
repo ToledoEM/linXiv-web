@@ -92,7 +92,7 @@ const GROUPS: { id: GroupId; label: string; icon: string }[] = [
 ]
 
 // Server-wide groups (MCP, accounts): admins only.
-const ADMIN_GROUPS: GroupId[] = ['integrations', 'admin']
+const ADMIN_GROUPS: GroupId[] = ['admin']
 
 // `#server` or `#server/backup` (group, then a card in it).
 function groupFromHash(hash: string): GroupId | null {
@@ -485,7 +485,6 @@ export default function Settings() {
         <PdfTextIndex />
         <VersionMonitor />
         <PdfLayout />
-        <ClipTokenSettings />
       </>
     ),
     server: (
@@ -543,9 +542,12 @@ export default function Settings() {
     ),
     integrations: (
       <>
-        <form onSubmit={save('mcp')} onKeyDown={formSubmitOnCtrlEnter}>
-          <McpSettings draft={draft} saved={saved} set={set} footer={saveBar('mcp')} />
-        </form>
+        {admin && (
+          <form onSubmit={save('mcp')} onKeyDown={formSubmitOnCtrlEnter}>
+            <McpSettings draft={draft} saved={saved} set={set} footer={saveBar('mcp')} />
+          </form>
+        )}
+        <ClipTokenSettings />
       </>
     ),
     admin: (

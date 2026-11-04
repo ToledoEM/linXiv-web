@@ -3,7 +3,7 @@ import { api } from './api'
 import { ErrorText } from './components'
 import type { ClipTokenStatus } from './types'
 
-/** Settings → Library: the token the browser add-on saves papers with. One per account. */
+/** Settings → Integrations: the token the browser add-on saves papers with. One per account. */
 export default function ClipTokenSettings() {
   const [status, setStatus] = useState<ClipTokenStatus | null>(null)
   const [token, setToken] = useState('')
