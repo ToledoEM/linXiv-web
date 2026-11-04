@@ -46,7 +46,7 @@ The MCP server for Claude Code, Codex and OpenCode: switch it on, choose the too
 
 ### Browser add-on
 
-The **Browser add-on** card creates the access token for the linXiv Firefox add-on. Each account has its own token, shown once. Papers it saves go to your library and onto the reading list **Imported - to check**.
+The **Browser add-on** card creates the access token for the linXiv Firefox add-on. Each account has its own token, shown once. Papers it saves go to your library and onto the reading list **Imported - to check**. See [Browser add-on](../browser-add-on.md).
 
 ## Server Admin
 

@@ -23,4 +23,4 @@ Upload PDF files
 Import a metadata file
 :   A BibTeX `.bib` file or a Zotero CSL JSON export. Only metadata is imported, no PDFs. Entries already in the library are updated, and papers in the trash are restored.
 
-To import a whole folder of PDFs that is already on the server, use the [bulk import script](../bulk-import.md).
+To import a whole folder of PDFs that is already on the server, use the [bulk import script](../bulk-import.md). To save the page or PDF open in Firefox, use the [browser add-on](../browser-add-on.md).
