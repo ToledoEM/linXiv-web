@@ -47,7 +47,7 @@ def _status_for(message: str) -> int:
     low = message.lower()
     if "not found" in low or "no paper" in low or "no version" in low:
         return 404
-    if low.startswith("invalid") or "invalid " in low:
+    if low.startswith("invalid") or "invalid " in low or "parse error" in low:
         return 400
     return 502
 

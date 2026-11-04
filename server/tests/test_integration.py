@@ -821,6 +821,7 @@ def test_real_cli_clip_keeps_stored_records(settings):
         assert r.status_code == 200, r.text
         body = r.json()
         sid = body["new"][0]
+        assert body["title"]
         listed = body["project_id"]
         project = c.get(f"/api/projects/{listed}").json()
         assert project["project_tags"] == ["reading-list"]
@@ -835,6 +836,7 @@ def test_real_cli_clip_keeps_stored_records(settings):
         r = clip()
         assert r.json()["existing"] == [sid]
         assert r.json()["attached"] == []
+        assert r.json()["title"] == "My own title"
         assert r.json()["project_id"] == listed
         assert c.get(f"/api/projects/{listed}").json()["source_ids"] == [sid]
         paper = c.get(f"/api/papers/{sid}").json()
@@ -896,3 +898,13 @@ def test_real_cli_clip_bibtex(settings):
         assert c.get(f"/api/papers/{sid}").json()["authors"] == ["Me"]
         listed = c.get(f"/api/projects/{r.json()['project_id']}").json()
         assert listed["source_ids"] == [sid]
+
+
+def test_real_cli_clip_broken_bibtex(settings):
+    with TestClient(create_app(replace(settings, linxiv_bin=BIN))) as c:
+        token = c.post("/api/clip/token").json()["token"]
+        addon = {"Authorization": f"Bearer {token}", "Origin": "moz-extension://1234"}
+        send = {"file": ("a.bib", b"@article{broken")}
+        r = c.post("/api/clip/bibtex", files=send, headers=addon)
+        assert r.status_code == 400, r.text
+        assert r.json()["detail"] == "The server could not read this file."

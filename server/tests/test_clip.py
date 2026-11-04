@@ -9,7 +9,7 @@ import httpx
 import pytest
 from fastapi.testclient import TestClient
 
-from app.cli import CLIError
+from app.cli import CLIError, _status_for
 from app.libraries import HEADER
 from app.main import create_app
 
@@ -413,6 +413,72 @@ def test_restore_failure_is_reported(client, fake, token):
     assert r.json()["metadata_kept"] is False
 
 
+def test_pdf_answer_has_the_title_of_a_new_paper(client, fake, token):
+    assert _clip_pdf(client, token).json()["title"] == "A"
+
+
+def test_pdf_answer_has_the_stored_title_when_left_alone(client, fake, token, tmp_path):
+    stored = tmp_path / "stored.pdf"
+    stored.write_bytes(PDF)
+    fake.on(
+        "paper",
+        "get",
+        result={"source_id": "doi:10.1/a", "title": "Edited", "pdf_path": str(stored)},
+    )
+    assert _clip_pdf(client, token).json()["title"] == "Edited"
+
+
+def test_pdf_answer_has_the_stored_title_when_attached(client, fake, token):
+    fake.on("paper", "get", result={"source_id": "doi:10.1/a", "title": "Mine"})
+    fake.on("paper", "repair", result={"ok": True})
+    assert _clip_pdf(client, token).json()["title"] == "Mine"
+
+
+def test_pdf_answer_without_a_title_leaves_it_out(client, fake, token):
+    fake.on("pdf", "import", result={"source_id": "doi:10.1/a"})
+    assert "title" not in _clip_pdf(client, token).json()
+
+
+# --- errors the add-on shows as written ---------------------------------------
+
+
+def test_timeout_answer_is_plain(client, fake, token):
+    fake.on("pdf", "import", result=CLIError(504, "linxiv pdf timed out after 120s"))
+    r = _clip_pdf(client, token)
+    assert r.status_code == 504
+    assert r.json()["detail"] == "The server took too long to read this file. Try again later."
+
+
+def test_raw_cli_output_stays_out_of_the_answer(client, fake, token):
+    fake.on("pdf", "import", result=CLIError(502, "linxiv pdf printed non-JSON output"))
+    r = _clip_pdf(client, token)
+    assert r.status_code == 502
+    assert r.json()["detail"] == "The server could not import this file."
+
+
+def test_unexpected_failure_answer_is_plain(client, fake, token):
+    fake.on("pdf", "import", result={"title": "no id"})
+    quiet = TestClient(client.app, raise_server_exceptions=False)
+    r = quiet.post("/api/clip/pdf", files={"file": ("a.pdf", PDF)}, headers=_bearer(token))
+    assert r.status_code == 500
+    assert r.json()["detail"] == "The server could not import this file."
+
+
+@pytest.mark.parametrize("route", ["/api/clip/pdf", "/api/clip/bibtex"])
+def test_no_file_answer_is_a_plain_string(client, token, route):
+    r = client.post(route, headers=_bearer(token))
+    assert r.status_code == 400
+    assert r.json()["detail"] == "No file was sent."
+
+
+def test_web_ui_routes_keep_the_raw_message(client, fake, token):
+    fake.on("pdf", "import", result=CLIError(502, "linxiv pdf printed non-JSON output"))
+    r = client.post("/api/pdfs/import", files={"file": ("a.pdf", PDF)})
+    assert r.status_code == 502
+    assert r.json()["detail"] == "linxiv pdf printed non-JSON output"
+    assert isinstance(client.post("/api/pdfs/import").json()["detail"], list)
+
+
 def test_not_a_pdf_refused(client, fake, token):
     r = client.post("/api/clip/pdf", files={"file": ("a.pdf", b"<html>")}, headers=_bearer(token))
     assert r.status_code == 400
@@ -513,9 +579,11 @@ def test_web_ui_bibtex_import_still_overwrites(client, fake, token, monkeypatch)
 
 
 def test_unparsable_file_goes_to_the_cli(client, fake, token):
-    fake.on("bibtex", "import", result=CLIError(400, "invalid BibTeX"))
+    message = "BibTeX parse error at line 1"
+    fake.on("bibtex", "import", result=CLIError(_status_for(message), message))
     r = _clip_bib(client, token, "user@example.com")
     assert r.status_code == 400
+    assert r.json()["detail"] == "The server could not read this file."
 
 
 def test_no_at_sign_refused(client, fake, token):

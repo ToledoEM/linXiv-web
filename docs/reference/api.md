@@ -78,7 +78,7 @@ In multi-user mode (see [Server Admin](../server-admin.md)) each request works o
 | `GET /api/clip/token`, `POST /api/clip/token`, `DELETE /api/clip/token` | Browser add-on token of the caller's library: status, create (shown once; replaces any previous one) or revoke. Every account has its own |
 | `GET /api/clip/list` | `{project_id}` of the add-on's reading list in this library, null before the first clip |
 | `GET /api/clip/ping` | Add-on token. `{ok, version, username}` |
-| `POST /api/clip/pdf` (multipart `file`) | Add-on token. Trial `pdf import` in a throwaway library to learn the id. New paper or no PDF yet: `pdf import` (metadata of an existing paper put back with `paper repair`). Has a PDF: no import. Then `project add-papers` to the list. Answers `{source_ids, new, existing, attached, project_id, failed}`, plus `metadata_kept` when a PDF was attached to an existing paper |
+| `POST /api/clip/pdf` (multipart `file`) | Add-on token. Trial `pdf import` in a throwaway library to learn the id. New paper or no PDF yet: `pdf import` (metadata of an existing paper put back with `paper repair`). Has a PDF: no import. Then `project add-papers` to the list. Answers `{source_ids, new, existing, attached, project_id, failed}`, plus `title` when known and `metadata_kept` when a PDF was attached to an existing paper |
 | `POST /api/clip/bibtex` (multipart `file`) | Add-on token. `bibtex import` of the entries not in the library, matched by DOI, arXiv id, else exact title, then `project add-papers` for all of them. Answers `{source_ids, new, existing, project_id, failed}` |
 
 

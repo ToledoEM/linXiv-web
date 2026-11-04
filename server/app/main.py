@@ -7,7 +7,8 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, Request
-from fastapi.exception_handlers import http_exception_handler
+from fastapi.exception_handlers import http_exception_handler, request_validation_exception_handler
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -198,8 +199,17 @@ def create_app(
     )
 
     @app.exception_handler(CLIError)
-    async def _cli_error(_: Request, exc: CLIError):
-        return JSONResponse({"detail": exc.message}, status_code=exc.status)
+    async def _cli_error(request: Request, exc: CLIError):
+        addon = clip.is_addon_route(request.url.path)
+        detail = clip.plain_detail(exc.status) if addon else exc.message
+        return JSONResponse({"detail": detail}, status_code=exc.status)
+
+    @app.exception_handler(RequestValidationError)
+    async def _invalid_request(request: Request, exc: RequestValidationError):
+        # The add-on routes take one field, so this always means no usable file.
+        if clip.is_addon_route(request.url.path):
+            return JSONResponse({"detail": "No file was sent."}, status_code=400)
+        return await request_validation_exception_handler(request, exc)
 
     @app.exception_handler(StarletteHTTPException)
     async def _http_error(request: Request, exc: StarletteHTTPException):
@@ -210,10 +220,12 @@ def create_app(
         return await http_exception_handler(request, exc)
 
     @app.exception_handler(Exception)
-    async def _unexpected(_: Request, exc: Exception):
+    async def _unexpected(request: Request, exc: Exception):
         # The traceback reaches the app log through uvicorn; the client gets JSON
         # (api.ts reads `detail`) and no internals.
-        return JSONResponse({"detail": "internal server error"}, status_code=500)
+        addon = clip.is_addon_route(request.url.path)
+        detail = clip.plain_detail(500) if addon else "internal server error"
+        return JSONResponse({"detail": detail}, status_code=500)
 
     @app.get("/api/health")
     async def health():

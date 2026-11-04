@@ -35,6 +35,20 @@ from .metadata import MetadataIn, repair_args
 log = logging.getLogger(__name__)
 
 _trial_slot = asyncio.Semaphore(1)
+_ADDON_ROUTES = ("/api/clip/ping", "/api/clip/pdf", "/api/clip/bibtex")
+
+
+def is_addon_route(path: str) -> bool:
+    return path in _ADDON_ROUTES
+
+
+def plain_detail(status: int) -> str:
+    """The add-on shows `detail` as written, so no linxiv output reaches it."""
+    if status == 504:
+        return "The server took too long to read this file. Try again later."
+    if status == 400:
+        return "The server could not read this file."
+    return "The server could not import this file."
 
 
 def require_clip_token(request: Request) -> None:
@@ -169,11 +183,13 @@ async def clip_pdf(request: Request, file: UploadFile):
         sid = await _trial_id(request, tmp)
         stored = await _paper(request, sid)
         pdf_path = (stored or {}).get("pdf_path")
+        title = (stored or {}).get("title")
         if stored and pdf_path and Path(pdf_path).is_file():
             result: dict[str, Any] = {"new": [], "existing": [sid], "attached": []}
         else:
             out = await run(request, ["pdf", "import", "--", str(tmp)], long=True)
             sid = out["source_id"]
+            title = title or out.get("title")
             if stored is None:
                 result = {"new": [sid], "existing": [], "attached": []}
             else:
@@ -181,7 +197,10 @@ async def clip_pdf(request: Request, file: UploadFile):
                 result["metadata_kept"] = await _restore(request, stored)
     finally:
         tmp.unlink(missing_ok=True)
-    return {"source_ids": [sid], **result, **await _join_list(request, [sid])}
+    answer = {"source_ids": [sid], **result, **await _join_list(request, [sid])}
+    if title:
+        answer["title"] = title
+    return answer
 
 
 def _known_id(entry: dict, by_doi: dict, by_arxiv: dict, by_title: dict) -> str | None:

@@ -198,7 +198,7 @@ server {
         proxy_pass http://127.0.0.1:8086;
         proxy_set_header Host $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_read_timeout 300s;  # long searches, imports, AI calls
+        proxy_read_timeout 480s;  # long searches, imports, AI calls, two large add-on PDFs queued
     }
 }
 ```
