@@ -233,6 +233,25 @@ def test_save_fetches_fields_for_search_candidates(client, fake, settings, monke
     assert _stored(settings, arxiv)["bib"]["eprint"] == "1706.03762"
 
 
+def test_save_bib_fill_only_keeps_stored_fields(client, fake, settings, monkeypatch):
+    """Batch edit, candidate with no fields read yet: only null fields are filled,
+    the saved record's source is still recorded."""
+    fake.on("paper", "repair", result={"source_id": SID})
+    fake.on("settings", "get", result={})
+    asyncio.run(bib_store.upsert(Lib(settings.data_dir), SID, {"volume": "9"}, "pubmed", "x"))
+    crossref = f"{metadata.CROSSREF}/works/10.1038/nature14539"
+    _api(monkeypatch, {crossref: {"message": {"type": "journal-article", "volume": "521"}}})
+    body = {
+        **BODY,
+        "bib_fill_only": True,
+        "metadata_source": {"source": "crossref", "ref": "doi:10.1038/nature14539"},
+    }
+    assert client.put(f"/api/papers/{SID}/metadata", json=body).status_code == 200
+    got = _stored(settings, SID)
+    assert got["bib"] == {"entry_type": "article", "volume": "9"}
+    assert got["metadata_source"] == {"source": "crossref", "ref": "doi:10.1038/nature14539"}
+
+
 @pytest.mark.parametrize(
     "bad",
     [

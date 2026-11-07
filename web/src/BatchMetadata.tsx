@@ -6,8 +6,10 @@ import { ErrorText } from './components'
 import { paperLabel } from './format'
 import { useLookupPrefs } from './lookupSource'
 import {
+  bibDiffs,
   bibInput,
   candidateSource,
+  defaultBibPicked,
   defaultPicked,
   diffFields,
   fromCandidate,
@@ -21,7 +23,7 @@ import {
   type MatchKind,
 } from './metadataFields'
 import { MathText } from './tex'
-import type { LookupSource, MetadataCandidate, Paper } from './types'
+import type { BibKey, LookupSource, MetadataCandidate, Paper } from './types'
 
 type Status = 'waiting' | 'looking' | 'nomatch' | 'error' | 'match' | 'saving' | 'saved'
 
@@ -32,10 +34,13 @@ interface Item {
   candidates: MetadataCandidate[]
   chosen: number
   picked: Set<Field>
+  /** Ticked BibTeX rows (the found value replaces the stored one). */
+  bibPicked: Set<BibKey>
   error?: string
 }
 
-const blank = (): Item => ({ status: 'waiting', candidates: [], chosen: 0, picked: new Set() })
+const blank = (): Item => ({ status: 'waiting', candidates: [], chosen: 0, picked: new Set(), bibPicked: new Set() })
+const ticks = (it: Item) => it.picked.size + it.bibPicked.size
 
 /** Library batch edit: one lookup source for every selected paper, a field diff per
  * paper, and approve per paper or all at once (same routes as Edit metadata). */
@@ -105,6 +110,7 @@ export default function BatchMetadata({
           candidates: r.candidates,
           chosen: 0,
           picked: found ? defaultPicked(fromPaper(paper), fromCandidate(found)) : new Set(),
+          bibPicked: found ? defaultBibPicked(paper.bib, found.bib) : new Set(),
         })
       } catch (err) {
         patch(sid, { status: 'error', error: (err as Error).message })
@@ -118,7 +124,11 @@ export default function BatchMetadata({
     const it = item(sid)
     const c = it.candidates[idx]
     if (!it.paper || !c) return
-    patch(sid, { chosen: idx, picked: defaultPicked(fromPaper(it.paper), fromCandidate(c)) })
+    patch(sid, {
+      chosen: idx,
+      picked: defaultPicked(fromPaper(it.paper), fromCandidate(c)),
+      bibPicked: defaultBibPicked(it.paper.bib, c.bib),
+    })
   }
 
   const toggle = (sid: string, field: Field) => {
@@ -128,11 +138,18 @@ export default function BatchMetadata({
     patch(sid, { picked: next })
   }
 
+  const toggleBib = (sid: string, key: BibKey) => {
+    const next = new Set(item(sid).bibPicked)
+    if (next.has(key)) next.delete(key)
+    else next.add(key)
+    patch(sid, { bibPicked: next })
+  }
+
   /** Save one paper: stored values with the ticked found fields on top. */
   const approve = async (sid: string, notify = true): Promise<boolean> => {
     const it = item(sid)
     const c = it.candidates[it.chosen]
-    if (!it.paper || !c || !it.picked.size) return false
+    if (!it.paper || !c || !ticks(it)) return false
     const found = fromCandidate(c)
     const form = { ...fromPaper(it.paper) }
     for (const f of it.picked) form[f] = found[f]
@@ -144,11 +161,13 @@ export default function BatchMetadata({
     patch(sid, { status: 'saving', error: undefined })
     try {
       // Tags as loaded for the diff, so the server skips its own `paper get`. The
-      // record's BibTeX fields and source go along (the list holds no stored ones to diff).
+      // ticked BibTeX rows and the record's source go along. A candidate with no BibTeX
+      // fields read yet (title search) lets the server read them, filling empty ones only.
       await api.saveMetadata(sid, {
         ...checked.input,
         tags: it.paper.tags,
-        bib: bibInput(c),
+        bib: bibInput(c, it.bibPicked),
+        ...(c.bib ? {} : { bib_fill_only: true }),
         metadata_source: candidateSource(c),
       })
       patch(sid, { status: 'saved' })
@@ -160,7 +179,7 @@ export default function BatchMetadata({
     }
   }
 
-  const approvable = selected.filter((sid) => item(sid).status === 'match' && item(sid).picked.size > 0)
+  const approvable = selected.filter((sid) => item(sid).status === 'match' && ticks(item(sid)) > 0)
   const byTitle = (sid: string) => guardTitleMatches && item(sid).match === 'title'
   const ready = approvable.filter((sid) => !byTitle(sid))
   const heldBack = approvable.length - ready.length
@@ -238,6 +257,8 @@ export default function BatchMetadata({
           const current = it.paper ? fromPaper(it.paper) : null
           const found = c ? fromCandidate(c) : null
           const diffs = current && found ? diffFields(current, found) : []
+          const bibRows = it.paper && c ? bibDiffs(it.paper.bib, c.bib) : []
+          const anyDiff = diffs.length > 0 || bibRows.length > 0
           return (
             <li key={sid} className={`batch-card st-${it.status}`}>
               <div className="batch-card-head">
@@ -266,10 +287,10 @@ export default function BatchMetadata({
                   ))}
                 </select>
               )}
-              {it.status === 'match' && current && found && diffs.length === 0 && (
+              {it.status === 'match' && current && found && !anyDiff && (
                 <p className="success small">Agrees with the current metadata.</p>
               )}
-              {(it.status === 'match' || it.status === 'saving') && current && found && diffs.length > 0 && (
+              {(it.status === 'match' || it.status === 'saving') && current && found && anyDiff && (
                 <table className="batch-diff">
                   <tbody>
                     {diffs.map((f) => (
@@ -290,6 +311,26 @@ export default function BatchMetadata({
                         </td>
                       </tr>
                     ))}
+                    {bibRows.map((f) => (
+                      <tr key={`bib-${f.key}`}>
+                        <td className="check-col">
+                          <input
+                            type="checkbox"
+                            aria-label={`Use found ${f.label} (BibTeX) for ${sid}`}
+                            checked={it.bibPicked.has(f.key)}
+                            disabled={it.status !== 'match'}
+                            onChange={() => toggleBib(sid, f.key)}
+                          />
+                        </td>
+                        <th scope="row" className="bib-key">
+                          {f.label} <span className="small block">(BibTeX)</span>
+                        </th>
+                        <td>
+                          <div className="diff-old">{it.paper?.bib?.[f.key] || <em>empty</em>}</div>
+                          <div className="diff-new">{c?.bib?.[f.key]}</div>
+                        </td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               )}
@@ -297,7 +338,7 @@ export default function BatchMetadata({
               {(it.status !== 'saved' || onDone) && (
                 <div className="actions">
                   {it.status === 'match' && (
-                    <button type="button" disabled={!it.picked.size} onClick={() => approve(sid)}>
+                    <button type="button" disabled={!ticks(it)} onClick={() => approve(sid)}>
                       Approve
                     </button>
                   )}

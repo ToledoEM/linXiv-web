@@ -127,6 +127,9 @@ class MetadataIn(BaseModel):
     # BibTeX fields linXiv does not store (app/bib_store.py); only the keys sent
     # change. Omitted = left as stored.
     bib: dict[str, str | None] | None = None
+    # Only fill BibTeX fields that are still null (batch edit, when the
+    # candidate's fields are read here and could not be shown for review).
+    bib_fill_only: bool = False
     # The candidate these values came from; omitted (a hand edit) keeps the
     # recorded source.
     metadata_source: MetadataSourceIn | None = None
@@ -231,11 +234,15 @@ async def _store_bib(request: Request, sid: str, body: MetadataIn) -> None:
     # Explicit nulls in `bib` clear those fields; absent keys stay as stored.
     cleared = [k for k, v in (bib or {}).items() if v is None or not str(v).strip()]
     lib = library(request)
+    source, ref = (src.source, src.ref) if src else (None, None)
+    if body.bib_fill_only:
+        # Stored values stay; the saved record's source is still recorded.
+        await bib_store.upsert(lib, sid, bib, overwrite=False)
+        await bib_store.upsert(lib, sid, None, source, ref, overwrite=True)
+        return
     if cleared:
         await bib_store.clear(lib, sid, cleared)
-    await bib_store.upsert(
-        lib, sid, bib, src.source if src else None, src.ref if src else None, overwrite=True
-    )
+    await bib_store.upsert(lib, sid, bib, source, ref, overwrite=True)
 
 
 # ---------------------------------------------------------------------------

@@ -177,6 +177,11 @@ export const bibDiffs = (current: BibFields | undefined | null, found: BibFields
     return value !== '' && value !== norm(current?.[f.key] ?? '')
   })
 
+/** Pre-ticked BibTeX rows in batch edit: only fields stored empty, so a batch never
+ * replaces a stored value unless ticked by hand. */
+export const defaultBibPicked = (current: BibFields | undefined | null, found: BibFields | undefined | null) =>
+  new Set(bibDiffs(current, found).filter((f) => !norm(current?.[f.key] ?? '')).map((f) => f.key))
+
 /** Recorded with a saved candidate, so "Refresh metadata" can ask the same source again. */
 export const candidateSource = (c: MetadataCandidate): MetadataSource => ({ source: c.source, ref: c.ref })
 
