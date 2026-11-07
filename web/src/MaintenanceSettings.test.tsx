@@ -8,6 +8,7 @@ import type { Job, MaintenanceOverview } from './types'
 const overview = (): MaintenanceOverview => ({
   hour: 3,
   nightly: ['dup'],
+  monthly: [],
   timezone: 'UTC',
   nightly_on: null,
   keep_backups: 7,
@@ -67,7 +68,7 @@ describe('MaintenanceSettings', () => {
     vi.spyOn(api, 'maintenance').mockResolvedValue(overview())
     const save = vi
       .spyOn(api, 'setMaintenanceSchedule')
-      .mockImplementation((body) => Promise.resolve({ keep_backups: 7, trash_days: 0, ...body }))
+      .mockImplementation((body) => Promise.resolve({ monthly: [], keep_backups: 7, trash_days: 0, ...body }))
     render(<MaintenanceSettings />)
     fireEvent.click(await screen.findByLabelText('Run Clean up nightly'))
     await waitFor(() => expect(save).toHaveBeenCalledWith({ hour: 3, nightly: ['dup', 'clean'] }))
@@ -91,7 +92,7 @@ describe('MaintenanceSettings', () => {
     const del = vi.spyOn(api, 'deleteMaintenanceBackup').mockResolvedValue({ ok: true })
     const save = vi
       .spyOn(api, 'setMaintenanceSchedule')
-      .mockImplementation((body) => Promise.resolve({ keep_backups: 7, trash_days: 0, ...body }))
+      .mockImplementation((body) => Promise.resolve({ monthly: [], keep_backups: 7, trash_days: 0, ...body }))
     render(<MaintenanceSettings />)
     expect(await screen.findByText('2026-10-26 03:00:00')).toBeTruthy()
     expect(screen.getByRole('link', { name: 'Download' }).getAttribute('href')).toBe(
@@ -120,7 +121,7 @@ describe('MaintenanceSettings', () => {
     vi.spyOn(api, 'maintenance').mockResolvedValue(data)
     const save = vi
       .spyOn(api, 'setMaintenanceSchedule')
-      .mockImplementation((body) => Promise.resolve({ keep_backups: 7, trash_days: 0, ...body }))
+      .mockImplementation((body) => Promise.resolve({ monthly: [], keep_backups: 7, trash_days: 0, ...body }))
     render(<MaintenanceSettings />)
     const days = (await screen.findByLabelText('Trash days')) as HTMLInputElement
     for (const bad of ['-1', '121', 'abc', '2.5', '']) {
@@ -134,5 +135,21 @@ describe('MaintenanceSettings', () => {
     fireEvent.blur(days)
     await waitFor(() => expect(save).toHaveBeenCalledWith({ hour: 3, nightly: ['dup'], trash_days: 120 }))
     expect(screen.queryByText(/Enter 0 to 120/)).toBeNull()
+  })
+})
+
+describe('MaintenanceSettings monthly', () => {
+  afterEach(() => vi.restoreAllMocks())
+
+  it('ticks Monthly, which a nightly operation does not need', async () => {
+    vi.spyOn(api, 'maintenance').mockResolvedValue(overview())
+    const save = vi
+      .spyOn(api, 'setMaintenanceSchedule')
+      .mockImplementation((body) => Promise.resolve({ ...overview(), ...body }))
+    render(<MaintenanceSettings />)
+    const nightlyMonthly = await screen.findByLabelText('Run Find duplicates monthly')
+    expect((nightlyMonthly as HTMLInputElement).disabled).toBe(true)
+    fireEvent.click(screen.getByLabelText('Run Clean up monthly'))
+    await waitFor(() => expect(save).toHaveBeenCalledWith({ hour: 3, nightly: ['dup'], monthly: ['clean'] }))
   })
 })

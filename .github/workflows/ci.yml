@@ -72,7 +72,7 @@ jobs:
       - run: npm run build
 
   image:
-    name: Server tests + image (linXiv ${{ matrix.linxiv_ref }})
+    name: Server tests + image
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false

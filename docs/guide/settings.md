@@ -1,6 +1,6 @@
 # Settings
 
-Settings are split into groups listed on the left. Each card has its own Save button. You can link to a group directly, for example `/settings#ai`.
+Settings are split into groups listed on the left. The selected group lists its cards below it; click one to jump to it. Each card has its own Save button. You can link to a group directly, for example `/settings#ai`, or to a card in it, for example `/settings#server/backup`.
 
 Settings marked as stored in the browser (theme, zoom, density, sidebar pages, paper table columns) apply to that browser only. Everything else is stored on the server.
 
@@ -44,11 +44,15 @@ The MCP server for Claude Code, Codex and OpenCode: switch it on, choose the too
 
 ![Integrations settings](../assets/screenshots/settings-integrations.png)
 
+### Browser add-on
+
+The **Browser add-on** card creates the access token for the linXiv Firefox add-on. Each account has its own token, shown once. Papers it saves go to your library and onto the reading list **Imported - to check**. See [Browser add-on](../browser-add-on.md).
+
 ## Server Admin
 
-Admins only. Multi-user mode turns named accounts and the shared library on or off, and Users adds, edits and deletes accounts. Maintenance operations finds duplicate papers, completes metadata of new papers, checks PDF files, backs up the databases, removes authors without papers and empties old trash, on demand or nightly. See [Server Admin](../server-admin.md) and [Maintenance operations](../server-admin.md#maintenance-operations).
+Admins only. Multi-user mode turns named accounts and the shared library on or off, and Users adds, edits and deletes accounts. Maintenance operations finds duplicate papers, completes metadata of new papers, checks PDF files, backs up the databases, removes authors and tags without papers and empties old trash, on demand or nightly. See [Server Admin](../server-admin.md) and [Maintenance operations](../server-admin.md#maintenance-operations).
 
-In multi-user mode, accounts that are not admins see fewer settings: no Integrations or Server Admin group, no Logs or Activity card, and About shows the version only. Their AI keys, contacts, feeds and lookup choices belong to their own library.
+In multi-user mode, accounts that are not admins see fewer settings: no MCP card, Server Admin group, Logs card or Activity card, and About shows the version only. Their AI keys, contacts, feeds and lookup choices belong to their own library.
 
 ## Shortcuts
 

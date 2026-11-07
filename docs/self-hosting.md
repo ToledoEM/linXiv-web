@@ -30,7 +30,7 @@ Create `docker-compose.yml`:
 ```yaml
 services:
   linxiv-web:
-    image: ghcr.io/toledoem/linxiv-web:0.1.3
+    image: ghcr.io/toledoem/linxiv-web:0.1.4
     container_name: linxiv-web
     restart: unless-stopped
     env_file:
@@ -67,7 +67,7 @@ docker compose logs -f linxiv-web
 
 Open http://127.0.0.1:8086.
 
-The image is tagged with the linXiv-web version (`0.1.3`) and `latest`; pin the version to choose when you update. The image is public: no `docker login` needed.
+The image is tagged with the linXiv-web version (`0.1.4`) and `latest`; pin the version to choose when you update. The image is public: no `docker login` needed.
 
 ## First-run setup
 
@@ -96,7 +96,7 @@ A password from the environment always wins over the stored one, and setup never
 
 ```sh
 docker run --rm -e PASSWORD='your-password' --entrypoint python \
-  ghcr.io/toledoem/linxiv-web:0.1.3 -m app hash-password
+  ghcr.io/toledoem/linxiv-web:0.1.4 -m app hash-password
 ```
 
 Put it in `.env` next to `docker-compose.yml`, in single quotes (the hash contains `$`):
@@ -198,7 +198,7 @@ server {
         proxy_pass http://127.0.0.1:8086;
         proxy_set_header Host $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_read_timeout 300s;  # long searches, imports, AI calls
+        proxy_read_timeout 480s;  # long searches, imports, AI calls, two large add-on PDFs queued
     }
 }
 ```

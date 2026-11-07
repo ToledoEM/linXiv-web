@@ -3,7 +3,7 @@ title: "Deep: Learning \"Fast\""
 authors:
   - "Ada Lovelace"
   - "Alan Turing"
-doi: "10.1/xyz"
+doi: "10.1000/xyz"
 source_id: "arxiv:2204.12985"
 published: "2022-04-27"
 url: "https://arxiv.org/pdf/2204.12985v1"

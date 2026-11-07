@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import AboutSettings, { AboutBasic } from '../AboutSettings'
 import ActivityLog from '../ActivityLog'
@@ -18,10 +18,13 @@ import { serializeFeeds } from '../feeds'
 import FeedRules from '../FeedRules'
 import LoginSettings from '../LoginSettings'
 import FullTextIndex from '../FullTextIndex'
+import ClipTokenSettings from '../ClipTokenSettings'
 import OrcidBackfill from '../OrcidBackfill'
 import PaperTableSettings from '../PaperTableSettings'
 import PdfLayout from '../PdfLayout'
 import PdfTextIndex from '../PdfTextIndex'
+import { splitSettingsHash } from '../settingsHash'
+import SettingsSubnav from '../SettingsSubnav'
 import ThemePicker from '../ThemePicker'
 import VersionMonitor from '../VersionMonitor'
 import { CONTACTS } from '../contacts'
@@ -89,10 +92,11 @@ const GROUPS: { id: GroupId; label: string; icon: string }[] = [
 ]
 
 // Server-wide groups (MCP, accounts): admins only.
-const ADMIN_GROUPS: GroupId[] = ['integrations', 'admin']
+const ADMIN_GROUPS: GroupId[] = ['admin']
 
+// `#server` or `#server/backup` (group, then a card in it).
 function groupFromHash(hash: string): GroupId | null {
-  const id = hash.slice(1)
+  const id = splitSettingsHash(hash).group
   return GROUPS.find((g) => g.id === id)?.id ?? null
 }
 
@@ -116,6 +120,8 @@ export default function Settings() {
   const groups = GROUPS.filter((g) => admin || !ADMIN_GROUPS.includes(g.id))
   // A hidden group (#admin as a user) falls back to the first one.
   const shown = groups.some((g) => g.id === active) ? active : groups[0].id
+  const panelRef = useRef<HTMLDivElement>(null)
+  const hashSection = groupFromHash(hash) === shown ? splitSettingsHash(hash).section : null
 
   // A hash arriving while mounted (link to /settings#ai) switches the group.
   useEffect(() => {
@@ -536,9 +542,12 @@ export default function Settings() {
     ),
     integrations: (
       <>
-        <form onSubmit={save('mcp')} onKeyDown={formSubmitOnCtrlEnter}>
-          <McpSettings draft={draft} saved={saved} set={set} footer={saveBar('mcp')} />
-        </form>
+        {admin && (
+          <form onSubmit={save('mcp')} onKeyDown={formSubmitOnCtrlEnter}>
+            <McpSettings draft={draft} saved={saved} set={set} footer={saveBar('mcp')} />
+          </form>
+        )}
+        <ClipTokenSettings />
       </>
     ),
     admin: (
@@ -594,7 +603,7 @@ export default function Settings() {
       </div>
       <div className="settings-grid">
         <nav className="settings-nav" role="tablist" aria-orientation="vertical" aria-label="Settings groups">
-          {groups.map((g) => (
+          {groups.map((g) => [
             <button
               key={g.id}
               type="button"
@@ -609,11 +618,15 @@ export default function Settings() {
                 {g.icon}
               </span>
               {g.label}
-            </button>
-          ))}
+            </button>,
+            shown === g.id && (
+              <SettingsSubnav key={`${g.id}-sections`} group={g.id} panel={panelRef} section={hashSection} />
+            ),
+          ])}
         </nav>
         <div
           key={shown}
+          ref={panelRef}
           id="settings-panel"
           role="tabpanel"
           aria-labelledby={`settings-tab-${shown}`}

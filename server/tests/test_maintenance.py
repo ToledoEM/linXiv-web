@@ -111,7 +111,13 @@ def test_schedule_put(settings, fake):
     with TestClient(_app(settings, fake, [COUNT, FLAKY])) as c:
         r = c.put("/api/maintenance/schedule", json={"hour": 2, "nightly": ["flaky", "count"]})
         assert r.status_code == 200, r.text
-        want = {"hour": 2, "nightly": ["count", "flaky"], "keep_backups": 7, "trash_days": 0}
+        want = {
+            "hour": 2,
+            "nightly": ["count", "flaky"],
+            "monthly": [],
+            "keep_backups": 7,
+            "trash_days": 0,
+        }
         assert r.json() == want
         assert json.loads(stored["web_maint_schedule"]) == want
         # keep_backups stays unless given
@@ -160,3 +166,57 @@ def test_nightly_off_outside_hour(settings, fake):
     app = _app(settings, fake, [COUNT], now=lambda: now)
     asyncio.run(app.state.maintenance.step())
     assert not any(c[:2] == ["settings", "update"] for c in fake.calls)
+
+
+def test_monthly_runs_when_30_days_are_due(settings, fake):
+    stored = _store(
+        fake,
+        {
+            "web_maint_schedule": json.dumps({"hour": 3, "nightly": [], "monthly": ["count"]}),
+            "web_maint_status": json.dumps(
+                {"count": {"finished_at": "2026-10-01T03:20:00+00:00", "state": "done"}}
+            ),
+        },
+    )
+    clock = {"now": datetime(2026, 10, 26, 3, 15, tzinfo=UTC)}
+    app = _app(settings, fake, [COUNT], now=lambda: clock["now"])
+    m = app.state.maintenance
+
+    async def go():
+        await m.step()  # 25 days since the last run: not due
+        assert "nightly_on" not in json.loads(stored["web_maint_status"])
+        clock["now"] = datetime(2026, 10, 31, 3, 30, tzinfo=UTC)
+        await m.step()  # 30 days: runs
+        status = json.loads(stored["web_maint_status"])
+        assert status["nightly_on"] == "2026-10-31"
+        assert status["count"]["finished_at"].startswith("2026-10-31")
+
+    asyncio.run(go())
+
+
+def test_monthly_due_never_ran_and_skips_nightly(settings, fake):
+    app = _app(settings, fake, [COUNT, FLAKY])
+    m = app.state.maintenance
+    now = datetime(2026, 10, 26, 3, 0, tzinfo=UTC)
+    sched = {"nightly": ["flaky"], "monthly": ["count", "flaky"]}
+    assert m.monthly_due(sched, {}, now) == ["count"]
+    assert m.monthly_due(sched, {"count": {"finished_at": "junk"}}, now) == ["count"]
+
+
+def test_schedule_put_monthly(settings, fake):
+    stored = _store(fake, {})
+    with TestClient(_app(settings, fake, [COUNT, FLAKY])) as c:
+        body = {"hour": 2, "nightly": [], "monthly": ["flaky", "count"]}
+        assert c.put("/api/maintenance/schedule", json=body).json()["monthly"] == [
+            "count",
+            "flaky",
+        ]
+        # monthly stays unless given
+        body = {"hour": 4, "nightly": ["count"]}
+        assert c.put("/api/maintenance/schedule", json=body).json()["monthly"] == [
+            "count",
+            "flaky",
+        ]
+        body = {"hour": 4, "nightly": [], "monthly": ["nope"]}
+        assert c.put("/api/maintenance/schedule", json=body).status_code == 400
+    assert json.loads(stored["web_maint_schedule"])["monthly"] == ["count", "flaky"]

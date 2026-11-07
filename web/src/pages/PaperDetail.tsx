@@ -1,4 +1,5 @@
 import {
+  Fragment,
   lazy,
   Suspense,
   useCallback,
@@ -14,11 +15,12 @@ import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { api, pdfUrl } from '../api'
 import type { Annotation, Paper, PaperVersions, TagSuggestion } from '../types'
 import { Authors, ErrorText } from '../components'
-import { cleanDoi, paperJournal, paperLabel } from '../format'
+import { paperJournal, paperLabel, validDoi } from '../format'
 import { useAiEnabled } from '../aiEnabled'
 import AiSummary from '../AiSummary'
 import Highlights from '../Highlights'
 import MetadataEditor from '../MetadataEditor'
+import { BIB_FIELDS } from '../metadataFields'
 import Notes from '../Notes'
 import TagSuggestions from '../TagSuggestions'
 import { toggled } from '../projects'
@@ -512,12 +514,12 @@ export default function PaperDetail() {
                   </p>
                 </>
               )}
-              {(cleanDoi(paper.doi) || paperJournal(paper) || paper.comment || paper.url) && (
+              {(validDoi(paper.doi) || paperJournal(paper) || paper.comment || paper.url) && (
                 <dl className="meta">
-                  {cleanDoi(paper.doi) && (
+                  {validDoi(paper.doi) && (
                     <>
                       <dt>DOI</dt>
-                      <dd className="mono">{cleanDoi(paper.doi)}</dd>
+                      <dd className="mono">{validDoi(paper.doi)}</dd>
                     </>
                   )}
                   {paperJournal(paper) && (
@@ -544,6 +546,7 @@ export default function PaperDetail() {
                   )}
                 </dl>
               )}
+              <BibDetails paper={paper} />
             </>
           )}
 
@@ -685,5 +688,36 @@ export default function PaperDetail() {
         )}
       </aside>
     </section>
+  )
+}
+
+/** BibTeX fields stored beyond linXiv's own, and where the metadata came from. */
+function BibDetails({ paper }: { paper: Paper }) {
+  const rows = BIB_FIELDS.filter((f) => paper.bib?.[f.key])
+  const src = paper.metadata_source
+  return (
+    <details className="paper-section">
+      <summary>BibTeX details</summary>
+      <dl className="meta">
+        {rows.map((f) => (
+          <Fragment key={f.key}>
+            <dt>{f.label}</dt>
+            <dd>{paper.bib?.[f.key]}</dd>
+          </Fragment>
+        ))}
+        <dt>Metadata source</dt>
+        <dd>
+          {src ? (
+            <>
+              {src.source}
+              {src.ref && <span className="mono muted"> ({src.ref})</span>}
+            </>
+          ) : (
+            <span className="muted">not recorded</span>
+          )}
+        </dd>
+      </dl>
+      {!rows.length && <p className="muted small">No BibTeX fields stored yet. Retrieve metadata fills them.</p>}
+    </details>
   )
 }

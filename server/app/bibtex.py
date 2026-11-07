@@ -4,6 +4,10 @@ linXiv's own `project export-bibtex` works per project only, so selections
 are formatted here. arXiv papers become `@misc`
 with `eprint`/`archivePrefix`/`primaryClass` (or `@article` when they carry a
 journal reference); everything else is `@article`.
+
+A paper's stored BibTeX fields (app/bib_store.py) fill in the rest: an
+`entry_type` replaces the guess above (the journal is then `booktitle` for
+`inproceedings` / `incollection`), and every other non-null field is written.
 """
 
 from __future__ import annotations
@@ -11,11 +15,16 @@ from __future__ import annotations
 import re
 import unicodedata
 
-from .doi import clean_doi
+from .bib_store import BIB_FIELDS, MONTHS
+from .doi import doi_or_none
 
 _MATH = re.compile(r"(\$[^$]*\$)")
 _SPECIAL = re.compile(r"(?<!\\)([&%#_])")
 _STOP = {"a", "an", "the", "on", "of", "in", "for", "and", "to", "from", "with", "towards"}
+# Stored key -> BibTeX field name, where they differ.
+_NAMES = {"archive_prefix": "archivePrefix", "primary_class": "primaryClass"}
+# Entry types whose container is a `booktitle`, not a `journal`.
+_IN_BOOK = {"inproceedings", "incollection", "conference"}
 
 
 def _ascii_word(text: str) -> str:
@@ -60,21 +69,35 @@ def _arxiv_id(paper: dict) -> str | None:
     return sid.split(":", 1)[1] if sid.startswith("arxiv:") else None
 
 
-def entry(paper: dict, key: str) -> str:
+def entry(paper: dict, key: str, bib: dict | None = None) -> str:
+    bib = bib or {}
     arxiv = _arxiv_id(paper)
     journal = paper.get("journal_ref") or (None if arxiv else paper.get("category"))
+    kind = bib.get("entry_type") or ("misc" if arxiv and not journal else "article")
     fields: list[tuple[str, str]] = []
     if paper.get("title"):
         fields.append(("title", escape(str(paper["title"]))))
     authors = [escape(str(a)) for a in paper.get("authors") or [] if str(a).strip()]
     if authors:
         fields.append(("author", " and ".join(authors)))
-    if journal:
-        fields.append(("journal", escape(str(journal))))
+    if journal and not (kind in _IN_BOOK and bib.get("booktitle")):
+        fields.append(("booktitle" if kind in _IN_BOOK else "journal", escape(str(journal))))
     year = str(paper.get("published") or "")[:4]
     if year.isdigit():
         fields.append(("year", year))
-    doi = clean_doi(paper.get("doi"))
+    raw = []  # month macros go unbraced
+    for name in BIB_FIELDS:
+        value = bib.get(name)
+        if name == "entry_type" or not value:
+            continue
+        if arxiv and name in ("eprint", "archive_prefix", "primary_class"):
+            continue  # written from the paper's own id below
+        if name == "month" and value in MONTHS:
+            raw.append(len(fields))
+            fields.append(("month", value))
+            continue
+        fields.append((_NAMES.get(name, name), escape(str(value))))
+    doi = doi_or_none(paper.get("doi"))
     if doi:
         fields.append(("doi", doi))
     if arxiv:
@@ -86,13 +109,16 @@ def entry(paper: dict, key: str) -> str:
         fields.append(("url", f"https://doi.org/{doi}"))
     elif str(paper.get("url") or "").startswith(("http://", "https://")):
         fields.append(("url", str(paper["url"])))
-    kind = "misc" if arxiv and not journal else "article"
-    body = ",\n".join(f"  {name} = {{{value}}}" for name, value in fields)
+    body = ",\n".join(
+        f"  {name} = {value}" if i in raw else f"  {name} = {{{value}}}"
+        for i, (name, value) in enumerate(fields)
+    )
     return f"@{kind}{{{key},\n{body}\n}}\n"
 
 
-def render(papers: list[dict]) -> str:
-    """All entries, keys made unique with a/b/c… suffixes."""
+def render(papers: list[dict], bibs: dict[str, dict] | None = None) -> str:
+    """All entries, keys made unique with a/b/c… suffixes; `bibs`: stored
+    BibTeX fields by source_id."""
     seen: dict[str, int] = {}
     out = []
     for paper in papers:
@@ -101,7 +127,7 @@ def render(papers: list[dict]) -> str:
         seen[key] = n + 1
         if n:
             key = f"{key}{_suffix(n)}"
-        out.append(entry(paper, key))
+        out.append(entry(paper, key, (bibs or {}).get(str(paper.get("source_id")))))
     return "\n".join(out)
 
 

@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException, Request
 
+from .. import bib_store
 from ..cli import CLIError
-from .common import ident, run
+from .common import ident, library, run
 
 router = APIRouter(prefix="/api", tags=["trash"])
 
@@ -33,13 +34,16 @@ async def hard_delete_paper(request: Request, source_id: str):
     if sid not in await _trashed_ids(request):
         raise HTTPException(status_code=404, detail=f"Paper {sid} is not in the trash")
     try:
-        return await run(request, ["trash", "hard-delete", "--", sid])
+        out = await run(request, ["trash", "hard-delete", "--", sid])
     except CLIError as e:
         # linxiv v0.6.0 deletes the paper, then reports "not found" and exits 1.
         # It was in the trash a moment ago; if it's gone now, the delete worked.
         if e.status == 404 and sid not in await _trashed_ids(request):
+            await bib_store.delete(library(request), [sid])
             return {"ok": True, "hard_deleted": sid}
         raise
+    await bib_store.delete(library(request), [sid])
+    return out
 
 
 @router.post("/trash/projects/{project_id}/restore")

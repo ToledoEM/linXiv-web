@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { api, paperPath } from '../api'
+import { api, duplicatesTsvUrl, paperPath } from '../api'
 import { ErrorText } from '../components'
 import ConfirmDialog from '../ConfirmDialog'
 import { formatBytes } from '../format'
@@ -66,6 +66,14 @@ export default function Duplicates() {
         {data.scanned_at
           ? `${data.groups.length} group${data.groups.length === 1 ? '' : 's'} of papers sharing the same PDF file · checked ${data.scanned_at.replace('T', ' ').slice(0, 16)}`
           : 'Not checked yet: an admin runs "Find duplicate papers" in Settings → Server Admin.'}
+        {data.groups.length > 0 && (
+          <>
+            {' · '}
+            <a href={duplicatesTsvUrl()} download>
+              Download list (TSV)
+            </a>
+          </>
+        )}
       </p>
       <ErrorText error={error} />
       {data.scanned_at && data.groups.length === 0 && <p className="muted">No duplicates found.</p>}

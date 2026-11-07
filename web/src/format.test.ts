@@ -1,5 +1,7 @@
+// @vitest-environment node
+import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { cleanDoi, formatBytes, paperJournal, paperLabel } from './format'
+import { cleanDoi, formatBytes, isValidDoi, paperJournal, paperLabel, validDoi } from './format'
 
 describe('paperLabel', () => {
   it('prefers title, then PDF file name, then id', () => {
@@ -29,31 +31,20 @@ describe('paperJournal', () => {
   })
 })
 
-describe('cleanDoi', () => {
-  it.each([
-    ['10.1234/x', '10.1234/x'],
-    ['10.1234/x;', '10.1234/x'],
-    [' 10.1234/x ', '10.1234/x'],
-    ['; 10.1234/x ;', '10.1234/x'],
-    ['10.1234/x.,;:', '10.1234/x'],
-    ['doi: 10.1234/x.', '10.1234/x'],
-    ['DOI:10.1234/x', '10.1234/x'],
-    ['https://doi.org/10.1234/x;', '10.1234/x'],
-    ['(10.1234/x)', '10.1234/x'],
-    ['[10.1234/x]', '10.1234/x'],
-    ['"10.1234/x"', '10.1234/x'],
-    ['<10.1234/x>', '10.1234/x'],
-    ['10.1002/(SICI)1097-4636;2-x', '10.1002/(SICI)1097-4636;2-x'],
-    ['10.1002/(SICI)1097-4636(199)', '10.1002/(SICI)1097-4636(199)'],
-    ['10.1002/(SICI)1097-4636(199));', '10.1002/(SICI)1097-4636(199)'],
-    ['', ''],
-    [' ; ', ''],
-  ])('%j -> %j', (raw, doi) => {
-    expect(cleanDoi(raw)).toBe(doi)
+describe('DOI', () => {
+  // Shared with server/tests/test_doi.py: both sides must agree on every vector.
+  const vectors = JSON.parse(
+    readFileSync(new URL('../../server/tests/fixtures/doi-vectors.json', import.meta.url), 'utf8'),
+  ) as { in: string; clean: string; valid: boolean }[]
+
+  it.each(vectors)('$in', (v) => {
+    expect(cleanDoi(v.in)).toBe(v.clean)
+    expect(isValidDoi(v.clean)).toBe(v.valid)
+    expect(validDoi(v.in)).toBe(v.valid ? v.clean : '')
   })
 
-  it('treats a missing DOI as empty', () => {
+  it('handles null and a broken percent escape', () => {
     expect(cleanDoi(null)).toBe('')
-    expect(cleanDoi(undefined)).toBe('')
+    expect(cleanDoi('https://doi.org/10.1234/a%zz')).toBe('10.1234/a%zz')
   })
 })

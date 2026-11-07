@@ -2,12 +2,14 @@
 
 Each operation runs over every library on the server (root, shared and each
 account's, when their folders exist) as one background job, `maint-<id>`, on
-demand or each night at the configured hour. Times are the server's local time
-(the container's `TZ`).
+demand, each night at the configured hour, or monthly (at that hour, once 30
+days have passed since its last run finished). Times are the server's local
+time (the container's `TZ`).
 
 The schedule and the last result per operation live in two web-only settings of
 the root library, JSON strings that are never PATCHable through /api/settings:
-`web_maint_schedule` ({hour, nightly: [op ids], keep_backups, trash_days}) and
+`web_maint_schedule` ({hour, nightly: [op ids], monthly: [op ids], keep_backups,
+trash_days}) and
 `web_maint_status` ({op id: {started_at, finished_at, state, libraries: {key:
 summary}}, nightly_on}).
 """
@@ -26,6 +28,7 @@ from typing import TYPE_CHECKING, Any
 
 from .cli import CLIError
 from .jobs import Job
+from .update_check import INTERVALS
 
 if TYPE_CHECKING:
     from fastapi import FastAPI
@@ -44,6 +47,7 @@ MAX_KEEP_BACKUPS = 100
 # `trash_days` range: "Empty trash" deletes papers trashed longer ago (0: never).
 MAX_TRASH_DAYS = 120
 MAX_WAIT = 3600  # schedule re-read at least hourly (PUT /schedule wakes it sooner)
+MONTHLY_SECONDS = INTERVALS["monthly"]  # same "monthly" as the release check
 MAINT_DIR = "maintenance"
 SHARED = "shared"
 ROOT = "root"
@@ -161,11 +165,13 @@ class Maintenance:
         raw = parse_setting(stored.get(SCHEDULE_SETTING))
         hour = raw.get("hour")
         nightly = raw.get("nightly")
+        monthly = raw.get("monthly")
         keep = raw.get("keep_backups")
         days = raw.get("trash_days")
         return {
             "hour": hour if isinstance(hour, int) and 0 <= hour <= 23 else DEFAULT_HOUR,
             "nightly": [i for i in self.ops if isinstance(nightly, list) and i in nightly],
+            "monthly": [i for i in self.ops if isinstance(monthly, list) and i in monthly],
             "keep_backups": keep
             if isinstance(keep, int) and 1 <= keep <= MAX_KEEP_BACKUPS
             else DEFAULT_KEEP_BACKUPS,
@@ -181,12 +187,16 @@ class Maintenance:
         nightly: list[str],
         keep_backups: int | None = None,
         trash_days: int | None = None,
+        monthly: list[str] | None = None,
     ) -> dict:
-        """None keeps the stored value of `keep_backups` / `trash_days`."""
+        """None keeps the stored value of `keep_backups` / `trash_days` / `monthly`."""
         current = await self.schedule()
         value = {
             "hour": hour,
             "nightly": [i for i in self.ops if i in nightly],
+            "monthly": current["monthly"]
+            if monthly is None
+            else [i for i in self.ops if i in monthly],
             "keep_backups": keep_backups or current["keep_backups"],
             "trash_days": current["trash_days"] if trash_days is None else trash_days,
         }
@@ -263,9 +273,27 @@ class Maintenance:
         at = now.replace(hour=hour, minute=0, second=0, microsecond=0)
         return at if at > now else at + timedelta(days=1)
 
+    def monthly_due(self, sched: dict, status: dict, now: datetime) -> list[str]:
+        """Monthly operations (not also nightly) whose last run finished 30 days
+        ago or more, or never ran."""
+        due = []
+        for op_id in sched["monthly"]:
+            if op_id in sched["nightly"]:
+                continue
+            last = status.get(op_id) if isinstance(status.get(op_id), dict) else {}
+            try:
+                at = datetime.fromisoformat(str(last.get("finished_at")))
+                if at.tzinfo is None:
+                    at = at.astimezone()
+            except ValueError:
+                at = None
+            if at is None or (now - at).total_seconds() >= MONTHLY_SECONDS:
+                due.append(op_id)
+        return due
+
     async def step(self) -> float:
-        """One loop turn: run the nightly operations once during the set hour;
-        seconds to sleep next."""
+        """One loop turn: during the set hour, once a day, run the nightly
+        operations and the monthly ones that are due; seconds to sleep next."""
         try:
             stored = await self.stored()
         except CLIError:
@@ -274,10 +302,12 @@ class Maintenance:
         now = self.now()
         today = now.date().isoformat()
         status = self.status_from(stored)
-        if sched["nightly"] and now.hour == sched["hour"] and status.get("nightly_on") != today:
-            await self._update_status(lambda s: s.__setitem__("nightly_on", today))
-            await self.run_nightly(sched["nightly"])
-            now = self.now()
+        if now.hour == sched["hour"] and status.get("nightly_on") != today:
+            todo = [*sched["nightly"], *self.monthly_due(sched, status, now)]
+            if todo:
+                await self._update_status(lambda s: s.__setitem__("nightly_on", today))
+                await self.run_nightly(todo)
+                now = self.now()
         wait = (self._next_run(now, sched["hour"]) - now).total_seconds()
         return max(1.0, min(wait, MAX_WAIT))
 

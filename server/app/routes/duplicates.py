@@ -6,8 +6,10 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field
 
+from .. import bib_store
 from ..duplicates import REPORT, group_key
 from ..maintenance import read_report, report_lock, report_path, write_report
+from ..tsv import tsv_response
 from .common import ident, library, run
 
 router = APIRouter(prefix="/api/duplicates", tags=["duplicates"])
@@ -35,6 +37,21 @@ async def duplicates(request: Request):
     return _public(read_report(report_path(library(request), REPORT)))
 
 
+@router.get("/export.tsv")
+async def export_tsv(request: Request):
+    """The library's duplicate groups, one row per paper, groups numbered in order."""
+    lib = library(request)
+    groups = read_report(report_path(lib, REPORT)).get("groups") or []
+    cols = ("source_id", "version", "title", "file", "size")
+    rows = [
+        (n, g.get("sha256", ""), *(p.get(k, "") for k in cols))
+        for n, g in enumerate(groups, 1)
+        for p in g.get("papers") or []
+    ]
+    header = ["group", "sha256", "source_id", "version", "title", "file", "size"]
+    return tsv_response(header, rows, f"duplicates-{lib.key}.tsv")
+
+
 @router.post("/merge")
 async def merge(request: Request, body: MergeIn):
     """Keep `winner`; linXiv moves the loser's notes, highlights, projects, tags,
@@ -52,6 +69,7 @@ async def merge(request: Request, body: MergeIn):
         if group is None:
             raise HTTPException(status_code=404, detail="these papers are not a duplicate group")
         await run(request, ["paper", "merge", "--", winner, loser])
+        await bib_store.move(library(request), loser, winner)
         group["papers"] = [p for p in group["papers"] if p["source_id"] != loser]
         if len({p["source_id"] for p in group["papers"]}) < 2:
             groups.remove(group)

@@ -41,6 +41,53 @@ export interface Paper {
   source?: string
   /** arXiv TeX source fetched and indexed for full-text search. */
   downloaded_source?: boolean
+  /** GET /api/papers/{id} only: BibTeX fields linXiv does not store (server-side, per library). */
+  bib?: BibFields
+  /** GET /api/papers/{id} only: where the metadata last came from; null = not recorded. */
+  metadata_source?: MetadataSource | null
+}
+
+/** BibTeX fields kept next to linXiv's own (title, authors, journal, year, DOI, URL). */
+export type BibKey =
+  | 'entry_type'
+  | 'booktitle'
+  | 'editor'
+  | 'edition'
+  | 'series'
+  | 'volume'
+  | 'number'
+  | 'chapter'
+  | 'pages'
+  | 'month'
+  | 'publisher'
+  | 'address'
+  | 'school'
+  | 'institution'
+  | 'organization'
+  | 'howpublished'
+  | 'note'
+  | 'issn'
+  | 'isbn'
+  | 'eprint'
+  | 'archive_prefix'
+  | 'primary_class'
+export type BibFields = Partial<Record<BibKey, string>>
+
+/** Metadata source names the server records ("Refresh metadata" asks the first five again). */
+export type MetadataSourceName =
+  | 'crossref'
+  | 'pubmed'
+  | 'biorxiv'
+  | 'arxiv'
+  | 'openalex'
+  | 'bibtex'
+  | 'filename'
+  | 'ai'
+
+export interface MetadataSource {
+  source: MetadataSourceName
+  /** The source's own id: DOI, arXiv id, PMID or OpenAlex work id. */
+  ref: string | null
 }
 
 export interface PaperVersions {
@@ -120,6 +167,13 @@ export interface McpStatus {
   token: { set: boolean; hint: string | null; created: string | null }
   sessions: number
   tool_counts: Record<McpProfile, number>
+}
+
+/** `GET /api/clip/token`: the browser add-on token of the caller's library. */
+export interface ClipTokenStatus {
+  set: boolean
+  hint: string | null
+  created: string | null
 }
 
 export type AiProvider = 'gemini' | 'openai' | 'anthropic' | 'generic'
@@ -368,6 +422,12 @@ export interface MetadataInput {
   url: string | null
   /** Current tags, kept by the save; omitted = the server reads them. */
   tags?: string[]
+  /** BibTeX fields to set (null clears one); omitted = left as stored. */
+  bib?: Partial<Record<BibKey, string | null>>
+  /** Fill only BibTeX fields still empty (batch edit, fields the server reads itself). */
+  bib_fill_only?: boolean
+  /** The looked-up record these values came from; omitted (a hand edit) keeps the recorded one. */
+  metadata_source?: MetadataSource
 }
 
 /** 'ai' = AI metadata cleanup (POST /api/ai/cleanup), same candidate shape. */
@@ -397,6 +457,8 @@ export interface MetadataCandidate {
   category: string | null
   doi: string | null
   url: string | null
+  /** BibTeX fields the source holds (volume, pages, publisher...); null = none read yet. */
+  bib?: BibFields | null
 }
 
 /** `versions new` / `versions check` entry: a saved arXiv paper with a newer version stored. */
@@ -411,6 +473,8 @@ export interface NewVersion {
 export interface Job {
   id: number
   kind: string
+  /** Library the job works in (root, shared, u<id>). */
+  library?: string
   state: 'running' | 'done' | 'failed' | 'cancelled'
   total: number
   done: number
@@ -446,6 +510,8 @@ export interface MaintenanceSchedule {
   /** Nightly run hour, server local time. */
   hour: number
   nightly: string[]
+  /** Operations run at that hour once 30 days have passed since their last run. */
+  monthly: string[]
   /** Database backups kept per library by the "backup" operation. */
   keep_backups: number
   /** Cleanup empties trash entries older than this many days; 0 keeps the trash. */
@@ -453,7 +519,7 @@ export interface MaintenanceSchedule {
 }
 
 export type MaintenanceScheduleInput = Pick<MaintenanceSchedule, 'hour' | 'nightly'> &
-  Partial<Pick<MaintenanceSchedule, 'keep_backups' | 'trash_days'>>
+  Partial<Pick<MaintenanceSchedule, 'monthly' | 'keep_backups' | 'trash_days'>>
 
 export interface MaintenanceOverview extends MaintenanceSchedule {
   timezone: string | null
@@ -477,14 +543,38 @@ export interface FillOptions {
 }
 
 /** Last "Check PDF files" result of one library; lists are capped, counts are not. */
+export interface PdfCheckFolder {
+  /** Top-level folder of the PDF folder; '.' = files directly in it. */
+  folder: string
+  files: number
+  pdfs: number
+  unlinked: number
+  skipped: boolean
+}
+
 export interface PdfCheckReport {
   library: string
   checked_at: string
+  /** Paper versions that have (or should have) a PDF. */
   pdfs: number
   missing_count: number
   unlinked_count: number
   missing: { source_id: string; version: number; title: string }[]
-  unlinked: { file: string; size: number }[]
+  /** First 500; the CSV has all. */
+  unlinked: { file: string; size: number; modified?: string }[]
+  // Breakdown (reports from before it was added lack these).
+  papers?: number
+  papers_with_pdf?: number
+  extra_versions?: number
+  trashed_pdfs?: number
+  skip?: string[]
+  disk?: { files: number; pdf_files: number; other_files: number; skipped_files: number; by_folder: PdfCheckFolder[] }
+}
+
+export interface PdfCheckOptions {
+  skip: string[]
+  /** Folders always skipped (orphans). */
+  always: string[]
 }
 
 export interface DuplicatePaper {
@@ -559,4 +649,12 @@ export interface UserAccount {
 export interface MultiUserStatus {
   enabled: boolean
   owner_username: string | null
+}
+
+/** "Refresh metadata" choice: every paper with a recorded source, or only recent ones and preprints. */
+export type RefreshScope = 'all' | 'recent_or_preprint'
+
+export interface RefreshOptions {
+  scope: RefreshScope
+  all_scopes: RefreshScope[]
 }

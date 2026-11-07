@@ -1,10 +1,15 @@
 """Add a paper from one pasted string: arXiv id/link, DOI/doi.org link, publisher
-article link (saved by its DOI), or PDF link."""
+article link (saved by its DOI), or PDF link.
+
+A paper saved by DOI or arXiv id also gets its BibTeX fields and metadata
+source (app/bib_store.py): Crossref's record for a DOI, the arXiv keys for an
+arXiv id. Failing to read them never fails the add."""
 
 from __future__ import annotations
 
 import asyncio
 import ipaddress
+import logging
 import os
 import re
 import socket
@@ -16,18 +21,20 @@ import httpx
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
+from .. import bib_store
 from ..cli import CLIError
-from ..doi import clean_doi
-from .common import ident, run, settings
+from ..doi import clean_doi, is_valid_doi
+from .common import ident, library, run, settings
 from .library import fetch
+from .metadata import arxiv_bib, contact, crossref_bib
 
 router = APIRouter(prefix="/api", tags=["add"])
+log = logging.getLogger(__name__)
 
 _ARXIV_ID = r"(\d{4}\.\d{4,5}|[a-z\-]+(?:\.[A-Z]{2})?/\d{7})(?:v\d+)?"
 _ARXIV_BARE = re.compile(rf"^(?:arxiv:)?{_ARXIV_ID}$", re.IGNORECASE)
 _ARXIV_PATH = re.compile(rf"^/(?:abs|pdf|html)/{_ARXIV_ID}(?:\.pdf)?/?$")
 _ARXIV_HOSTS = {"arxiv.org", "www.arxiv.org", "export.arxiv.org"}
-_DOI = re.compile(r"^10\.\d{4,9}/\S+$")
 _DOI_HOSTS = {"doi.org", "dx.doi.org", "www.doi.org"}
 _ARXIV_DOI = re.compile(r"^10\.48550/arxiv\.(.+)$", re.IGNORECASE)
 _MAX_REDIRECTS = 5
@@ -125,7 +132,7 @@ def classify(text: str) -> tuple[str, str]:
         else:
             return "pdf", text
     doi = clean_doi(doi)
-    if _DOI.match(doi):
+    if is_valid_doi(doi):
         # arXiv-minted DOIs (10.48550/arXiv.<id>) go through the arXiv fetch.
         if (m := _ARXIV_DOI.match(doi)) and (a := _ARXIV_BARE.match(m.group(1))):
             return "arxiv", a.group(1)
@@ -226,6 +233,15 @@ async def _attach_publisher_pdf(request: Request, sid: str, url: str) -> bool:
     return True
 
 
+async def _record(
+    request: Request, sid: str, bib: dict | None, source: str, ref: str | None = None
+) -> None:
+    try:
+        await bib_store.upsert(library(request), sid, bib, source, ref or sid)
+    except Exception:  # an add that worked is not undone for the extra fields
+        log.exception("could not store BibTeX fields of %s", sid)
+
+
 class AddBody(BaseModel):
     input: str = Field(min_length=1, max_length=2048)
 
@@ -235,7 +251,13 @@ async def add_paper(request: Request, body: AddBody):
     """Returns {kind, paper}: the saved paper's `paper get` JSON (or a stub)."""
     kind, value = classify(body.input)
     if kind == "arxiv":
-        return {"kind": kind, "paper": await fetch(request, value, "arxiv")}
+        paper = await fetch(request, value, "arxiv")
+        if isinstance(paper, dict) and str(paper.get("source_id") or "").startswith("arxiv:"):
+            sid = str(paper["source_id"])
+            await _record(
+                request, sid, arxiv_bib(sid, paper.get("category"), paper.get("published")), "arxiv"
+            )
+        return {"kind": kind, "paper": paper}
     if kind == "doi":
         out = await run(request, ["doi", "save", "--", ident(value, "DOI")], long=True)
         meta = out.get("metadata") if isinstance(out, dict) else None
@@ -244,6 +266,9 @@ async def add_paper(request: Request, body: AddBody):
             paper = await run(request, ["paper", "get", "--", sid])
         except CLIError:
             paper = {"source_id": sid, "title": (meta or {}).get("title")}
+        doi = paper.get("doi") or value
+        bib = await crossref_bib(doi, await contact(request, "CROSSREF_MAILTO"))
+        await _record(request, sid, bib, "crossref", f"doi:{doi}")
         result = {"kind": kind, "paper": paper}
         pub = publisher_doi(body.input)
         if pub and not paper.get("has_pdf"):

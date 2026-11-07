@@ -1,33 +1,23 @@
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 import pytest
 
-from app.doi import clean_doi
+from app.doi import clean_doi, doi_or_none, is_valid_doi
+
+# Shared with web/src/format.test.ts: both sides must agree on every vector.
+VECTORS = json.loads((Path(__file__).parent / "fixtures" / "doi-vectors.json").read_text())
 
 
-@pytest.mark.parametrize(
-    ("raw", "doi"),
-    [
-        ("10.1234/x", "10.1234/x"),
-        ("10.1234/x;", "10.1234/x"),
-        (" 10.1234/x ", "10.1234/x"),
-        ("; 10.1234/x ;", "10.1234/x"),
-        ("10.1234/x.,;:", "10.1234/x"),
-        ("doi: 10.1234/x.", "10.1234/x"),
-        ("DOI:10.1234/x", "10.1234/x"),
-        ("https://doi.org/10.1234/x;", "10.1234/x"),
-        ("(10.1234/x)", "10.1234/x"),
-        ("[10.1234/x]", "10.1234/x"),
-        ('"10.1234/x"', "10.1234/x"),
-        ("<10.1234/x>", "10.1234/x"),
-        # Brackets and `;` inside the DOI stay; a closing bracket it opened stays.
-        ("10.1002/(SICI)1097-4636;2-x", "10.1002/(SICI)1097-4636;2-x"),
-        ("10.1002/(SICI)1097-4636(199)", "10.1002/(SICI)1097-4636(199)"),
-        ("10.1002/(SICI)1097-4636(199));", "10.1002/(SICI)1097-4636(199)"),
-        ("", ""),
-        (None, ""),
-        (" ; ", ""),
-    ],
-)
-def test_clean_doi(raw, doi):
-    assert clean_doi(raw) == doi
+@pytest.mark.parametrize("v", VECTORS, ids=[v["in"] or "<empty>" for v in VECTORS])
+def test_doi_vectors(v):
+    assert clean_doi(v["in"]) == v["clean"]
+    assert is_valid_doi(v["clean"]) is v["valid"]
+    assert doi_or_none(v["in"]) == (v["clean"] if v["valid"] else None)
+
+
+def test_clean_doi_none():
+    assert clean_doi(None) == ""
+    assert doi_or_none(None) is None

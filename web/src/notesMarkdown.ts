@@ -2,7 +2,7 @@
 // paper's metadata, then one section per note. Same layout as the server's
 // project export (`server/app/notes_md.py`); keep the two in step.
 
-import { cleanDoi } from './format'
+import { validDoi } from './format'
 import type { Note, Paper } from './types'
 
 const q = (s: string) => JSON.stringify(s) // a JSON string is a valid YAML double-quoted scalar
@@ -33,7 +33,7 @@ export function notesMarkdown(
   const lines = ['---', `title: ${q(title)}`]
   const authors = (paper.authors ?? []).filter((a) => a.trim())
   if (authors.length) lines.push('authors:', ...authors.map((a) => `  - ${q(a)}`))
-  const doi = cleanDoi(paper.doi)
+  const doi = validDoi(paper.doi)
   if (doi) lines.push(`doi: ${q(doi)}`)
   lines.push(`source_id: ${q(paper.source_id)}`)
   if (paper.published) lines.push(`published: ${q(paper.published)}`)

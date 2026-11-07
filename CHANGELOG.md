@@ -4,7 +4,26 @@ All notable changes to linXiv-web are documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The version is `server/pyproject.toml` `version`; images are published to `ghcr.io/toledoem/linxiv-web:<version>`.
 
-## [Unreleased]
+## [0.1.4] - 2026-11-07
+
+### Added
+- Browser add-on: per-account token in Settings → Integrations for the linXiv Firefox add-on. Clips save to the owner's library and join the reading list **Imported - to check**; existing papers keep their metadata. **Check metadata** on that list opens batch edit. New docs page.
+- BibTeX fields per paper (entry type, volume, pages, publisher, ISSN and more), filled by every lookup source, by add by DOI/arXiv id and by `.bib` import, and written by Library BibTeX export. Stored in a per-library `linxiv-web-bib.db`, included in server backups.
+- Metadata source per paper, shown on the paper page under **BibTeX details**.
+- Maintenance operations: **Refresh metadata** (asks each paper's recorded source again), **Clean tags without papers**, and a **Monthly** schedule option.
+- Complete metadata of new papers: new gap **No BibTeX details**, fills empty BibTeX fields only.
+- Batch edit metadata: *(BibTeX)* rows; fields stored empty come ticked, stored values are only replaced when ticked.
+- Check PDF files: folder breakdown, **Skip folders**, full TSV lists, **Move to orphans/**.
+- Duplicates page: **Download list (TSV)**.
+- Background jobs tray folds finished jobs into a dot with **Dismiss**; Settings menu lists each group's cards, with links like `/settings#server/backup`.
+- `scripts/sanitize-pdf-names.py` and a **Server scripts** docs page.
+- API: `/api/clip/*`; `bib`, `metadata_source` and `bib_fill_only` on paper metadata; PDF check options, TSV and move-orphans routes; `GET /api/duplicates/export.tsv`; `GET/PUT /api/maintenance/metadata-refresh/options`; `monthly` in the schedule.
+
+### Changed
+- Home tags panel shows the 8 most used tags in the library.
+- DOI parsing extracts the DOI from surrounding text and checks it against Crossref's patterns; invalid DOIs are refused on input and treated as missing when stored.
+- An unparseable BibTeX file answers 400 instead of 502.
+- nginx example in the self-hosting guide: `proxy_read_timeout` 480 s.
 
 ## [0.1.3] - 2026-10-26
 

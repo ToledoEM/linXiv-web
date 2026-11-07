@@ -9,7 +9,7 @@ def _paper(**kw):
         "title": "A Study of Things",
         "authors": ["Jane Q. Smith", "Bo Li"],
         "published": "2024-05-01",
-        "doi": "10.1/x",
+        "doi": "10.1000/x",
         "category": "Cell",
         "journal_ref": None,
     }
@@ -21,7 +21,7 @@ def test_article_fields_and_author_join():
     assert out.startswith("@article{smith2024study,\n")
     assert "  author = {Jane Q. Smith and Bo Li}" in out
     assert "  journal = {Cell}" in out
-    assert "  url = {https://doi.org/10.1/x}" in out
+    assert "  url = {https://doi.org/10.1000/x}" in out
 
 
 def test_arxiv_is_misc_with_eprint():

@@ -10,6 +10,8 @@ import type {
   DuplicatesReport,
   FeedResponse,
   FillOptions,
+  RefreshOptions,
+  RefreshScope,
   FeedRule,
   Job,
   LogsResponse,
@@ -18,6 +20,7 @@ import type {
   MaintenanceOverview,
   MaintenanceSchedule,
   MaintenanceScheduleInput,
+  ClipTokenStatus,
   McpStatus,
   Me,
   MergeCandidates,
@@ -28,6 +31,7 @@ import type {
   Note,
   Paper,
   PdfLayout,
+  PdfCheckOptions,
   PdfCheckReport,
   PdfLayoutPreview,
   PaperVersions,
@@ -105,6 +109,14 @@ export const DIAGNOSTICS_URL = '/api/system/diagnostics'
 /** A database backup kept on the server by the "backup" maintenance operation (GET downloads it). */
 export const serverBackupUrl = (b: ServerBackup) =>
   `/api/maintenance/backups/${encodeURIComponent(b.library)}/${encodeURIComponent(b.name)}`
+
+/** Every unlinked file / missing-PDF paper of a library's last PDF check, tab separated (GET downloads it). */
+export const unlinkedTsvUrl = (library: string) =>
+  `/api/maintenance/pdf-check/${encodeURIComponent(library)}/unlinked.tsv`
+export const missingTsvUrl = (library: string) =>
+  `/api/maintenance/pdf-check/${encodeURIComponent(library)}/missing.tsv`
+/** Duplicate groups of the library in view, one row per paper, tab separated. */
+export const duplicatesTsvUrl = () => withLibrary('/api/duplicates/export.tsv')
 
 /** Tell the activity tray a background job just started (it polls slowly when idle). */
 function started<T>(p: Promise<T>): Promise<T> {
@@ -455,13 +467,21 @@ export const api = {
   removeMetadataReview: (sourceIds: string[]) =>
     request<{ ok: boolean }>('POST', '/api/metadata-review/remove', { source_ids: sourceIds }),
   maintenance: () => request<MaintenanceOverview>('GET', '/api/maintenance'),
-  /** Omitted keep_backups / trash_days keep their stored values. */
+  /** Omitted monthly / keep_backups / trash_days keep their stored values. */
   setMaintenanceSchedule: (body: MaintenanceScheduleInput) =>
     request<MaintenanceSchedule>('PUT', '/api/maintenance/schedule', body),
   fillOptions: () => request<FillOptions>('GET', '/api/maintenance/complete-metadata/options'),
   setFillOptions: (gaps: string[], sources: string[]) =>
     request<FillOptions>('PUT', '/api/maintenance/complete-metadata/options', { gaps, sources }),
+  refreshOptions: () => request<RefreshOptions>('GET', '/api/maintenance/metadata-refresh/options'),
+  setRefreshOptions: (scope: RefreshScope) =>
+    request<RefreshOptions>('PUT', '/api/maintenance/metadata-refresh/options', { scope }),
   pdfCheck: () => request<{ libraries: PdfCheckReport[] }>('GET', '/api/maintenance/pdf-check'),
+  pdfCheckOptions: () => request<PdfCheckOptions>('GET', '/api/maintenance/pdf-check/options'),
+  setPdfCheckOptions: (skip: string[]) =>
+    request<PdfCheckOptions>('PUT', '/api/maintenance/pdf-check/options', { skip }),
+  moveOrphans: (library: string) =>
+    started(request<Job>('POST', `/api/maintenance/pdf-check/${encodeURIComponent(library)}/move-orphans`)),
   maintenanceBackups: () =>
     request<{ backups: ServerBackup[] }>('GET', '/api/maintenance/backups'),
   deleteMaintenanceBackup: (b: ServerBackup) => request<{ ok: boolean }>('DELETE', serverBackupUrl(b)),
@@ -485,6 +505,10 @@ export const api = {
   mcpStatus: () => request<McpStatus>('GET', '/api/mcp'),
   mcpCreateToken: () => request<{ token: string; hint: string; created: string }>('POST', '/api/mcp/token'),
   mcpRevokeToken: () => request('DELETE', '/api/mcp/token'),
+  clipTokenStatus: () => request<ClipTokenStatus>('GET', '/api/clip/token'),
+  clipCreateToken: () => request<{ token: string; hint: string; created: string }>('POST', '/api/clip/token'),
+  clipRevokeToken: () => request('DELETE', '/api/clip/token'),
+  clipList: () => request<{ project_id: number | null }>('GET', '/api/clip/list'),
   summarize: (id: string, pdf: boolean) =>
     request<SummaryResult>('POST', `/api/ai/summary/${idPath(id)}${qs({ pdf: pdf || undefined })}`),
   suggestTags: (id: string) =>

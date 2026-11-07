@@ -11,17 +11,42 @@ export function formatBytes(n: number): string {
   return `${(n / 1024 / 1024).toFixed(1)} MB`
 }
 
-const DOI_PREFIX = /^(?:doi:\s*|https?:\/\/(?:dx\.|www\.)?doi\.org\/)/i
+const DOI_URL = /^(?:https?:\/\/)?(?:dx\.|www\.)?doi\.org\//i
+const DOI_PREFIX = /^doi:\s*/i
 const DOI_LEAD = /^[\s"';,.:<>([{]+/
+const DOI_START = /10\.\d{4,9}\/\S+/
 const DOI_TRAIL = /[\s"';,.:>]$/
 const DOI_CLOSE: Record<string, string> = { ')': '(', ']': '[', '}': '{' }
 const count = (s: string, c: string) => s.split(c).length - 1
+// Crossref's patterns (crossref.org/blog/dois-and-matching-regular-expressions): the
+// modern form, then older Wiley, SICI (literal parentheses), ACS and 10.1207 forms.
+const DOI_VALID = [
+  /^10\.\d{4,9}\/[-._;()/:A-Z0-9]+$/i,
+  /^10\.1002\/\S+$/i,
+  /^10\.\d{4}\/\d+-\d+X?\(\d+\)\d+<\w+:\w*>\d+\.\d+\.\w+;\d$/i,
+  /^10\.1021\/\w\w\d+$/i,
+  /^10\.1207\/\w+&\d+_\d+$/i,
+]
 
-/** A DOI without the whitespace, quotes and punctuation around it (PDF text often
- * leaves `;` or spaces) and without a `doi:` / doi.org prefix; '' when none. Only the
- * ends change: `;` and brackets inside a DOI stay. Same rule as server `app/doi.py`. */
+function decode(s: string): string {
+  try {
+    return decodeURIComponent(s)
+  } catch {
+    return s
+  }
+}
+
+/** The DOI in `value`, without the text, quotes and punctuation around it and
+ * without a `doi:` / doi.org prefix (percent-decoded); '' when none. Starts at the
+ * first `10.<registrant>/`, stops at whitespace; only the end is trimmed, so `;` and
+ * brackets inside a DOI stay. Same rule as server `app/doi.py`. */
 export function cleanDoi(value?: string | null): string {
-  let doi = (value ?? '').replace(DOI_LEAD, '').replace(DOI_PREFIX, '').replace(DOI_LEAD, '')
+  let doi = (value ?? '').replace(DOI_LEAD, '')
+  const url = DOI_URL.exec(doi)
+  if (url) doi = decode(doi.slice(url[0].length))
+  doi = doi.replace(DOI_PREFIX, '').replace(DOI_LEAD, '')
+  const start = DOI_START.exec(doi)
+  if (start) doi = start[0]
   for (;;) {
     const last = doi.slice(-1)
     if (!last) break
@@ -30,6 +55,15 @@ export function cleanDoi(value?: string | null): string {
     } else break
   }
   return doi
+}
+
+/** `doi` (already cleaned) has a shape Crossref's patterns accept. */
+export const isValidDoi = (doi: string) => DOI_VALID.some((p) => p.test(doi))
+
+/** The cleaned DOI when valid, else '' (shown, linked and exported as no DOI). */
+export function validDoi(value?: string | null): string {
+  const doi = cleanDoi(value)
+  return doi && isValidDoi(doi) ? doi : ''
 }
 
 // arXiv subject codes (cs.CL, hep-th, q-bio.GN): a subject, not a venue.

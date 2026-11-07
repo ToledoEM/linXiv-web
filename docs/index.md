@@ -17,9 +17,10 @@ Try it at <https://linxiv-web.onrender.com> with the password `trymelinxiv-web`.
 - Projects and reading lists: projects export to BibTeX, Obsidian, Zotero and `.lxproj`, and `.lxproj` files import back. Reading lists have their own page.
 - Discovery: search tabs for arXiv, OpenAlex, Crossref and the local library, with an advanced arXiv query builder. Add papers by arXiv id, DOI or PDF link. The home page shows RSS/Atom feeds with filter rules, and a monitor reports new arXiv versions.
 - Authors and graph: author pages, edit and merge, ORCID backfill, and a knowledge graph of papers, authors and tags.
-- Maintenance: trash, backup, import and restore of the database, settings export and import, PDF folder layouts (by year, journal or both) and a background full-text indexer. Admins also get [maintenance operations](server-admin.md#maintenance-operations), on demand or nightly: duplicate papers, metadata of new papers, PDF file check, server-side database backups, authors without papers, old trash.
+- Maintenance: trash, backup, import and restore of the database, settings export and import, PDF folder layouts (by year, journal or both) and a background full-text indexer. Admins also get [maintenance operations](server-admin.md#maintenance-operations), on demand or nightly: duplicate papers, metadata of new papers, PDF file check, server-side database backups, authors and tags without papers, old trash.
 - AI (opt-in): tag suggestions, paper summaries saved as notes, metadata cleanup. See [AI features](ai.md).
 - MCP (opt-in): linXiv's own MCP tools over HTTP at `/mcp`, for any AI tool that speaks MCP. See [MCP server](mcp.md).
+- Browser add-on: a Firefox add-on saves the page or PDF you're reading to your library. See [Browser add-on](browser-add-on.md).
 - Several users (opt-in): named accounts with their own libraries and settings, admin and user roles, and a shared library that admins fill and everyone can copy papers from. See [Server Admin](server-admin.md).
 - Light and dark themes, zoom and density, keyboard shortcuts and sidebar page toggles.
 
@@ -57,5 +58,6 @@ Like `linxiv-headless`, the server refuses to start on a non-loopback address wi
 - To learn the pages: start with the [Library](guide/library.md).
 - To change server settings: [Admin Server Configuration](reference/configuration.md).
 - To add accounts and a shared library: [Server Admin](server-admin.md).
+- To save papers from Firefox: [Browser add-on](browser-add-on.md).
 
 linXiv-web is open source under the Apache License 2.0.

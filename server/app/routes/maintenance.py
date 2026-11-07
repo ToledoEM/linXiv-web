@@ -12,13 +12,28 @@ from ..jobs import JobBusy
 from ..maintenance import (
     MAX_KEEP_BACKUPS,
     MAX_TRASH_DAYS,
+    ROOT,
     Maintenance,
     library_keys,
     read_report,
     report_path,
 )
-from ..metadata_fill import FILLS, OPTIONS_SETTING, options_from
+from ..metadata_fill import GAPS, OPTIONS_SETTING, options_from
+from ..metadata_refresh import OPTIONS_SETTING as REFRESH_OPTIONS
+from ..metadata_refresh import SCOPES
+from ..metadata_refresh import options_from as refresh_options_from
+from ..pdf_check import (
+    MAX_LISTED,
+    MAX_SKIP,
+    ORPHAN_KIND,
+    ORPHANS,
+    move_orphans,
+    skip_from,
+    valid_folder,
+)
+from ..pdf_check import OPTIONS_SETTING as PDF_CHECK_OPTIONS
 from ..pdf_check import REPORT as PDF_CHECK
+from ..tsv import tsv_response
 from .metadata import ID_SOURCES
 
 router = APIRouter(prefix="/api/maintenance", tags=["maintenance"])
@@ -29,6 +44,7 @@ class ScheduleIn(BaseModel):
 
     hour: int = Field(ge=0, le=23)
     nightly: list[str] = Field(max_length=50)
+    monthly: list[str] | None = Field(None, max_length=50)
     keep_backups: int | None = Field(None, ge=1, le=MAX_KEEP_BACKUPS)
     trash_days: int | None = Field(None, ge=0, le=MAX_TRASH_DAYS)
 
@@ -57,10 +73,12 @@ async def overview(request: Request):
 @router.put("/schedule")
 async def set_schedule(request: Request, body: ScheduleIn):
     m = _maint(request)
-    unknown = [i for i in body.nightly if i not in m.ops]
+    unknown = [i for i in (*body.nightly, *(body.monthly or [])) if i not in m.ops]
     if unknown:
         raise HTTPException(status_code=400, detail=f"unknown operation: {', '.join(unknown)}")
-    return await m.set_schedule(body.hour, body.nightly, body.keep_backups, body.trash_days)
+    return await m.set_schedule(
+        body.hour, body.nightly, body.keep_backups, body.trash_days, body.monthly
+    )
 
 
 @router.post("/{op_id}/run")
@@ -116,14 +134,89 @@ async def pdf_check_report(request: Request):
         lib = request.app.state.libraries.get(key)
         report = read_report(report_path(lib, PDF_CHECK))
         if report:
+            for name in ("missing", "unlinked"):
+                report[name] = (report.get(name) or [])[:MAX_LISTED]
             out.append({"library": key, **report})
     return {"libraries": out}
+
+
+class PdfCheckOptionsIn(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    skip: list[str] = Field(max_length=MAX_SKIP)
+
+
+@router.get("/pdf-check/options")
+async def pdf_check_options(request: Request):
+    """Top-level folders of the PDF folder the check skips; orphans/ always is."""
+    return {"skip": skip_from(await _maint(request).stored()), "always": [ORPHANS]}
+
+
+@router.put("/pdf-check/options")
+async def set_pdf_check_options(request: Request, body: PdfCheckOptionsIn):
+    bad = [s for s in body.skip if not valid_folder(s)]
+    if bad:
+        raise HTTPException(
+            status_code=400, detail=f"not a folder name inside the PDF folder: {', '.join(bad)}"
+        )
+    skip = [s for s in dict.fromkeys(body.skip) if s != ORPHANS]
+    await _maint(request).save_setting(PDF_CHECK_OPTIONS, {"skip": skip})
+    return await pdf_check_options(request)
+
+
+def _check_library(request: Request, key: str):
+    if key not in library_keys(request.app):
+        raise HTTPException(status_code=404, detail="library not found")
+    return request.app.state.libraries.get(key)
+
+
+@router.get("/pdf-check/{key}/unlinked.tsv")
+async def pdf_check_unlinked_tsv(request: Request, key: str):
+    """Every unlinked file of the library's last check (the API lists 500)."""
+    report = read_report(report_path(_check_library(request, key), PDF_CHECK))
+    rows = [
+        (r.get("file", ""), r.get("size", ""), r.get("modified", ""))
+        for r in report.get("unlinked") or []
+    ]
+    return tsv_response(["file", "size", "modified"], rows, f"unlinked-pdfs-{key}.tsv")
+
+
+@router.get("/pdf-check/{key}/missing.tsv")
+async def pdf_check_missing_tsv(request: Request, key: str):
+    """Every paper of the library's last check whose PDF file is missing."""
+    report = read_report(report_path(_check_library(request, key), PDF_CHECK))
+    rows = [
+        (r.get("source_id", ""), r.get("version", ""), r.get("title", ""))
+        for r in report.get("missing") or []
+    ]
+    return tsv_response(["source_id", "version", "title"], rows, f"missing-pdfs-{key}.tsv")
+
+
+@router.post("/pdf-check/{key}/move-orphans")
+async def pdf_check_move_orphans(request: Request, key: str):
+    """Move the library's unlinked PDFs to orphans/ as job `pdf-orphans`. Refused
+    while any other job runs in that library or any maintenance job runs."""
+    lib = _check_library(request, key)
+    jobs = request.app.state.jobs
+    if busy := jobs.running(None, lib.key) or jobs.running(None, ROOT):
+        raise HTTPException(status_code=409, detail=f"a {busy.kind} job is running")
+    app = request.app
+    try:
+        job = jobs.start(
+            ORPHAN_KIND,
+            lambda job: move_orphans(app, lib, job),
+            lib.key,
+            current_user(request).get("id"),
+        )
+    except JobBusy as e:
+        raise HTTPException(status_code=409, detail=str(e)) from e
+    return job.public()
 
 
 class FillOptionsIn(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
 
-    gaps: list[str] = Field(min_length=1, max_length=len(FILLS))
+    gaps: list[str] = Field(min_length=1, max_length=len(GAPS))
     sources: list[str] = Field(min_length=1, max_length=len(ID_SOURCES))
 
 
@@ -132,15 +225,36 @@ async def fill_options(request: Request):
     """Which gaps make a new paper incomplete, and which sources it is looked up
     in, in order. `all_gaps` / `all_sources` list every choice."""
     opts = options_from(await _maint(request).stored())
-    return {**opts, "all_gaps": list(FILLS), "all_sources": list(ID_SOURCES)}
+    return {**opts, "all_gaps": list(GAPS), "all_sources": list(ID_SOURCES)}
 
 
 @router.put("/complete-metadata/options")
 async def set_fill_options(request: Request, body: FillOptionsIn):
-    bad = [g for g in body.gaps if g not in FILLS]
+    bad = [g for g in body.gaps if g not in GAPS]
     bad += [s for s in body.sources if s not in ID_SOURCES]
     if bad or len(set(body.gaps)) != len(body.gaps) or len(set(body.sources)) != len(body.sources):
         raise HTTPException(status_code=400, detail=f"unknown or repeated choice: {', '.join(bad)}")
-    value = {"gaps": [g for g in FILLS if g in body.gaps], "sources": body.sources}
+    value = {"gaps": [g for g in GAPS if g in body.gaps], "sources": body.sources}
     await _maint(request).save_setting(OPTIONS_SETTING, value)
     return await fill_options(request)
+
+
+class RefreshOptionsIn(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    scope: str = Field(min_length=1, max_length=40)
+
+
+@router.get("/metadata-refresh/options")
+async def refresh_options(request: Request):
+    """Which papers "Refresh metadata" asks again: `all`, or `recent_or_preprint`
+    (published within a year, or arXiv / bioRxiv / medRxiv)."""
+    return {**refresh_options_from(await _maint(request).stored()), "all_scopes": list(SCOPES)}
+
+
+@router.put("/metadata-refresh/options")
+async def set_refresh_options(request: Request, body: RefreshOptionsIn):
+    if body.scope not in SCOPES:
+        raise HTTPException(status_code=400, detail=f"unknown scope: {body.scope}")
+    await _maint(request).save_setting(REFRESH_OPTIONS, {"scope": body.scope})
+    return await refresh_options(request)

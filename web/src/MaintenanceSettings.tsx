@@ -4,7 +4,9 @@ import { api } from './api'
 import { ErrorText } from './components'
 import ConfirmDialog from './ConfirmDialog'
 import FillOptions from './FillOptions'
+import PdfCheckOptions from './PdfCheckOptions'
 import PdfCheckReport from './PdfCheckReport'
+import RefreshOptions from './RefreshOptions'
 import ServerBackups from './ServerBackups'
 import { runSummary } from './maintenance'
 import type { MaintenanceOp, MaintenanceOverview, MaintenanceSchedule } from './types'
@@ -17,11 +19,12 @@ const REPORT_PAGES: Record<string, { to: string; label: string } | undefined> = 
   duplicates: { to: '/duplicates', label: 'Show duplicates' },
   'complete-metadata': { to: '/library?review=metadata', label: 'Review papers left incomplete' },
 }
+const listToggled = (list: string[], id: string) => (list.includes(id) ? list.filter((i) => i !== id) : [...list, id])
 
 const when = (iso: string) => iso.replace('T', ' ').slice(0, 16)
 
 /** Settings → Server Admin: operations that run over every library on the server,
- *  on demand (Run) or each night at the chosen hour. */
+ *  on demand (Run), each night at the chosen hour, or monthly at that hour. */
 export default function MaintenanceSettings() {
   const [data, setData] = useState<MaintenanceOverview | null>(null)
   const [error, setError] = useState('')
@@ -84,7 +87,8 @@ export default function MaintenanceSettings() {
     <div className="card settings-section">
       <h3>Maintenance operations</h3>
       <p className="muted small">
-        Each operation runs over every library on the server. Tick &quot;Nightly&quot; to run it once a night.
+        Each operation runs over every library on the server. Tick &quot;Nightly&quot; to run it once a night, or
+        &quot;Monthly&quot; to run it at that hour once 30 days have passed since its last run.
       </p>
       <div className="actions">
         <label className="check">
@@ -112,6 +116,8 @@ export default function MaintenanceSettings() {
             <tbody>
               {data.ops.map((op) => {
                 const nightly = data.nightly.includes(op.id)
+                const monthlyList = data.monthly ?? []
+                const monthly = monthlyList.includes(op.id)
                 const report = REPORT_PAGES[op.id]
                 return (
                   <tr key={op.id}>
@@ -140,8 +146,10 @@ export default function MaintenanceSettings() {
                           {report.label}
                         </Link>
                       )}
+                      {op.id === 'pdf-check' && <PdfCheckOptions />}
                       {op.id === 'pdf-check' && op.last && <PdfCheckReport />}
                       {op.id === 'complete-metadata' && <FillOptions />}
+                      {op.id === 'metadata-refresh' && <RefreshOptions />}
                     </td>
                     <td className="nowrap">
                       <label className="check">
@@ -150,13 +158,20 @@ export default function MaintenanceSettings() {
                           aria-label={`Run ${op.label} nightly`}
                           checked={nightly}
                           disabled={saving}
-                          onChange={() =>
-                            void saveSchedule({
-                              nightly: nightly ? data.nightly.filter((i) => i !== op.id) : [...data.nightly, op.id],
-                            })
-                          }
+                          onChange={() => void saveSchedule({ nightly: listToggled(data.nightly, op.id) })}
                         />
                         Nightly
+                      </label>
+                      <label className="check">
+                        <input
+                          type="checkbox"
+                          aria-label={`Run ${op.label} monthly`}
+                          checked={monthly}
+                          disabled={saving || nightly}
+                          title={nightly ? 'Already runs nightly' : undefined}
+                          onChange={() => void saveSchedule({ monthly: listToggled(monthlyList, op.id) })}
+                        />
+                        Monthly
                       </label>
                     </td>
                     <td className="nowrap">

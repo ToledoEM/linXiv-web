@@ -17,6 +17,7 @@ account on each request, so a demotion, deletion or reset applies at once.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import secrets
@@ -294,6 +295,36 @@ class Auth:
         sid = self._sid(token)
         if sid:
             self._state.drop_session(sid)
+
+    # --- clip tokens (browser add-on) ---
+
+    def clip_token_status(self, library: str) -> dict[str, str] | None:
+        return self._state.clip_token(library)
+
+    def create_clip_token(self, library: str) -> dict[str, str]:
+        """New token for this library, returned this once; replaces any previous one.
+        Only its SHA-256 is stored."""
+        token = "lxclip_" + secrets.token_urlsafe(32)
+        created = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+        digest = hashlib.sha256(token.encode()).hexdigest()
+        self._state.set_clip_token(library, digest, token[-4:], created)
+        return {"token": token, "hint": token[-4:], "created": created}
+
+    def revoke_clip_token(self, library: str) -> None:
+        self._state.drop_clip_token(library)
+
+    def clip_identity(self, token: str) -> dict | None:
+        """The account behind a clip token, None when the token is not valid. Read
+        from the account row each time, as for sessions."""
+        digest = hashlib.sha256(token.encode()).hexdigest()
+        lib = self._state.clip_token_library(digest)
+        if lib is None:
+            return None
+        if lib == OWNER_LIBRARY:
+            return self._owner_identity()
+        user = self._state.user_by_library(lib)
+        # Named accounts only exist while multi-user mode is on.
+        return public_user(user) if user and self.multi_user() else None
 
     # --- request guard ---
 

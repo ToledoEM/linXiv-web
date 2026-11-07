@@ -10,7 +10,7 @@ const PAPER = {
   source_id: 'arxiv:2204.12985',
   title: 'Deep: Learning "Fast"',
   authors: ['Ada Lovelace', 'Alan Turing'],
-  doi: '10.1/xyz',
+  doi: '10.1000/xyz',
   published: '2022-04-27',
   url: 'https://arxiv.org/pdf/2204.12985v1',
   tags: ['machine learning', 'nlp'],

@@ -24,7 +24,7 @@ Papers imported from PDFs sometimes get a junk title read from the file. linXiv-
 
 Tick papers and open **batch edit** to:
 
-- look up and apply metadata from Crossref, arXiv, OpenAlex, PubMed or bioRxiv/medRxiv, with a field diff before anything is saved;
+- look up and apply metadata from Crossref, arXiv, OpenAlex, PubMed or bioRxiv/medRxiv, with a field diff before anything is saved. The diff includes the BibTeX fields the source holds, marked *(BibTeX)*. Rows whose stored value is empty come ticked; a row that would replace a stored value stays unticked until you tick it. A Crossref or OpenAlex match found by title has no BibTeX fields to show; on save linXiv-web reads them and fills the empty ones;
 - add or remove tags, or ask the AI for tags if AI features are on;
 - export the selection as a `.bib` file.
 

@@ -22,6 +22,8 @@ A project page lists its papers in the same sortable table as the Library. **Add
 
 A reading list is a project tagged `reading-list`. Reading lists have their own page and stay off the Projects page. Open one to add papers.
 
+Papers saved with the [browser add-on](../browser-add-on.md) land on the reading list **Imported - to check** ([token in Settings](settings.md#browser-add-on)). **Check metadata** on that list opens batch edit with every paper selected and Crossref as the source. Approve the changes you want, then **Done** takes the paper off the list; it stays in your library. **Approve all** skips matches found by title, because the first result may be a different paper: check those and approve them one at a time. A clip leaves a paper already in your library as it is, and adds the PDF if it has none.
+
 ![Reading lists page](../assets/screenshots/reading-lists.png)
 
 linXiv keeps a per-paper reading status (unread, reading, read) only in its `linxiv-headless` HTTP API, not in the CLI, so linXiv-web can't show it yet. See [Functions not in the CLI](../functions-not-in-api.md).
