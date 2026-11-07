@@ -34,7 +34,7 @@ Then load the build in Firefox:
 ## Connect it to linXiv-web
 
 !!! warning "Needs a newer server"
-    The add-on needs a linXiv-web newer than v0.1.3. An older server answers 404, and the add-on says it needs a newer version.
+    The add-on needs linXiv-web v0.1.4 or newer. An older server answers 404, and the add-on says it needs a newer version.
 
 1. In linXiv-web, open Settings, then Integrations, and create a token on the [Browser add-on](guide/settings.md#browser-add-on) card. Each account has its own token, and it's shown only once. Creating a new one replaces the old one.
 2. In the add-on, open the popup and click **Settings**.

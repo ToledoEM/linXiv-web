@@ -4,34 +4,26 @@ All notable changes to linXiv-web are documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The version is `server/pyproject.toml` `version`; images are published to `ghcr.io/toledoem/linxiv-web:<version>`.
 
-## [Unreleased]
+## [0.1.4] - 2026-11-07
 
 ### Added
-- **Browser add-on imports**: Settings → Integrations → **Browser add-on** creates a token per account, for the linXiv Firefox add-on. A clip saves to the token owner's library and adds the paper to the reading list **Imported - to check**, which is created on first use. Renaming the list keeps it; a deleted or archived list is replaced on the next clip. A clip leaves a stored record as it is: a paper with a PDF only joins the list, and a paper without one gets the PDF and keeps its metadata. A PDF clip of a new paper reads the file twice, so it takes about twice as long as a web UI import. A clip of a paper in the trash restores it. A PDF clip answers with the paper's title, and the add-on routes answer failures with plain messages. The nginx example in the self-hosting guide now has a 480 s read timeout, enough for two large PDF clips queued.
-- "Complete metadata of new papers" has a new gap, **No BibTeX details**: a new paper with no BibTeX field stored is looked up by its DOI or arXiv id and gets the record's BibTeX fields, without touching its other values. It is ticked by default; a library whose gaps were changed before keeps its own choice, so tick it there.
-- Batch edit metadata lists the BibTeX fields of each match as *(BibTeX)* rows. Fields stored empty come ticked; you tick by hand any that would replace a stored value. A match that differs only in BibTeX fields can now be approved. API: `bib_fill_only` in the `PUT /api/papers/{id}/metadata` body.
-- **Check metadata** on that reading list opens batch edit with every paper selected and Crossref as the source. **Done** takes a paper off the list and leaves it in the library. **Approve all** skips matches found by title, which need their own **Approve**.
-- API: `GET/POST/DELETE /api/clip/token`, `GET /api/clip/list`; with the bearer token, `GET /api/clip/ping`, `POST /api/clip/pdf`, `POST /api/clip/bibtex`.
-- Docs: new Browser add-on page on installing the Firefox add-on, connecting it to linXiv-web and saving papers.
-- Maintenance operation **Clean tags without papers** (admins): deletes tags that no paper (papers in the trash included) and no project uses. Project tags such as `reading-list` stay, and a tag named Untagged is always kept. It asks before running.
-- **Check PDF files** report now breaks the PDF folder down: files of any type, PDFs, files in each top-level subfolder, next to the number of papers, papers with a PDF, extra version files and PDFs of papers in the trash, so the file count on disk and the paper count can be compared. **Skip folders** lists subfolders (for example `dup, errors`) that are counted but never reported as unlinked. **Download full list (TSV)** under the missing and unlinked lists has every row, tab separated (the page lists 500). **Move to orphans/** checks again and moves each unlinked PDF to `orphans/` under the same path; files changed in the last hour stay, and nothing is deleted.
-- Duplicates page: **Download list (TSV)**, every group with one row per paper (`GET /api/duplicates/export.tsv`).
-- Background jobs tray: a finished job shows its result for 5 seconds, then folds into a red dot with the number of finished jobs. The dot opens the list with **Dismiss** per job and **Dismiss all**; Esc closes it. Running jobs keep their card.
-- Settings: the selected group lists its cards (Server & data: Storage, Login, Backup, Logs, …) under its name in the left menu; a click jumps to the card and the card in view is highlighted. Links can point at a card, e.g. `/settings#server/backup`.
-- API: `GET/PUT /api/maintenance/pdf-check/options`, `GET /api/maintenance/pdf-check/{library}/unlinked.tsv`, `GET /api/maintenance/pdf-check/{library}/missing.tsv`, `POST /api/maintenance/pdf-check/{library}/move-orphans`.
-- **BibTeX fields** per paper beyond linXiv's own: entry type, book or proceedings title, editor, edition, series, volume, number, chapter, pages, month, publisher, address, school, institution, organization, how published, note, ISSN, ISBN and the arXiv e-print keys. Every lookup source fills the ones it has (Crossref and OpenAlex records are read from their APIs for this, PubMed, bioRxiv/medRxiv and arXiv from what they already return), and they show as *(BibTeX)* rows in the metadata diff. Adding a paper by DOI or arXiv id, a `.bib` import (matched by DOI, arXiv id or title) and "Complete metadata of new papers" store them too. They live in a per-library `linxiv-web-bib.db` next to `papers.db`, are copied with each server database backup, and follow merges and deletes for good. Existing papers start with none.
-- **Metadata source** per paper: where its saved metadata came from (Crossref, PubMed, bioRxiv, arXiv, OpenAlex, BibTeX import, PDF file name or AI cleanup) and that source's id for it, shown with the BibTeX fields under **BibTeX details** on the paper page. Existing papers start as not recorded.
-- Maintenance operation **Refresh metadata** (admins): asks each paper's recorded source again by its own id and replaces the stored values with what comes back, BibTeX fields included. Its row picks papers published in the last year and preprints (default) or every paper with a recorded source.
-- Maintenance operations: a **Monthly** box next to Nightly runs an operation at the nightly hour once 30 days have passed since its last run.
-- BibTeX export of a Library selection writes the stored BibTeX fields; an `inproceedings` or `incollection` entry type writes the journal as `booktitle`.
-- Server script `scripts/sanitize-pdf-names.py`: renames the PDFs under a folder to plain ASCII names before an import, dry run by default, with an undo manifest; it refuses a folder inside a linXiv library unless `--force` is given.
-- Documentation: **Server scripts** page listing every script and the order to run them in, plus pages for sanitizing PDF file names and exporting tags (moved from `scripts/export-tags.md`).
-- API: `bib` and `metadata_source` on `GET /api/papers/{id}`, on lookup candidates (`bib`) and in the `PUT /api/papers/{id}/metadata` body; `monthly` in `PUT /api/maintenance/schedule`; `GET/PUT /api/maintenance/metadata-refresh/options`.
+- Browser add-on: per-account token in Settings → Integrations for the linXiv Firefox add-on. Clips save to the owner's library and join the reading list **Imported - to check**; existing papers keep their metadata. **Check metadata** on that list opens batch edit. New docs page.
+- BibTeX fields per paper (entry type, volume, pages, publisher, ISSN and more), filled by every lookup source, by add by DOI/arXiv id and by `.bib` import, and written by Library BibTeX export. Stored in a per-library `linxiv-web-bib.db`, included in server backups.
+- Metadata source per paper, shown on the paper page under **BibTeX details**.
+- Maintenance operations: **Refresh metadata** (asks each paper's recorded source again), **Clean tags without papers**, and a **Monthly** schedule option.
+- Complete metadata of new papers: new gap **No BibTeX details**, fills empty BibTeX fields only.
+- Batch edit metadata: *(BibTeX)* rows; fields stored empty come ticked, stored values are only replaced when ticked.
+- Check PDF files: folder breakdown, **Skip folders**, full TSV lists, **Move to orphans/**.
+- Duplicates page: **Download list (TSV)**.
+- Background jobs tray folds finished jobs into a dot with **Dismiss**; Settings menu lists each group's cards, with links like `/settings#server/backup`.
+- `scripts/sanitize-pdf-names.py` and a **Server scripts** docs page.
+- API: `/api/clip/*`; `bib`, `metadata_source` and `bib_fill_only` on paper metadata; PDF check options, TSV and move-orphans routes; `GET /api/duplicates/export.tsv`; `GET/PUT /api/maintenance/metadata-refresh/options`; `monthly` in the schedule.
 
 ### Changed
-- A BibTeX file linXiv can't parse now answers 400 instead of 502, in the web UI import and the add-on route.
-- Home: the tags panel is now **Most frequent tags**, the 8 most used tags in the whole library (was tags of the 10 recent papers).
-- DOI parsing: a DOI is pulled out of the text around it (`DOI: 10.1038/nature14539.`, `doi.org/…` links with or without `https://`, percent-encoded links, trailing words) and checked against Crossref's patterns (the modern form plus the older Wiley, SICI, ACS and 10.1207 forms). Add Paper and the metadata editor refuse a DOI that fails the check; a stored DOI that fails it is shown, linked, exported and looked up as no DOI.
+- Home tags panel shows the 8 most used tags in the library.
+- DOI parsing extracts the DOI from surrounding text and checks it against Crossref's patterns; invalid DOIs are refused on input and treated as missing when stored.
+- An unparseable BibTeX file answers 400 instead of 502.
+- nginx example in the self-hosting guide: `proxy_read_timeout` 480 s.
 
 ## [0.1.3] - 2026-10-26
 
