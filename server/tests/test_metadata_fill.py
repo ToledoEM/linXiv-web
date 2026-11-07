@@ -8,7 +8,7 @@ import time
 import pytest
 from fastapi.testclient import TestClient
 
-from app import metadata_fill
+from app import bib_store, metadata_fill
 from app.main import create_app
 from app.metadata_fill import completed, gaps
 
@@ -99,10 +99,12 @@ def _run(c: TestClient) -> dict:
 
 
 def test_gaps():
-    assert gaps(PAPERS[0], []) == ["authors", "abstract", "journal"]
-    assert gaps(PAPERS[1], []) == ["title", "authors", "abstract", "journal", "doi"]
+    assert gaps(PAPERS[0], []) == ["authors", "abstract", "journal", "bibtex"]
+    assert gaps(PAPERS[1], []) == ["title", "authors", "abstract", "journal", "doi", "bibtex"]
     arxiv = {**fixture("list.json")[0]}
-    assert gaps(arxiv, []) == []  # arXiv: no journal or DOI expected
+    assert gaps(arxiv, []) == ["bibtex"]  # arXiv: no journal or DOI expected
+    assert gaps(arxiv, [], bib={"volume": "3"}) == []  # any stored BibTeX field counts
+    assert gaps(PAPERS[0], [], ["bibtex", "doi"], {}) == ["bibtex"]
 
 
 def test_completed_fills_only_empty_fields():
@@ -143,7 +145,7 @@ def test_run_completes_by_doi_and_lists_the_rest(settings, fake, fast):
             {
                 "source_id": "local:x",
                 "title": "scan0001",
-                "missing": ["title", "authors", "abstract", "journal", "doi"],
+                "missing": ["title", "authors", "abstract", "journal", "doi", "bibtex"],
             }
         ]
         # second run: nothing added since, no list call at all
@@ -161,7 +163,8 @@ def test_options_default_and_validation(settings, fake):
     _setup(settings, fake)
     with TestClient(create_app(settings, fake)) as c:
         got = c.get("/api/maintenance/complete-metadata/options").json()
-        assert got["gaps"] == ["title", "authors", "date", "abstract", "journal", "doi"]
+        all_gaps = ["title", "authors", "date", "abstract", "journal", "doi", "bibtex"]
+        assert got["gaps"] == got["all_gaps"] == all_gaps
         assert got["sources"] == ["arxiv", "biorxiv", "crossref", "pubmed"]
         assert got["all_sources"] == ["arxiv", "biorxiv", "crossref", "pubmed"]
         url = "/api/maintenance/complete-metadata/options"
@@ -169,10 +172,13 @@ def test_options_default_and_validation(settings, fake):
         assert c.put(url, json={"gaps": ["doi"], "sources": ["openalex"]}).status_code == 400
         assert c.put(url, json={"gaps": ["doi", "doi"], "sources": ["crossref"]}).status_code == 400
         assert c.put(url, json={"gaps": [], "sources": ["crossref"]}).status_code == 422
-        r = c.put(url, json={"gaps": ["doi", "title"], "sources": ["pubmed", "crossref"]})
+        r = c.put(url, json={"gaps": ["bibtex", "doi", "title"], "sources": ["pubmed", "crossref"]})
         assert r.status_code == 200, r.text
         # gaps come back in their fixed order, sources in the chosen one
-        assert (r.json()["gaps"], r.json()["sources"]) == (["title", "doi"], ["pubmed", "crossref"])
+        assert (r.json()["gaps"], r.json()["sources"]) == (
+            ["title", "doi", "bibtex"],
+            ["pubmed", "crossref"],
+        )
 
 
 def test_ticked_gaps_and_sources_drive_the_run(settings, fake, fast):
@@ -216,3 +222,58 @@ def test_match_by_id_follows_the_source_order(monkeypatch):
     asked.clear()
     assert asyncio.run(metadata.match_by_id(None, paper, ["arxiv"])) is None
     assert asked == []
+
+
+COMPLETE = {
+    **PAPERS[0],
+    "authors": ["Yann LeCun"],
+    "summary": "An abstract",
+    "category": "Nature",
+}
+FOUND_BIB = {"volume": "521", "pages": "436--444", "entry_type": "article"}
+
+
+def _bib_only(settings, fake, monkeypatch, found_bib):
+    """NEW has every core field: only its BibTeX details are missing."""
+    _setup(settings, fake)
+    fake.on("list", result=[COMPLETE])
+
+    async def match(call, paper, sources, ncbi_key="", stored=None):
+        return {**COMPLETE, "source": "crossref", "ref": NEW, "bib": found_bib}
+
+    monkeypatch.setattr(metadata_fill, "match_by_id", match)
+
+
+def test_bibtex_gap_alone_stores_bib_without_repair(settings, fake, fast, monkeypatch):
+    _bib_only(settings, fake, monkeypatch, FOUND_BIB)
+    with TestClient(create_app(settings, fake)) as c:
+        lib = c.app.state.libraries.get("root")
+        job = _run(c)
+        assert job["result"] == {"new_papers": 2, "completed": 1, "to_review": 0}, job
+        assert not any(a[:2] == ["paper", "repair"] for a in fake.calls)
+        got = asyncio.run(bib_store.get(lib, NEW))
+        assert got["bib"] == FOUND_BIB
+        assert got["metadata_source"] == {"source": "crossref", "ref": NEW}
+        assert c.get("/api/metadata-review").json()["papers"] == []
+
+
+def test_bibtex_gap_keeps_stored_fields(settings, fake, fast, monkeypatch):
+    """A stored field means no gap: the paper is not looked up at all."""
+    _bib_only(settings, fake, monkeypatch, FOUND_BIB)
+    with TestClient(create_app(settings, fake)) as c:
+        lib = c.app.state.libraries.get("root")
+        asyncio.run(bib_store.upsert(lib, NEW, {"volume": "9"}))
+        assert _run(c)["result"] == {"new_papers": 2, "completed": 0, "to_review": 0}
+        assert asyncio.run(bib_store.get(lib, NEW))["bib"] == {"volume": "9"}
+
+
+def test_bibtex_gap_without_found_fields_is_listed(settings, fake, fast, monkeypatch):
+    _bib_only(settings, fake, monkeypatch, None)
+    with TestClient(create_app(settings, fake)) as c:
+        assert _run(c)["result"] == {"new_papers": 2, "completed": 0, "to_review": 1}
+        [entry] = c.get("/api/metadata-review").json()["papers"]
+        assert (entry["source_id"], entry["missing"]) == (NEW, ["bibtex"])
+        # filled since the run (here by hand): it drops out of the list
+        lib = c.app.state.libraries.get("root")
+        asyncio.run(bib_store.upsert(lib, NEW, {"pages": "1--2"}))
+        assert c.get("/api/metadata-review").json()["papers"] == []

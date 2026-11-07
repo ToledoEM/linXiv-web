@@ -6,6 +6,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Request
 from pydantic import BaseModel, ConfigDict, Field
 
+from .. import bib_store
 from ..maintenance import read_report, report_lock, report_path, write_report
 from ..metadata_fill import REPORT, gaps, options_from
 from .common import ident, library
@@ -31,10 +32,14 @@ async def review(request: Request):
     bases = [str(lib.data_dir / "pdfs"), str(lib.pdf_dir)]
     wanted = options_from(await request.app.state.maintenance.stored())["gaps"]
     current = {p.get("source_id"): p for p in await _full_list(request, ["list"])}
+    sids = [str(e["source_id"]) for e in listed if e.get("source_id")]
+    stored_bib = await bib_store.get_many(lib, sids) if "bibtex" in wanted else {}
     papers = []
     for entry in listed:
-        paper = current.get(entry.get("source_id"))
-        if paper is not None and (missing := gaps(paper, bases, wanted)):
+        sid = entry.get("source_id")
+        paper = current.get(sid)
+        bib = (stored_bib.get(str(sid)) or {}).get("bib") or {}
+        if paper is not None and (missing := gaps(paper, bases, wanted, bib)):
             papers.append({**entry, "title": paper.get("title") or "", "missing": missing})
     return {"papers": papers}
 

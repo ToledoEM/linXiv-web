@@ -10,6 +10,7 @@ const GAP_LABEL: Record<string, string> = {
   abstract: 'No abstract',
   journal: 'No journal',
   doi: 'No DOI',
+  bibtex: 'No BibTeX details',
 }
 const SOURCE_LABEL: Record<string, string> = {
   arxiv: 'arXiv (arXiv papers, by arXiv id)',

@@ -53,6 +53,7 @@ describe('BatchMetadata', () => {
       metadata_source: { source: 'crossref', ref: 'a:1' },
     })
     expect(save.mock.calls[0][1].bib).toBeUndefined() // none read yet: the server fetches them
+    expect(save.mock.calls[0][1].bib_fill_only).toBe(true) // ...and fills empty fields only
     expect(onSaved).toHaveBeenCalledTimes(1)
   })
 
@@ -123,6 +124,40 @@ describe('BatchMetadata', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Approve' }))
     await waitFor(() => expect(save).toHaveBeenCalledTimes(2))
     expect(save.mock.calls[1][0]).toBe('a:2')
+  })
+
+  it('lists BibTeX rows, pre-ticks only empty stored fields, saves the ticked ones', async () => {
+    vi.spyOn(api, 'settings').mockRejectedValue(new Error('offline'))
+    vi.spyOn(api, 'paper').mockResolvedValue({ ...paper('a:1'), bib: { volume: '9' } } as Paper)
+    vi.spyOn(api, 'lookupMetadata').mockResolvedValue({
+      match: 'doi',
+      candidates: [{ ...found('a:1'), title: 'Old a:1', bib: { volume: '521', pages: '436--444' } }],
+    })
+    const save = vi.spyOn(api, 'saveMetadata').mockResolvedValue({} as Paper)
+    render(<BatchMetadata selected={['a:1']} titles={{}} onSaved={() => {}} onSkip={() => {}} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Look up 1 selected' }))
+    const pages = await screen.findByRole('checkbox', { name: 'Use found Pages (BibTeX) for a:1' })
+    const volume = screen.getByRole('checkbox', { name: 'Use found Volume (BibTeX) for a:1' })
+    expect((pages as HTMLInputElement).checked).toBe(true)
+    expect((volume as HTMLInputElement).checked).toBe(false) // stored value kept unless ticked
+    // only BibTeX differs: still approvable
+    fireEvent.click(screen.getByRole('button', { name: 'Approve' }))
+    await waitFor(() => expect(save).toHaveBeenCalledTimes(1))
+    expect(save.mock.calls[0][1].bib).toEqual({ pages: '436--444' })
+    expect(save.mock.calls[0][1].bib_fill_only).toBeUndefined()
+  })
+
+  it('agrees when the BibTeX fields match too', async () => {
+    vi.spyOn(api, 'settings').mockRejectedValue(new Error('offline'))
+    vi.spyOn(api, 'paper').mockResolvedValue({ ...paper('a:1'), bib: { volume: '9' } } as Paper)
+    vi.spyOn(api, 'lookupMetadata').mockResolvedValue({
+      match: 'doi',
+      candidates: [{ ...found('a:1'), title: 'Old a:1', bib: { volume: '9' } }],
+    })
+    render(<BatchMetadata selected={['a:1']} titles={{}} onSaved={() => {}} onSkip={() => {}} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Look up 1 selected' }))
+    await screen.findByText('Agrees with the current metadata.')
+    expect((screen.getByRole('button', { name: 'Approve' }) as HTMLButtonElement).disabled).toBe(true)
   })
 
   it('defaultSource wins over the Settings default', async () => {

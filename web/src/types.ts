@@ -424,6 +424,8 @@ export interface MetadataInput {
   tags?: string[]
   /** BibTeX fields to set (null clears one); omitted = left as stored. */
   bib?: Partial<Record<BibKey, string | null>>
+  /** Fill only BibTeX fields still empty (batch edit, fields the server reads itself). */
+  bib_fill_only?: boolean
   /** The looked-up record these values came from; omitted (a hand edit) keeps the recorded one. */
   metadata_source?: MetadataSource
 }

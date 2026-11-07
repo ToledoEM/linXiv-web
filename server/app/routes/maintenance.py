@@ -18,7 +18,7 @@ from ..maintenance import (
     read_report,
     report_path,
 )
-from ..metadata_fill import FILLS, OPTIONS_SETTING, options_from
+from ..metadata_fill import GAPS, OPTIONS_SETTING, options_from
 from ..metadata_refresh import OPTIONS_SETTING as REFRESH_OPTIONS
 from ..metadata_refresh import SCOPES
 from ..metadata_refresh import options_from as refresh_options_from
@@ -216,7 +216,7 @@ async def pdf_check_move_orphans(request: Request, key: str):
 class FillOptionsIn(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
 
-    gaps: list[str] = Field(min_length=1, max_length=len(FILLS))
+    gaps: list[str] = Field(min_length=1, max_length=len(GAPS))
     sources: list[str] = Field(min_length=1, max_length=len(ID_SOURCES))
 
 
@@ -225,16 +225,16 @@ async def fill_options(request: Request):
     """Which gaps make a new paper incomplete, and which sources it is looked up
     in, in order. `all_gaps` / `all_sources` list every choice."""
     opts = options_from(await _maint(request).stored())
-    return {**opts, "all_gaps": list(FILLS), "all_sources": list(ID_SOURCES)}
+    return {**opts, "all_gaps": list(GAPS), "all_sources": list(ID_SOURCES)}
 
 
 @router.put("/complete-metadata/options")
 async def set_fill_options(request: Request, body: FillOptionsIn):
-    bad = [g for g in body.gaps if g not in FILLS]
+    bad = [g for g in body.gaps if g not in GAPS]
     bad += [s for s in body.sources if s not in ID_SOURCES]
     if bad or len(set(body.gaps)) != len(body.gaps) or len(set(body.sources)) != len(body.sources):
         raise HTTPException(status_code=400, detail=f"unknown or repeated choice: {', '.join(bad)}")
-    value = {"gaps": [g for g in FILLS if g in body.gaps], "sources": body.sources}
+    value = {"gaps": [g for g in GAPS if g in body.gaps], "sources": body.sources}
     await _maint(request).save_setting(OPTIONS_SETTING, value)
     return await fill_options(request)
 
