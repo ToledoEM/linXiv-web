@@ -1,0 +1,1887 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Browser UI for the linXiv paper library">
+      
+      
+      
+      
+      
+        <link rel="prev" href="../bulk-import/">
+      
+      
+        <link rel="next" href="../export-tags/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/favicon.ico">
+      <meta name="generator" content="zensical-0.0.71">
+    
+    
+      
+        <title>Bulk AI tags - linXiv-web</title>
+      
+    
+    
+      
+        
+      
+      <link rel="stylesheet" href="../assets/stylesheets/modern/main.e442bf79.min.css">
+      
+        
+          
+        
+        <link rel="stylesheet" href="../assets/stylesheets/modern/palette.b60ce83d.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,500,500i,700,700i%7CJetBrains+Mono:400,400i,700,700i&amp;display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("..",location),__md_scope.pathname.endsWith("/")||(__md_scope=new URL(__md_scope.pathname+"/",location)),__md_hash=e=>[...e].reduce(((e,t)=>(e<<5)-e+t.charCodeAt(0)),0),__md_get=(e,t=localStorage,_=__md_scope)=>JSON.parse(t.getItem(_.pathname+"."+e)),__md_set=(e,t,_=localStorage,a=__md_scope)=>{try{_.setItem(a.pathname+"."+e,JSON.stringify(t))}catch(e){}},document.documentElement.setAttribute("data-platform",navigator.platform)</script>
+    
+      
+
+    
+    
+  
+  <script
+      data-goatcounter="https://etoledo.goatcounter.com/count"
+      async
+      src="//gc.zgo.at/count.js"
+  ></script>
+
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer" aria-hidden="true"></label>
+    <div data-md-component="skip">
+      <a href="#__skip" class="md-skip">
+        Skip to content
+      </a>
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="./.." title="linXiv-web" class="md-header__button md-logo" aria-label="linXiv-web" data-md-component="logo">
+      
+  <img src="../assets/logo.svg" alt="linXiv-web">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer" aria-label="Navigation">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-menu" viewBox="0 0 24 24"><path d="M4 5h16M4 12h16M4 19h16"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            linXiv-web
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Bulk AI tags
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-sun-moon" viewBox="0 0 24 24"><path d="M12 2v2M14.837 16.385a6 6 0 1 1-7.223-7.222c.624-.147.97.66.715 1.248a4 4 0 0 0 5.26 5.259c.589-.255 1.396.09 1.248.715M16 12a4 4 0 0 0-4-4M19 5l-1.256 1.256M20 12h2"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_2" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to system preference"  type="radio" name="__palette" id="__palette_2">
+    
+      <label class="md-header__button md-icon" title="Switch to system preference" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-moon" viewBox="0 0 24 24"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search" aria-label="Search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-search" viewBox="0 0 24 24"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog" aria-label="Search">
+  <button type="button" class="md-search__button">
+    Search
+  </button>
+</div>
+      
+    
+    <div class="md-header__source">
+      
+        <a href="https://github.com/ToledoEM/linXiv-web" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M216.5 362.5c-66-8-112.5-55.5-112.5-117 0-25 9-52 24-70-6.5-16.5-5.5-51.5 2-66 20-2.5 47 8 63 22.5 19-6 39-9 63.5-9s44.5 3 62.5 8.5c15.5-14 43-24.5 63-22 7 13.5 8 48.5 1.5 65.5 16 19 24.5 44.5 24.5 70.5 0 61.5-46.5 108-113.5 116.5 17 11 28.5 35 28.5 62.5v52c0 15 12.5 23.5 27.5 17.5C441 459.5 512 369 512 257 512 115.5 397 0 255.5 0S0 115.5 0 257c0 111 70.5 203 165.5 237.5 13.5 5 26.5-4 26.5-17.5v-40c-7 3-16 5-24 5-33 0-52.5-18-66.5-51.5-5.5-13.5-11.5-21.5-23-23-6-.5-8-3-8-6 0-6 10-10.5 20-10.5 14.5 0 27 9 40 27.5 10 14.5 20.5 21 33 21s20.5-4.5 32-16c8.5-8.5 15-16 21-21"/></svg>
+  </div>
+  <div class="md-source__repository">
+    ToledoEM/linXiv-web
+  </div>
+</a>
+      
+    </div>
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="./.." title="linXiv-web" class="md-nav__button md-logo" aria-label="linXiv-web" data-md-component="logo">
+      
+  <img src="../assets/logo.svg" alt="linXiv-web">
+
+    </a>
+    linXiv-web
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/ToledoEM/linXiv-web" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M216.5 362.5c-66-8-112.5-55.5-112.5-117 0-25 9-52 24-70-6.5-16.5-5.5-51.5 2-66 20-2.5 47 8 63 22.5 19-6 39-9 63.5-9s44.5 3 62.5 8.5c15.5-14 43-24.5 63-22 7 13.5 8 48.5 1.5 65.5 16 19 24.5 44.5 24.5 70.5 0 61.5-46.5 108-113.5 116.5 17 11 28.5 35 28.5 62.5v52c0 15 12.5 23.5 27.5 17.5C441 459.5 512 369 512 257 512 115.5 397 0 255.5 0S0 115.5 0 257c0 111 70.5 203 165.5 237.5 13.5 5 26.5-4 26.5-17.5v-40c-7 3-16 5-24 5-33 0-52.5-18-66.5-51.5-5.5-13.5-11.5-21.5-23-23-6-.5-8-3-8-6 0-6 10-10.5 20-10.5 14.5 0 27 9 40 27.5 10 14.5 20.5 21 33 21s20.5-4.5 32-16c8.5-8.5 15-16 21-21"/></svg>
+  </div>
+  <div class="md-source__repository">
+    ToledoEM/linXiv-web
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="./.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Home
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Install
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_2">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Install
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../self-hosting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Self-hosting with Docker
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/compatibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Compatibility and resources
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Using linXiv-web
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_3">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Using linXiv-web
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/home-feed/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Home feed
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/library/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Library
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/papers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Paper page
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/projects/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Projects and reading lists
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/search-and-add/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Search and add papers
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/authors-graph-tags/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Authors, graph and tags
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/settings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Settings
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/trash-backup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Trash and backups
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../server-admin/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Server Admin
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  AI and agents
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_5">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  AI and agents
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ai/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  AI features
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../mcp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  MCP server
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../browser-add-on/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Browser add-on
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Server scripts
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="true">
+            <label class="md-nav__title" for="__nav_7">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Server scripts
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../scripts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Server scripts
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../sanitize-pdf-names/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Sanitize PDF file names
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../bulk-import/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Bulk PDF import
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Bulk AI tags
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="././" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Bulk AI tags
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Requirements
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#getting-the-script-onto-the-server" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Getting the script onto the server
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#running-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Running it
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#running-papers-in-parallel" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Running papers in parallel
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tagging-papers-that-already-have-tags" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Tagging papers that already have tags
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#running-it-again" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Running it again
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#running-it-without-a-terminal-cron" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Running it without a terminal (cron)
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-to-expect" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        What to expect
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Troubleshooting
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../export-tags/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Export tags
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Reference
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_8">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Reference
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Admin Server Configuration
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  HTTP API
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../functions-not-in-api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Functions not in the CLI
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../development/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Development
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  
+                    
+                    
+                    
+                      
+                    
+                    
+                      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+                      <div class="md-sidebar-button__wrapper">
+                        <label class="md-sidebar-button" for="__toc"></label>
+                      </div>
+                    
+                  
+                  <div class="md-sidebar__inner">
+                    
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Requirements
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#getting-the-script-onto-the-server" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Getting the script onto the server
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#running-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Running it
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#running-papers-in-parallel" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Running papers in parallel
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tagging-papers-that-already-have-tags" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Tagging papers that already have tags
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#running-it-again" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Running it again
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#running-it-without-a-terminal-cron" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Running it without a terminal (cron)
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-to-expect" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        What to expect
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Troubleshooting
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+                
+
+
+
+  
+
+
+  <nav class="md-path" aria-label="Navigation" >
+    <ol class="md-path__list">
+      
+        
+  
+  
+    <li class="md-path__item">
+      <a href="./.." class="md-path__link">
+        
+  
+  <span class="md-ellipsis">
+    Home
+  </span>
+
+      </a>
+    </li>
+  
+
+      
+      
+        
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+      <li class="md-path__item">
+        <a href="../scripts/" class="md-path__link">
+          
+  
+  <span class="md-ellipsis">
+    Server scripts
+  </span>
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ol>
+  </nav>
+
+              
+              <article class="md-content__inner md-typeset">
+                <a id="__skip" tabindex="-1"></a>
+                
+                  
+
+  
+  
+
+
+<h1 id="tagging-every-untagged-paper-with-ai">Tagging every untagged paper with AI<a class="headerlink" href="#tagging-every-untagged-paper-with-ai" title="Permanent link">&para;</a></h1>
+<p>Use this after a large import, when hundreds of papers have no tags and picking them one by one in the Library batch panel would take too long. <code>scripts/bulk-ai-tags.sh</code> runs on the machine that hosts the linXiv-web container. It asks the AI you set up in Settings → AI for tags for every paper that has none, and adds them.</p>
+<p>Each paper gets the same suggestions as <strong>AI Tags</strong> on the paper page: the model reads the title, categories and abstract, and is steered toward tags your library already uses. The script adds all suggested tags, as the batch panel does when you approve without unticking any, or the first few with <code>--max-tags</code>.</p>
+<p>The container keeps running and the web UI stays usable. The script talks to the server over <code>127.0.0.1</code>, so tags go through the server like any other edit.</p>
+<h2 id="requirements">Requirements<a class="headerlink" href="#requirements" title="Permanent link">&para;</a></h2>
+<ul>
+<li>On the server: <code>sh</code>, <code>curl</code> and <code>jq</code> (<code>apt install jq</code> on Debian and Ubuntu).</li>
+<li>AI turned on in Settings → AI, with a provider, key and model saved, and <strong>Test connection</strong> passing. The script uses those saved settings; it has no provider options of its own.</li>
+<li>The container running with the compose file's port (<code>127.0.0.1:8086</code>), and the admin password set (first-run setup done, or <code>LINXIV_WEB_PASSWORD_HASH</code> in <code>.env</code>).</li>
+</ul>
+<h2 id="getting-the-script-onto-the-server">Getting the script onto the server<a class="headerlink" href="#getting-the-script-onto-the-server" title="Permanent link">&para;</a></h2>
+<p>Copy it next to your <code>docker-compose.yml</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>scp<span class="w"> </span>scripts/bulk-ai-tags.sh<span class="w"> </span>server:linxiv-web/
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>ssh<span class="w"> </span>server<span class="w"> </span><span class="s1">'chmod +x linxiv-web/bulk-ai-tags.sh'</span>
+</code></pre></div>
+<p>Then, on the server:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nb">cd</span><span class="w"> </span>linxiv-web
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>./bulk-ai-tags.sh<span class="w"> </span>--help
+</code></pre></div>
+<p>See which papers it will pick up first. This makes no AI calls and changes nothing:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>./bulk-ai-tags.sh<span class="w"> </span>--dry-run
+</code></pre></div>
+<h2 id="running-it">Running it<a class="headerlink" href="#running-it" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>./bulk-ai-tags.sh
+</code></pre></div>
+<p>The script asks for the linXiv-web password and logs in. It checks the AI connection (the same check as <strong>Test connection</strong>) and stops there if AI is off or not set up. Then it reads the full list of untagged papers and works through it one paper at a time. Every paper gets one line in the output and in the log file:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>started 2026-10-13 22:15:00: 858 untagged paper(s) on http://127.0.0.1:8086
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>AI gemini / gemini-2.5-flash, max tags per paper: all
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>OK    doi:10.1038/s41586-021-03819-2  2021/smith-rna.pdf  single-cell rna-seq, drug response, perturbation atlas (new)
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>NONE  local:9f3a0c1d  scans/notes.pdf  model returned no usable tags
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>SKIP  local:77c1e2b4  scans/blank.pdf  no title or abstract
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>FAIL  arXiv:2101.00001  -  (502): Gemini error 500: internal error
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>done: 812 tagged, 3 none, 41 skipped, 2 failed, 858 total. Log: ./bulk-ai-tags-20261013-221500.log
+</code></pre></div>
+<p>Each line shows the paper id, its PDF file inside the PDF folder (<code>-</code> when it has none) and the tags it got. <code>(new)</code> marks a tag that wasn't in your library before.</p>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>OK</code></td>
+<td>Tags added</td>
+</tr>
+<tr>
+<td><code>NONE</code></td>
+<td>The model answered, but every suggestion was empty, too long, or a duplicate. The paper stays untagged</td>
+</tr>
+<tr>
+<td><code>SKIP</code></td>
+<td>The paper has no title and no abstract, so it wasn't sent</td>
+</tr>
+<tr>
+<td><code>FAIL</code></td>
+<td>The AI call or the tag save failed. The message says why. When the save failed, the line lists the tags that weren't saved</td>
+</tr>
+</tbody>
+</table>
+<p>The exit status is 1 when any paper fails, and 0 otherwise. <code>NONE</code> and <code>SKIP</code> don't count as failures.</p>
+<p>Options:</p>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--all</code></td>
+<td>Also ask about papers that already have tags, not only the untagged ones. The model is told each paper's current tags and the server drops any it repeats, so only new tags are added. See <a href="#tagging-papers-that-already-have-tags">Tagging papers that already have tags</a></td>
+</tr>
+<tr>
+<td><code>--max-tags N</code></td>
+<td>Add only the first <code>N</code> suggestions per paper, 1 to 8. The default adds all of them (the model is asked for 3 to 6, the server keeps at most 8)</td>
+</tr>
+<tr>
+<td><code>--jobs N</code></td>
+<td>Ask the AI about <code>N</code> papers at a time, 1 to 4 (default 1). See <a href="#running-papers-in-parallel">Running papers in parallel</a></td>
+</tr>
+<tr>
+<td><code>--log FILE</code></td>
+<td>Log location (default <code>./bulk-ai-tags-&lt;date&gt;-&lt;time&gt;.log</code>)</td>
+</tr>
+<tr>
+<td><code>--dry-run</code></td>
+<td>List the untagged papers and how many would be skipped, then stop</td>
+</tr>
+</tbody>
+</table>
+<p>The script talks to the server at <code>http://127.0.0.1:8086</code>, the port <code>docker-compose.yml</code> publishes, so run it on the server itself. It also works when <code>LINXIV_WEB_COOKIE_SECURE=true</code>.</p>
+<h2 id="running-papers-in-parallel">Running papers in parallel<a class="headerlink" href="#running-papers-in-parallel" title="Permanent link">&para;</a></h2>
+<p><code>--jobs 2</code> keeps two papers in flight: while the model answers one, the next request is already waiting. The server sends both to the provider at once; only its short library steps (reading the paper, saving the tags) take turns. Every paper still gets one line in the log, but the lines from the two workers mix, so they are no longer in list order.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>./bulk-ai-tags.sh<span class="w"> </span>--jobs<span class="w"> </span><span class="m">2</span>
+</code></pre></div>
+<p>It only helps when the AI end can work on two requests at the same time:</p>
+<ul>
+<li>Cloud providers (Gemini, OpenAI, Anthropic) answer parallel requests, but count each one against your rate limit. On a free tier, <code>--jobs 2</code> hits <code>429</code> twice as fast. Stay at 1 if the log fills with rate-limit failures.</li>
+<li>LM Studio answers parallel requests from version 0.4.0, on its llama.cpp engine (GGUF models, runtime llama.cpp v2.0.0 or later). Each loaded model has a <strong>Max Concurrent Predictions</strong> setting, which defaults to 4. To check or change it: open the model loader, turn on <strong>Manually choose model load parameters</strong>, pick the model, turn on <strong>Show advanced settings</strong>, and set <strong>Max Concurrent Predictions</strong> to at least the <code>--jobs</code> value. Then load the model again. Requests beyond that number wait in LM Studio's queue rather than failing. <strong>Unified KV Cache</strong> (on by default) lets the parallel requests share the context memory instead of splitting it into fixed parts.</li>
+<li>Older LM Studio, or MLX models, may handle one request at a time. The second request then waits for the first. The server gives each AI answer at most 300 seconds, and the wait counts toward that, so a slow model with <code>--jobs 2</code> can turn into <code>FAIL ... (502): ... request failed (ReadTimeout)</code> lines. Use <code>--jobs 1</code> there.</li>
+</ul>
+<p>Parallel requests on a local model share the same GPU, so each answer comes back slower than alone. Total time still drops when the model runs well below the GPU's limits. Time the first lines of a run with <code>--jobs 1</code> and with <code>--jobs 2</code> and keep the faster one.</p>
+<p>Tags that one worker adds don't reach a paper the other worker is tagging at the same moment, so two papers on a new topic can come back with two spellings of the same tag. Look through the <code>(new)</code> tags afterwards.</p>
+<p>With more than one job, a lost login (the container restarted mid-run) isn't renewed. The affected papers are logged as <code>FAIL ... (401)</code>, and a rerun picks them up. Ctrl+C stops all workers. A paper whose tags were already on their way to the server still gets them.</p>
+<h2 id="tagging-papers-that-already-have-tags">Tagging papers that already have tags<a class="headerlink" href="#tagging-papers-that-already-have-tags" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>./bulk-ai-tags.sh<span class="w"> </span>--all<span class="w"> </span>--dry-run
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>./bulk-ai-tags.sh<span class="w"> </span>--all
+</code></pre></div>
+<p><code>--all</code> lists every paper in the library, not only the untagged ones. A tagged paper keeps its tags and gets the model's additional suggestions on top. It costs one AI call per paper in the whole library, so a large library means a long run, and many paid requests with a cloud provider. Use <code>--max-tags</code> to limit how many tags each paper gains. A <code>NONE</code> line for a tagged paper means the model had nothing new to add.</p>
+<p>Nothing remembers which papers a previous <code>--all</code> run already handled: running it again asks about every paper again.</p>
+<h2 id="running-it-again">Running it again<a class="headerlink" href="#running-it-again" title="Permanent link">&para;</a></h2>
+<p>A paper that got tags is no longer untagged, so a second run only picks up the <code>NONE</code>, <code>SKIP</code> and <code>FAIL</code> papers from the first one, plus anything imported since. Stopping a run with Ctrl+C is safe: the papers tagged so far keep their tags, and the next run carries on with the rest.</p>
+<p><code>SKIP</code> papers come back every run until they have a title or an abstract. Fix their metadata first (see below), or tag them by hand.</p>
+<h2 id="running-it-without-a-terminal-cron">Running it without a terminal (cron)<a class="headerlink" href="#running-it-without-a-terminal-cron" title="Permanent link">&para;</a></h2>
+<p>The script reads the password from the first line of the file named in <code>LINXIV_WEB_PASSWORD_FILE</code>. Keep that file readable only by you:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>install<span class="w"> </span>-m<span class="w"> </span><span class="m">600</span><span class="w"> </span>/dev/null<span class="w"> </span>~/.linxiv-web-password
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="nb">printf</span><span class="w"> </span><span class="s1">'%s\n'</span><span class="w"> </span><span class="s1">'your-password'</span><span class="w"> </span>&gt;<span class="w"> </span>~/.linxiv-web-password
+</code></pre></div>
+<p>A crontab entry that tags whatever arrived during the day, after the nightly import from <a href="../bulk-import/">bulk-import.md</a>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>45 3 * * * cd $HOME/linxiv-web &amp;&amp; LINXIV_WEB_PASSWORD_FILE=$HOME/.linxiv-web-password ./bulk-ai-tags.sh &gt;&gt; bulk-ai-tags-cron.log 2&gt;&amp;1
+</code></pre></div>
+<p>Five wrong passwords within five minutes lock out logins from that address for the rest of the five minutes (<code>429 too many login attempts</code>), so check the password file before you schedule it.</p>
+<h2 id="what-to-expect">What to expect<a class="headerlink" href="#what-to-expect" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Time: one AI call per paper, one at a time unless you pass <code>--jobs</code>. A cloud model takes a few seconds per paper. A local model in LM Studio or Ollama can take much longer, and the server waits up to 300 seconds for each answer from an OpenAI-compatible endpoint. Try <code>--dry-run</code> for the count, then time the first few lines.</li>
+<li>Cost and rate limits: with a cloud provider, every paper is one paid request. Free tiers often allow only a few requests per minute. When the provider answers with a rate-limit or overload error (429, 503 or 529), the script waits 30 seconds and tries that paper once more. If it fails again, the paper is logged as <code>FAIL</code> and picked up on the next run.</li>
+<li>Vocabulary: the prompt lists up to 400 of the library's existing tags, and the model is told to reuse them. Tags added earlier in a run count as existing for the papers after them, so a library with no tags yet builds its vocabulary as the run goes. Look through the <code>(new)</code> tags in the log afterwards. The Tags page lists every tag with its paper count, which makes near-duplicates easy to spot.</li>
+<li>Thin records: papers imported from scans or PDFs without embedded metadata often have only a stray title and no abstract, and get poor tags. Fix those first: in the Library, tick papers marked <code>title?</code>, open batch edit, and look them up (with "By PDF file name" when the file names are titles). See <a href="../bulk-import/#what-to-expect">bulk-import.md</a>.</li>
+<li>Removing tags: the script only adds tags. To undo part of a run, remove the tags on the paper pages. The log lists every tag the script added, by paper.</li>
+</ul>
+<p>Before tagging a large library, take a backup in Settings → Server &amp; data → Backup.</p>
+<h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Message</th>
+<th>Fix</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>jq not found</code></td>
+<td>Install jq on the server: <code>apt install jq</code></td>
+</tr>
+<tr>
+<td><code>cannot reach http://127.0.0.1:8086</code></td>
+<td>The container is down, or the script isn't running on the server</td>
+</tr>
+<tr>
+<td><code>first-run setup is not done</code></td>
+<td>Open the web UI once and create the password</td>
+</tr>
+<tr>
+<td><code>login failed (401): invalid password</code></td>
+<td>Wrong password, or a stale <code>LINXIV_WEB_PASSWORD_FILE</code></td>
+</tr>
+<tr>
+<td><code>login failed (429)</code></td>
+<td>Wait five minutes after repeated wrong passwords</td>
+</tr>
+<tr>
+<td><code>AI check failed (409): AI features are off</code></td>
+<td>Turn AI on in Settings → AI</td>
+</tr>
+<tr>
+<td><code>AI check failed (400): No … API key</code></td>
+<td>Add the provider's key in Settings → AI</td>
+</tr>
+<tr>
+<td><code>AI check failed (400): Choose a model</code></td>
+<td>Pick a model in Settings → AI and save</td>
+</tr>
+<tr>
+<td><code>AI check failed (400): Set the base URL …</code></td>
+<td>OpenAI-compatible provider: enter the endpoint's base URL in Settings → AI</td>
+</tr>
+<tr>
+<td><code>AI check failed (502): … request failed (ConnectError)</code></td>
+<td>The provider, or your local LM Studio or Ollama, can't be reached from the container</td>
+</tr>
+<tr>
+<td><code>FAIL … (502): … error 429</code></td>
+<td>The provider's rate limit, still hit after the retry. Run again later, or use a plan with a higher limit</td>
+</tr>
+<tr>
+<td><code>FAIL … (502): … did not return valid JSON</code></td>
+<td>The model ignored the reply format. Pick a stronger model, or run again: replies vary</td>
+</tr>
+<tr>
+<td><code>FAIL … (404)</code></td>
+<td>The paper was deleted while the run was going</td>
+</tr>
+</tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-circle-arrow-up" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m16 12-4-4-4 4M12 16V8"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../bulk-import/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Bulk PDF import">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-left" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7M19 12H5"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Bulk PDF import
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../export-tags/" class="md-footer__link md-footer__link--next" aria-label="Next: Export tags">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Export tags
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Docs made with <a href="https://zensical.org">Zensical</a> · linXiv developed by <a href="https://github.com/linxiv-dev">linxiv-dev</a> · linXiv-web developed by ToledoEM · Apache License 2.0
+    </div>
+  
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog" role="status" aria-atomic="true">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      
+      
+        
+        
+      <script id="__config" type="application/json">{"annotate":null,"base":"..","features":["content.code.copy","content.code.select","navigation.footer","navigation.indexes","navigation.instant","navigation.path","navigation.top","navigation.tracking","search.highlight"],"redirect":null,"search":"../assets/javascripts/workers/search.c47bb847.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","clipboard.error":"Could not copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.a2388154.min.js"></script>
+      
+    
+  </body>
+</html>

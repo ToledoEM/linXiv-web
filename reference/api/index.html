@@ -1,0 +1,1741 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Browser UI for the linXiv paper library">
+      
+      
+      
+      
+      
+        <link rel="prev" href="../configuration/">
+      
+      
+        <link rel="next" href="../../functions-not-in-api/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/favicon.ico">
+      <meta name="generator" content="zensical-0.0.71">
+    
+    
+      
+        <title>HTTP API - linXiv-web</title>
+      
+    
+    
+      
+        
+      
+      <link rel="stylesheet" href="../../assets/stylesheets/modern/main.e442bf79.min.css">
+      
+        
+          
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/modern/palette.b60ce83d.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,500,500i,700,700i%7CJetBrains+Mono:400,400i,700,700i&amp;display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_scope.pathname.endsWith("/")||(__md_scope=new URL(__md_scope.pathname+"/",location)),__md_hash=e=>[...e].reduce(((e,t)=>(e<<5)-e+t.charCodeAt(0)),0),__md_get=(e,t=localStorage,_=__md_scope)=>JSON.parse(t.getItem(_.pathname+"."+e)),__md_set=(e,t,_=localStorage,a=__md_scope)=>{try{_.setItem(a.pathname+"."+e,JSON.stringify(t))}catch(e){}},document.documentElement.setAttribute("data-platform",navigator.platform)</script>
+    
+      
+
+    
+    
+  
+  <script
+      data-goatcounter="https://etoledo.goatcounter.com/count"
+      async
+      src="//gc.zgo.at/count.js"
+  ></script>
+
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer" aria-hidden="true"></label>
+    <div data-md-component="skip">
+      <a href="#__skip" class="md-skip">
+        Skip to content
+      </a>
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="linXiv-web" class="md-header__button md-logo" aria-label="linXiv-web" data-md-component="logo">
+      
+  <img src="../../assets/logo.svg" alt="linXiv-web">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer" aria-label="Navigation">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-menu" viewBox="0 0 24 24"><path d="M4 5h16M4 12h16M4 19h16"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            linXiv-web
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              HTTP API
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-sun-moon" viewBox="0 0 24 24"><path d="M12 2v2M14.837 16.385a6 6 0 1 1-7.223-7.222c.624-.147.97.66.715 1.248a4 4 0 0 0 5.26 5.259c.589-.255 1.396.09 1.248.715M16 12a4 4 0 0 0-4-4M19 5l-1.256 1.256M20 12h2"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_2" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to system preference"  type="radio" name="__palette" id="__palette_2">
+    
+      <label class="md-header__button md-icon" title="Switch to system preference" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-moon" viewBox="0 0 24 24"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search" aria-label="Search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-search" viewBox="0 0 24 24"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog" aria-label="Search">
+  <button type="button" class="md-search__button">
+    Search
+  </button>
+</div>
+      
+    
+    <div class="md-header__source">
+      
+        <a href="https://github.com/ToledoEM/linXiv-web" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M216.5 362.5c-66-8-112.5-55.5-112.5-117 0-25 9-52 24-70-6.5-16.5-5.5-51.5 2-66 20-2.5 47 8 63 22.5 19-6 39-9 63.5-9s44.5 3 62.5 8.5c15.5-14 43-24.5 63-22 7 13.5 8 48.5 1.5 65.5 16 19 24.5 44.5 24.5 70.5 0 61.5-46.5 108-113.5 116.5 17 11 28.5 35 28.5 62.5v52c0 15 12.5 23.5 27.5 17.5C441 459.5 512 369 512 257 512 115.5 397 0 255.5 0S0 115.5 0 257c0 111 70.5 203 165.5 237.5 13.5 5 26.5-4 26.5-17.5v-40c-7 3-16 5-24 5-33 0-52.5-18-66.5-51.5-5.5-13.5-11.5-21.5-23-23-6-.5-8-3-8-6 0-6 10-10.5 20-10.5 14.5 0 27 9 40 27.5 10 14.5 20.5 21 33 21s20.5-4.5 32-16c8.5-8.5 15-16 21-21"/></svg>
+  </div>
+  <div class="md-source__repository">
+    ToledoEM/linXiv-web
+  </div>
+</a>
+      
+    </div>
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="linXiv-web" class="md-nav__button md-logo" aria-label="linXiv-web" data-md-component="logo">
+      
+  <img src="../../assets/logo.svg" alt="linXiv-web">
+
+    </a>
+    linXiv-web
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/ToledoEM/linXiv-web" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M216.5 362.5c-66-8-112.5-55.5-112.5-117 0-25 9-52 24-70-6.5-16.5-5.5-51.5 2-66 20-2.5 47 8 63 22.5 19-6 39-9 63.5-9s44.5 3 62.5 8.5c15.5-14 43-24.5 63-22 7 13.5 8 48.5 1.5 65.5 16 19 24.5 44.5 24.5 70.5 0 61.5-46.5 108-113.5 116.5 17 11 28.5 35 28.5 62.5v52c0 15 12.5 23.5 27.5 17.5C441 459.5 512 369 512 257 512 115.5 397 0 255.5 0S0 115.5 0 257c0 111 70.5 203 165.5 237.5 13.5 5 26.5-4 26.5-17.5v-40c-7 3-16 5-24 5-33 0-52.5-18-66.5-51.5-5.5-13.5-11.5-21.5-23-23-6-.5-8-3-8-6 0-6 10-10.5 20-10.5 14.5 0 27 9 40 27.5 10 14.5 20.5 21 33 21s20.5-4.5 32-16c8.5-8.5 15-16 21-21"/></svg>
+  </div>
+  <div class="md-source__repository">
+    ToledoEM/linXiv-web
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Home
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Install
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_2">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Install
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../self-hosting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Self-hosting with Docker
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../compatibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Compatibility and resources
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Using linXiv-web
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_3">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Using linXiv-web
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/home-feed/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Home feed
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/library/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Library
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/papers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Paper page
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/projects/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Projects and reading lists
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/search-and-add/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Search and add papers
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/authors-graph-tags/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Authors, graph and tags
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/settings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Settings
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/trash-backup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Trash and backups
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../server-admin/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Server Admin
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  AI and agents
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_5">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  AI and agents
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ai/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  AI features
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../mcp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  MCP server
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../browser-add-on/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Browser add-on
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Server scripts
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_7">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Server scripts
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../scripts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Server scripts
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../sanitize-pdf-names/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Sanitize PDF file names
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../bulk-import/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Bulk PDF import
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../bulk-ai-tags/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Bulk AI tags
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../export-tags/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Export tags
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Reference
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="true">
+            <label class="md-nav__title" for="__nav_8">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Reference
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Admin Server Configuration
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      
+      
+      
+        
+      
+      
+      <a href="././" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  HTTP API
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../functions-not-in-api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Functions not in the CLI
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Development
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  
+                    
+                    
+                    
+                      
+                    
+                    
+                  
+                  <div class="md-sidebar__inner">
+                    
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+                
+
+
+
+  
+
+
+  <nav class="md-path" aria-label="Navigation" >
+    <ol class="md-path__list">
+      
+        
+  
+  
+    <li class="md-path__item">
+      <a href="../.." class="md-path__link">
+        
+  
+  <span class="md-ellipsis">
+    Home
+  </span>
+
+      </a>
+    </li>
+  
+
+      
+      
+        
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+      <li class="md-path__item">
+        <a href="../configuration/" class="md-path__link">
+          
+  
+  <span class="md-ellipsis">
+    Reference
+  </span>
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ol>
+  </nav>
+
+              
+              <article class="md-content__inner md-typeset">
+                <a id="__skip" tabindex="-1"></a>
+                
+                  
+
+  
+  
+
+
+<h1 id="http-api">HTTP API<a class="headerlink" href="#http-api" title="Permanent link">&para;</a></h1>
+<p>The web UI uses this API, and scripts can call it too. Every route except <code>/api/health</code>, <code>/api/login</code>, <code>/api/me</code>, <code>/mcp</code> and the add-on routes <code>/api/clip/ping</code>, <code>/api/clip/pdf</code> and <code>/api/clip/bibtex</code> needs a session when a password is set. Write requests also need the <code>X-CSRF-Token</code> header, which echoes the <code>lxw_csrf</code> cookie.</p>
+<p>Most routes map to one <code>linxiv</code> CLI command. The right column names the command or describes what the server does.</p>
+<p>In multi-user mode (see <a href="../../server-admin/">Server Admin</a>) each request works on the caller's own library, or on the shared library when it sends the header <code>X-Linxiv-Library: shared</code> (plain links such as a PDF or a download use <code>?library=shared</code> instead). Writes to the shared library by accounts that are not admins get 403, except <code>POST /api/shared/copy</code> and <code>POST /api/export/bibtex</code>. Logs, activity, update check, system status and diagnostics, and <code>/api/mcp</code> are admin only. Add-on routes with the bearer token always work on the token owner's own library and ignore this header. They accept requests with no <code>Origin</code> or a <code>moz-extension://</code> one, and answer 403 to any other <code>Origin</code>. <code>GET /api/jobs</code> lists only the caller's own jobs for accounts that are not admins.</p>
+<table>
+<thead>
+<tr>
+<th>Route</th>
+<th>linxiv command / behaviour</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>POST /api/login</code> <code>{username?, password, remember?}</code></td>
+<td>Start a session. <code>username</code> is required in multi-user mode and ignored otherwise; failed attempts are limited per client address and username</td>
+</tr>
+<tr>
+<td><code>GET /api/me</code></td>
+<td>Login state: <code>auth_enabled</code>, <code>setup_required</code>, <code>authenticated</code>, <code>password_source</code>, <code>multi_user</code>, <code>username</code>, <code>role</code> (<code>admin</code> or <code>user</code>), <code>owner</code></td>
+</tr>
+<tr>
+<td><code>POST /api/password</code> <code>{current, new, remember?}</code></td>
+<td>Change the caller's own password; logs out the caller's other sessions. For the owner this is the stored server password (409 when it comes from <code>LINXIV_WEB_PASSWORD(_HASH)</code>). In multi-user mode the new password must differ from every other account's</td>
+</tr>
+<tr>
+<td><code>GET /api/admin/multi-user</code>, <code>POST /api/admin/multi-user</code> <code>{enabled, username?}</code></td>
+<td>Admin only. Multi-user status and owner username; turn it on (<code>username</code> names the owner the first time) or off (owner only; logs out every other account)</td>
+</tr>
+<tr>
+<td><code>GET /api/users</code>, <code>POST /api/users</code> <code>{username, password, role}</code></td>
+<td>Admin only. List accounts (never their password hashes); create one with its own library (409 for a taken username, 400 for a password another account uses)</td>
+</tr>
+<tr>
+<td><code>PUT /api/users/{id}</code> <code>{username?, password?, role?}</code>, <code>DELETE /api/users/{id}</code></td>
+<td>Admin only. Rename, set a password, change the role (each ends that account's sessions); delete (the library stays on disk, its path is returned). The owner stays admin and can't be deleted; the last admin can't be demoted or deleted; nobody deletes their own account</td>
+</tr>
+<tr>
+<td><code>POST /api/shared/copy</code> <code>{source_ids}</code></td>
+<td>Copy papers with their PDFs from the shared library into the caller's own: a temporary project is exported with <code>project export --pdfs</code> and imported with <code>project import --on-conflict=merge</code>, then both temporary projects are deleted. Returns <code>copied</code>, <code>failed</code>, <code>skipped_pdfs</code></td>
+</tr>
+<tr>
+<td><code>POST /api/sessions/revoke-others</code></td>
+<td>Log out every session except the caller's; returns <code>{revoked}</code></td>
+</tr>
+<tr>
+<td><code>GET /api/activity?limit</code>, <code>GET /api/activity/export</code></td>
+<td>Activity log, newest first / as CSV: every POST/PUT/PATCH/DELETE under <code>/api/</code> with time, client address, route, path parameters, status (Settings saves: key names only). Kept in <code>&lt;data dir&gt;/logs/activity.jsonl</code>, 5 MiB + one rotated file</td>
+</tr>
+<tr>
+<td><code>DELETE /api/activity</code> <code>{confirm: "delete activity log"}</code></td>
+<td>Clear the activity log (the clear is recorded)</td>
+</tr>
+<tr>
+<td><code>GET /api/system/diagnostics</code></td>
+<td>Markdown report for bug reports: versions, configuration, library counts, disk, health, running jobs, DNS + TCP 443 reachability of outside services. Secrets and addresses that could locate the server only as set / not set</td>
+</tr>
+<tr>
+<td><code>GET /api/search?q&amp;source=arxiv\|openalex\|crossref&amp;max</code></td>
+<td><code>search</code></td>
+</tr>
+<tr>
+<td><code>POST /api/papers/{id}/fetch?source=</code></td>
+<td><code>fetch</code>, then <code>paper get</code></td>
+</tr>
+<tr>
+<td><code>GET /api/papers?q&amp;tag&amp;pdf=has\|none&amp;fulltext&amp;limit&amp;offset&amp;category&amp;sort&amp;dir</code></td>
+<td><code>list</code> filtered server-side; a <code>q</code> of 3+ characters also runs <code>paper search</code> (TeX full text and notes), hits flagged <code>deep_match</code>; <code>fulltext=true</code> returns only the <code>paper search</code> hits. Each paper also gets <code>pdf_file</code> (its PDF's path inside the PDF folder) and <code>title_suspect</code> (the title looks like junk read from the PDF, or unlike the file name)</td>
+</tr>
+<tr>
+<td><code>GET /api/papers/{id}</code>, <code>GET /api/papers/{id}/versions</code></td>
+<td><code>paper get</code> (plus <code>pdf_file</code>, <code>title_suspect</code>, <code>bib</code> (stored BibTeX fields, <code>{}</code> when none) and <code>metadata_source</code> (<code>{source, ref}</code> or null)), <code>paper versions</code></td>
+</tr>
+<tr>
+<td><code>DELETE /api/papers/{id}</code></td>
+<td><code>paper delete</code> (soft delete, goes to trash)</td>
+</tr>
+<tr>
+<td><code>GET /api/papers/{id}/pdf</code></td>
+<td><code>pdf path</code>, then serves the file (only from inside the data or PDF dir)</td>
+</tr>
+<tr>
+<td><code>POST /api/papers/{id}/pdf</code> <code>{url?, version?}</code></td>
+<td><code>pdf download</code> (for arXiv papers the URL is derived)</td>
+</tr>
+<tr>
+<td><code>DELETE /api/papers/{id}/pdf</code></td>
+<td><code>pdf delete</code></td>
+</tr>
+<tr>
+<td><code>PUT /api/papers/{id}/metadata</code> <code>{title, authors[], published, summary, category?, doi?, url?, tags?, bib?, metadata_source?}</code></td>
+<td><code>paper get</code>, then <code>paper repair</code> with the full record and the paper's current tags (repair clears any field it isn't given). <code>bib</code> sets BibTeX fields linXiv has no column for (<code>entry_type</code>, <code>booktitle</code>, <code>editor</code>, <code>edition</code>, <code>series</code>, <code>volume</code>, <code>number</code>, <code>chapter</code>, <code>pages</code>, <code>month</code>, <code>publisher</code>, <code>address</code>, <code>school</code>, <code>institution</code>, <code>organization</code>, <code>howpublished</code>, <code>note</code>, <code>issn</code>, <code>isbn</code>, <code>eprint</code>, <code>archive_prefix</code>, <code>primary_class</code>; null clears one) in the web server's per-library <code>linxiv-web-bib.db</code>. <code>metadata_source</code> <code>{source, ref}</code> records where the values came from (<code>crossref</code>, <code>pubmed</code>, <code>biorxiv</code>, <code>arxiv</code>, <code>openalex</code>, <code>bibtex</code>, <code>filename</code>, <code>ai</code>); a Crossref or OpenAlex source without <code>bib</code> has its fields read from that API</td>
+</tr>
+<tr>
+<td><code>GET /api/papers/{id}/lookup?source=crossref\|arxiv\|openalex\|pubmed\|biorxiv&amp;by=auto\|filename</code></td>
+<td>Candidate metadata: <code>doi resolve</code> (by DOI), <code>search</code> (by arXiv id or title), NCBI E-utilities for PubMed (by DOI, then title), api.biorxiv.org (by DOI). <code>by=filename</code> searches by the title in the PDF's file name, ignoring the stored DOI, and adds a last candidate built from the file name and its year folder. Each candidate carries <code>bib</code>, its BibTeX fields or null; for a Crossref DOI match they are read from api.crossref.org <code>/works/{doi}</code></td>
+</tr>
+<tr>
+<td><code>GET/POST/DELETE /api/papers/{id}/tags</code></td>
+<td><code>tag list</code> / <code>tag add</code> / <code>tag remove</code></td>
+</tr>
+<tr>
+<td><code>GET /api/pdfs</code>, <code>GET /api/pdfs/storage</code></td>
+<td><code>pdf list</code>, <code>pdf storage</code> (recounted including subfolders)</td>
+</tr>
+<tr>
+<td><code>POST /api/pdfs/import</code> (multipart <code>file</code>)</td>
+<td><code>pdf import</code></td>
+</tr>
+<tr>
+<td><code>GET /api/pdfs/layout/preview?layout=</code>, <code>POST /api/jobs/pdf-layout</code></td>
+<td>PDF folder layout (<code>none</code>, <code>year</code>, <code>journal</code>, <code>year/journal</code>, <code>journal/year</code>): preview, then a job that moves files and updates their stored path</td>
+</tr>
+<tr>
+<td><code>POST /api/import/bibtex</code>, <code>POST /api/import/zotero</code> (multipart <code>file</code>)</td>
+<td><code>bibtex import</code>, <code>zotero import</code> (upsert: existing entries are updated)</td>
+</tr>
+<tr>
+<td><code>POST /api/add</code> <code>{input}</code></td>
+<td>arXiv id/link: <code>fetch</code>; DOI or doi.org link: <code>doi save</code>; other http(s) link: server downloads the PDF (public hosts only, size-capped), then <code>pdf import</code></td>
+</tr>
+<tr>
+<td><code>GET /api/stats</code>, <code>/api/categories</code>, <code>/api/tags</code></td>
+<td><code>stats</code>, <code>categories</code>, <code>tag list-all</code></td>
+</tr>
+<tr>
+<td><code>GET /api/authors?hide_single</code>, <code>GET/PATCH/DELETE /api/authors/{id}</code></td>
+<td><code>author list</code>, <code>author get</code>, <code>author update</code>, <code>author delete</code> (409 while linked to papers)</td>
+</tr>
+<tr>
+<td><code>GET /api/authors/{id}/merge-candidates</code>, <code>POST /api/authors/{id}/merge</code></td>
+<td><code>author merge-candidates</code> (plus same-name hints), <code>author merge</code></td>
+</tr>
+<tr>
+<td><code>POST /api/orcid/backfill</code> <code>{limit?}</code></td>
+<td><code>orcid backfill</code> (1 to 100; 409 while one runs)</td>
+</tr>
+<tr>
+<td><code>GET /api/projects?status=active\|archived</code>, <code>POST /api/projects</code>, <code>PATCH /api/projects/{id}</code></td>
+<td><code>project list</code>, <code>project create</code>, <code>project update</code></td>
+</tr>
+<tr>
+<td><code>GET /api/projects/{id}</code>, <code>GET /api/projects/{id}/papers</code></td>
+<td><code>project get</code>; papers = <code>project get</code> + <code>list</code>, filtered to members in project order</td>
+</tr>
+<tr>
+<td><code>POST /api/projects/{id}/papers</code> (<code>{"source_ids": [...]}</code>), <code>DELETE /api/projects/{id}/papers/{source_id}</code></td>
+<td><code>project add-papers</code> (200 with <code>added</code>/<code>failed</code>), <code>project remove-paper</code></td>
+</tr>
+<tr>
+<td><code>GET /api/projects/{id}/export?format=lxproj\|bibtex\|obsidian\|zotero&amp;pdfs</code></td>
+<td><code>project export [--pdfs]</code>, <code>export-bibtex</code>, <code>export-obsidian</code>, <code>export-zotero</code>; written to a temp dir, sent as a download, then deleted</td>
+</tr>
+<tr>
+<td><code>POST /api/projects/import/preview</code>, <code>POST /api/projects/import</code> (multipart <code>file</code>, <code>on_conflict=merge\|overwrite</code>)</td>
+<td><code>project import --preview</code>, <code>project import</code> (<code>.lxproj</code>, zip checked before the CLI sees it)</td>
+</tr>
+<tr>
+<td><code>POST /api/projects/{id}/archive</code>, <code>POST /api/projects/{id}/restore</code>, <code>DELETE /api/projects/{id}</code></td>
+<td><code>project archive</code>, <code>project restore</code>, <code>project delete</code> (soft delete, goes to trash)</td>
+</tr>
+<tr>
+<td><code>GET /api/notes?paper=&amp;project=</code>, <code>POST /api/notes</code>, <code>PATCH /api/notes/{id}</code>, <code>DELETE /api/notes/{id}</code></td>
+<td><code>note list</code>, <code>note create [--project-id]</code>, <code>note update</code>, <code>note delete</code> (permanent); title/content capped at 100 kB</td>
+</tr>
+<tr>
+<td><code>GET /api/annotations?paper=&amp;project=</code>, <code>POST /api/annotations</code>, <code>PATCH /api/annotations/{id}</code>, <code>DELETE /api/annotations/{id}</code></td>
+<td><code>annotation list/create/update/delete</code> (PDF highlights; anchors validated server-side)</td>
+</tr>
+<tr>
+<td><code>GET /api/graph</code></td>
+<td>Knowledge graph of papers, authors and tags, built from <code>list</code> and <code>author list</code></td>
+</tr>
+<tr>
+<td><code>GET /api/graph/export</code></td>
+<td>The same graph as a file: <code>format=graphml</code> (default) or <code>format=csv</code> (zip of <code>nodes.csv</code> and <code>edges.csv</code>); <code>exclude_single_authors=true</code> drops single-paper authors</td>
+</tr>
+<tr>
+<td><code>GET /api/feed</code>, <code>POST /api/feed/dismiss</code></td>
+<td><code>feed get</code> for the stored home feed URL (cached 5 minutes), <code>feed dismiss</code></td>
+</tr>
+<tr>
+<td><code>GET /api/feed/rules</code>, <code>POST /api/feed/rules</code>, <code>DELETE /api/feed/rules/{id}</code></td>
+<td><code>feed rules list/add/delete</code></td>
+</tr>
+<tr>
+<td><code>GET /api/versions/new</code>, <code>POST /api/versions/check</code> <code>{limit?}</code>, <code>POST /api/versions/{id}/ack</code></td>
+<td><code>versions new</code>, <code>versions check --limit</code> (1 to 100, default 20; stores new versions it finds), <code>versions ack</code> (a second ack still returns ok)</td>
+</tr>
+<tr>
+<td><code>POST /api/papers/{id}/source</code> <code>{force?}</code></td>
+<td><code>paper fetch-source [--force]</code>: downloads the paper's arXiv LaTeX source and indexes its text for full-text search (400 for non-arXiv papers)</td>
+</tr>
+<tr>
+<td><code>GET /api/sources/pending</code>, <code>GET /api/sources/worker</code></td>
+<td>Saved arXiv papers whose source isn't indexed; status of the background full-text indexer</td>
+</tr>
+<tr>
+<td><code>POST /api/jobs/index-sources</code> <code>{limit?}</code>, <code>GET /api/jobs?kind=</code>, <code>GET /api/jobs/{id}</code>, <code>POST /api/jobs/{id}/cancel</code></td>
+<td>Background job: one <code>paper fetch-source</code> per pending paper, 7 s apart (409 if one is already running)</td>
+</tr>
+<tr>
+<td><code>GET /api/trash</code></td>
+<td><code>trash list</code></td>
+</tr>
+<tr>
+<td><code>POST /api/trash/papers/{id}/restore</code>, <code>DELETE /api/trash/papers/{id}</code></td>
+<td><code>trash restore</code>, <code>trash hard-delete</code> (paper must be in the trash)</td>
+</tr>
+<tr>
+<td><code>POST /api/trash/projects/{id}/restore</code>, <code>DELETE /api/trash/projects/{id}</code></td>
+<td><code>trash restore-project</code>, <code>trash hard-delete-project</code></td>
+</tr>
+<tr>
+<td><code>GET /api/backup</code>, <code>POST /api/backup/import</code>, <code>POST /api/backup/restore</code> (multipart <code>file</code>)</td>
+<td><code>backup</code> (database snapshot download), <code>import</code> (merge another database), <code>restore</code> (replace the library; refused while a job runs)</td>
+</tr>
+<tr>
+<td><code>GET /api/settings/export</code>, <code>POST /api/settings/import</code> (the exported JSON)</td>
+<td>Settings that <code>PATCH /api/settings</code> accepts, as a download without API keys or tokens (admins also get the server-wide keys); import applies a file's <code>settings</code> through the same checks, refusing API keys and unknown keys</td>
+</tr>
+<tr>
+<td><code>GET /api/maintenance</code>, <code>PUT /api/maintenance/schedule</code> <code>{hour, nightly[], monthly[]?, keep_backups?, trash_days? (0-120)}</code>, <code>POST /api/maintenance/{op}/run</code></td>
+<td>Admin only. Maintenance operations (<code>duplicates</code>, <code>complete-metadata</code>, <code>metadata-refresh</code>, <code>pdf-check</code>, <code>backup</code>, <code>clean-authors</code>, <code>clean-tags</code>, <code>empty-trash</code>) with their last result and running job; the nightly hour (server local time) and the operations ticked nightly or monthly (monthly: at that hour once 30 days have passed since the last run); start one as job <code>maint-&lt;op&gt;</code> over every library (409 while it runs)</td>
+</tr>
+<tr>
+<td><code>GET /api/maintenance/backups</code>, <code>GET</code>/<code>DELETE /api/maintenance/backups/{library}/{name}</code></td>
+<td>Admin only. Database backups the <code>backup</code> operation keeps in each library's <code>maintenance/backups/</code>: list, download, delete</td>
+</tr>
+<tr>
+<td><code>GET</code>/<code>PUT /api/maintenance/complete-metadata/options</code> <code>{gaps[], sources[]}</code></td>
+<td>Admin only. Which gaps (<code>title</code>, <code>authors</code>, <code>date</code>, <code>abstract</code>, <code>journal</code>, <code>doi</code>) make a new paper incomplete, and which sources (<code>arxiv</code>, <code>biorxiv</code>, <code>crossref</code>, <code>pubmed</code>) are asked, in order; at least one of each</td>
+</tr>
+<tr>
+<td><code>GET</code>/<code>PUT /api/maintenance/metadata-refresh/options</code> <code>{scope}</code></td>
+<td>Admin only. Which papers <code>metadata-refresh</code> asks again: <code>recent_or_preprint</code> (published within a year, or arXiv / bioRxiv / medRxiv; default) or <code>all</code></td>
+</tr>
+<tr>
+<td><code>GET /api/maintenance/pdf-check</code></td>
+<td>Admin only. Last <code>pdf-check</code> report per library: missing PDF files and files no paper points at (lists capped at 500, counts complete), plus <code>disk</code> (files of any type, PDFs, skipped, per top-level folder) and paper counts (<code>papers</code>, <code>papers_with_pdf</code>, <code>extra_versions</code>, <code>trashed_pdfs</code>)</td>
+</tr>
+<tr>
+<td><code>GET/PUT /api/maintenance/pdf-check/options</code> <code>{skip: [folder]}</code></td>
+<td>Admin only. Top-level folders of the PDF folder the check counts but never lists as unlinked (max 20; <code>orphans</code> always skipped)</td>
+</tr>
+<tr>
+<td><code>GET /api/maintenance/pdf-check/{library}/unlinked.tsv</code>, <code>/missing.tsv</code></td>
+<td>Admin only. Every unlinked file (<code>file, size, modified</code>) or every paper with a missing PDF (<code>source_id, version, title</code>) of the last check, tab separated</td>
+</tr>
+<tr>
+<td><code>POST /api/maintenance/pdf-check/{library}/move-orphans</code></td>
+<td>Admin only. Job <code>pdf-orphans</code>: checks again, moves unlinked PDFs older than one hour to <code>orphans/&lt;same path&gt;</code> (<code>(n)</code> suffix on clash), nothing deleted; 409 while another job runs</td>
+</tr>
+<tr>
+<td><code>GET /api/duplicates</code>, <code>POST /api/duplicates/merge</code> <code>{winner, loser}</code>, <code>POST /api/duplicates/dismiss</code> <code>{source_ids}</code>, <code>GET /api/duplicates/export.tsv</code></td>
+<td>Groups of papers with identical PDF files from the last <code>duplicates</code> run in this library; <code>paper merge</code> keeps the winner; dismissed groups stay hidden on later runs; the TSV has one row per paper (<code>group, sha256, source_id, version, title, file, size</code>)</td>
+</tr>
+<tr>
+<td><code>GET /api/metadata-review</code>, <code>POST /api/metadata-review/remove</code> <code>{source_ids}</code></td>
+<td>Papers <code>complete-metadata</code> could not complete in this library (fixed or deleted ones drop out); take papers off the list</td>
+</tr>
+<tr>
+<td><code>GET /api/settings</code>, <code>PATCH /api/settings</code></td>
+<td><code>settings get</code>, <code>settings update</code>, limited to an allowlist (storage cap, TeX rendering, contact addresses, home feed, search history, full-text worker, AI and MCP settings); API keys are write-only</td>
+</tr>
+<tr>
+<td><code>GET /api/ai/models</code>, <code>POST /api/ai/test</code>, <code>GET /api/ai/schemas</code></td>
+<td>Provider model list, connection test, the JSON Schema and example each AI action uses (409 while AI is off)</td>
+</tr>
+<tr>
+<td><code>POST /api/ai/tags/{id}</code>, <code>POST /api/ai/summary/{id}?pdf=</code>, <code>POST /api/ai/cleanup/{id}</code></td>
+<td>AI tag suggestions, summary, metadata cleanup; previews only, nothing is written</td>
+</tr>
+<tr>
+<td><code>GET /api/mcp</code>, <code>POST /api/mcp/token</code>, <code>DELETE /api/mcp/token</code></td>
+<td>MCP status, create (shown once) or revoke the access token</td>
+</tr>
+<tr>
+<td><code>POST/GET/DELETE /mcp</code></td>
+<td>MCP Streamable HTTP endpoint (bearer token; see <a href="../../mcp/">MCP server</a>)</td>
+</tr>
+<tr>
+<td><code>GET /api/clip/token</code>, <code>POST /api/clip/token</code>, <code>DELETE /api/clip/token</code></td>
+<td>Browser add-on token of the caller's library: status, create (shown once; replaces any previous one) or revoke. Every account has its own</td>
+</tr>
+<tr>
+<td><code>GET /api/clip/list</code></td>
+<td><code>{project_id}</code> of the add-on's reading list in this library, null before the first clip</td>
+</tr>
+<tr>
+<td><code>GET /api/clip/ping</code></td>
+<td>Add-on token. <code>{ok, version, username}</code></td>
+</tr>
+<tr>
+<td><code>POST /api/clip/pdf</code> (multipart <code>file</code>)</td>
+<td>Add-on token. Trial <code>pdf import</code> in a throwaway library to learn the id. New paper or no PDF yet: <code>pdf import</code> (metadata of an existing paper put back with <code>paper repair</code>). Has a PDF: no import. Then <code>project add-papers</code> to the list. Answers <code>{source_ids, new, existing, attached, project_id, failed}</code>, plus <code>title</code> when known and <code>metadata_kept</code> when a PDF was attached to an existing paper</td>
+</tr>
+<tr>
+<td><code>POST /api/clip/bibtex</code> (multipart <code>file</code>)</td>
+<td>Add-on token. <code>bibtex import</code> of the entries not in the library, matched by DOI, arXiv id, else exact title, then <code>project add-papers</code> for all of them. Answers <code>{source_ids, new, existing, project_id, failed}</code></td>
+</tr>
+</tbody>
+</table>
+<p>Paper ids are linXiv source ids such as <code>arxiv:1706.03762</code>. Old-style arXiv ids keep their slash: <code>/api/papers/arxiv:hep-th/9901001</code>.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-circle-arrow-up" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m16 12-4-4-4 4M12 16V8"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../configuration/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Admin Server Configuration">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-left" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7M19 12H5"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Admin Server Configuration
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../../functions-not-in-api/" class="md-footer__link md-footer__link--next" aria-label="Next: Functions not in the CLI">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Functions not in the CLI
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Docs made with <a href="https://zensical.org">Zensical</a> · linXiv developed by <a href="https://github.com/linxiv-dev">linxiv-dev</a> · linXiv-web developed by ToledoEM · Apache License 2.0
+    </div>
+  
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog" role="status" aria-atomic="true">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      
+      
+        
+        
+      <script id="__config" type="application/json">{"annotate":null,"base":"../..","features":["content.code.copy","content.code.select","navigation.footer","navigation.indexes","navigation.instant","navigation.path","navigation.top","navigation.tracking","search.highlight"],"redirect":null,"search":"../../assets/javascripts/workers/search.c47bb847.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","clipboard.error":"Could not copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.a2388154.min.js"></script>
+      
+    
+  </body>
+</html>

@@ -1,0 +1,2156 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Browser UI for the linXiv paper library">
+      
+      
+      
+      
+      
+        <link rel="prev" href="./..">
+      
+      
+        <link rel="next" href="../reference/compatibility/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/favicon.ico">
+      <meta name="generator" content="zensical-0.0.71">
+    
+    
+      
+        <title>Self-hosting with Docker - linXiv-web</title>
+      
+    
+    
+      
+        
+      
+      <link rel="stylesheet" href="../assets/stylesheets/modern/main.e442bf79.min.css">
+      
+        
+          
+        
+        <link rel="stylesheet" href="../assets/stylesheets/modern/palette.b60ce83d.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,500,500i,700,700i%7CJetBrains+Mono:400,400i,700,700i&amp;display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("..",location),__md_scope.pathname.endsWith("/")||(__md_scope=new URL(__md_scope.pathname+"/",location)),__md_hash=e=>[...e].reduce(((e,t)=>(e<<5)-e+t.charCodeAt(0)),0),__md_get=(e,t=localStorage,_=__md_scope)=>JSON.parse(t.getItem(_.pathname+"."+e)),__md_set=(e,t,_=localStorage,a=__md_scope)=>{try{_.setItem(a.pathname+"."+e,JSON.stringify(t))}catch(e){}},document.documentElement.setAttribute("data-platform",navigator.platform)</script>
+    
+      
+
+    
+    
+  
+  <script
+      data-goatcounter="https://etoledo.goatcounter.com/count"
+      async
+      src="//gc.zgo.at/count.js"
+  ></script>
+
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer" aria-hidden="true"></label>
+    <div data-md-component="skip">
+      <a href="#__skip" class="md-skip">
+        Skip to content
+      </a>
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="./.." title="linXiv-web" class="md-header__button md-logo" aria-label="linXiv-web" data-md-component="logo">
+      
+  <img src="../assets/logo.svg" alt="linXiv-web">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer" aria-label="Navigation">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-menu" viewBox="0 0 24 24"><path d="M4 5h16M4 12h16M4 19h16"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            linXiv-web
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Self-hosting with Docker
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-sun-moon" viewBox="0 0 24 24"><path d="M12 2v2M14.837 16.385a6 6 0 1 1-7.223-7.222c.624-.147.97.66.715 1.248a4 4 0 0 0 5.26 5.259c.589-.255 1.396.09 1.248.715M16 12a4 4 0 0 0-4-4M19 5l-1.256 1.256M20 12h2"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_2" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to system preference"  type="radio" name="__palette" id="__palette_2">
+    
+      <label class="md-header__button md-icon" title="Switch to system preference" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-moon" viewBox="0 0 24 24"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search" aria-label="Search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-search" viewBox="0 0 24 24"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog" aria-label="Search">
+  <button type="button" class="md-search__button">
+    Search
+  </button>
+</div>
+      
+    
+    <div class="md-header__source">
+      
+        <a href="https://github.com/ToledoEM/linXiv-web" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M216.5 362.5c-66-8-112.5-55.5-112.5-117 0-25 9-52 24-70-6.5-16.5-5.5-51.5 2-66 20-2.5 47 8 63 22.5 19-6 39-9 63.5-9s44.5 3 62.5 8.5c15.5-14 43-24.5 63-22 7 13.5 8 48.5 1.5 65.5 16 19 24.5 44.5 24.5 70.5 0 61.5-46.5 108-113.5 116.5 17 11 28.5 35 28.5 62.5v52c0 15 12.5 23.5 27.5 17.5C441 459.5 512 369 512 257 512 115.5 397 0 255.5 0S0 115.5 0 257c0 111 70.5 203 165.5 237.5 13.5 5 26.5-4 26.5-17.5v-40c-7 3-16 5-24 5-33 0-52.5-18-66.5-51.5-5.5-13.5-11.5-21.5-23-23-6-.5-8-3-8-6 0-6 10-10.5 20-10.5 14.5 0 27 9 40 27.5 10 14.5 20.5 21 33 21s20.5-4.5 32-16c8.5-8.5 15-16 21-21"/></svg>
+  </div>
+  <div class="md-source__repository">
+    ToledoEM/linXiv-web
+  </div>
+</a>
+      
+    </div>
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="./.." title="linXiv-web" class="md-nav__button md-logo" aria-label="linXiv-web" data-md-component="logo">
+      
+  <img src="../assets/logo.svg" alt="linXiv-web">
+
+    </a>
+    linXiv-web
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/ToledoEM/linXiv-web" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M216.5 362.5c-66-8-112.5-55.5-112.5-117 0-25 9-52 24-70-6.5-16.5-5.5-51.5 2-66 20-2.5 47 8 63 22.5 19-6 39-9 63.5-9s44.5 3 62.5 8.5c15.5-14 43-24.5 63-22 7 13.5 8 48.5 1.5 65.5 16 19 24.5 44.5 24.5 70.5 0 61.5-46.5 108-113.5 116.5 17 11 28.5 35 28.5 62.5v52c0 15 12.5 23.5 27.5 17.5C441 459.5 512 369 512 257 512 115.5 397 0 255.5 0S0 115.5 0 257c0 111 70.5 203 165.5 237.5 13.5 5 26.5-4 26.5-17.5v-40c-7 3-16 5-24 5-33 0-52.5-18-66.5-51.5-5.5-13.5-11.5-21.5-23-23-6-.5-8-3-8-6 0-6 10-10.5 20-10.5 14.5 0 27 9 40 27.5 10 14.5 20.5 21 33 21s20.5-4.5 32-16c8.5-8.5 15-16 21-21"/></svg>
+  </div>
+  <div class="md-source__repository">
+    ToledoEM/linXiv-web
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="./.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Home
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Install
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+            <label class="md-nav__title" for="__nav_2">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Install
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Self-hosting with Docker
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="././" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Self-hosting with Docker
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Requirements
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quick-start" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Quick start
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#first-run-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        First-run setup
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="First-run setup">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#setting-the-password-in-env-instead" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Setting the password in <code>.env</code> instead
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#changing-or-resetting-the-password" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Changing or resetting the password
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#logging-in" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Logging in
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#more-than-one-person" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        More than one person
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#where-your-data-lives" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Where your data lives
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reaching-it-from-other-machines" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Reaching it from other machines
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Reaching it from other machines">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#https-with-a-reverse-proxy" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        HTTPS with a reverse proxy
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Configuration
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#importing-many-pdfs" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Importing many PDFs
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#backups" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Backups
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#updating" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Updating
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#building-the-image-yourself" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Building the image yourself
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Troubleshooting
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/compatibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Compatibility and resources
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Using linXiv-web
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_3">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Using linXiv-web
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/home-feed/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Home feed
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/library/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Library
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/papers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Paper page
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/projects/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Projects and reading lists
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/search-and-add/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Search and add papers
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/authors-graph-tags/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Authors, graph and tags
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/settings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Settings
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/trash-backup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Trash and backups
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../server-admin/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Server Admin
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  AI and agents
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_5">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  AI and agents
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ai/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  AI features
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../mcp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  MCP server
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../browser-add-on/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Browser add-on
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Server scripts
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_7">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Server scripts
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../scripts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Server scripts
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../sanitize-pdf-names/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Sanitize PDF file names
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../bulk-import/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Bulk PDF import
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../bulk-ai-tags/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Bulk AI tags
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../export-tags/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Export tags
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Reference
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_8">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Reference
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Admin Server Configuration
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  HTTP API
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../functions-not-in-api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Functions not in the CLI
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../development/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Development
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  
+                    
+                    
+                    
+                      
+                    
+                    
+                      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+                      <div class="md-sidebar-button__wrapper">
+                        <label class="md-sidebar-button" for="__toc"></label>
+                      </div>
+                    
+                  
+                  <div class="md-sidebar__inner">
+                    
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Requirements
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quick-start" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Quick start
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#first-run-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        First-run setup
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="First-run setup">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#setting-the-password-in-env-instead" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Setting the password in <code>.env</code> instead
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#changing-or-resetting-the-password" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Changing or resetting the password
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#logging-in" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Logging in
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#more-than-one-person" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        More than one person
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#where-your-data-lives" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Where your data lives
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reaching-it-from-other-machines" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Reaching it from other machines
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Reaching it from other machines">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#https-with-a-reverse-proxy" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        HTTPS with a reverse proxy
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Configuration
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#importing-many-pdfs" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Importing many PDFs
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#backups" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Backups
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#updating" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Updating
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#building-the-image-yourself" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Building the image yourself
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Troubleshooting
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+                
+
+
+
+  
+
+
+  <nav class="md-path" aria-label="Navigation" >
+    <ol class="md-path__list">
+      
+        
+  
+  
+    <li class="md-path__item">
+      <a href="./.." class="md-path__link">
+        
+  
+  <span class="md-ellipsis">
+    Home
+  </span>
+
+      </a>
+    </li>
+  
+
+      
+      
+        
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+    
+      <li class="md-path__item">
+        <a href="././" class="md-path__link">
+          
+  
+  <span class="md-ellipsis">
+    Install
+  </span>
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ol>
+  </nav>
+
+              
+              <article class="md-content__inner md-typeset">
+                <a id="__skip" tabindex="-1"></a>
+                
+                  
+
+  
+  
+
+
+<h1 id="self-hosting-linxiv-web-with-docker">Self-hosting linXiv-web with Docker<a class="headerlink" href="#self-hosting-linxiv-web-with-docker" title="Permanent link">&para;</a></h1>
+<p>This guide runs linXiv-web on your own machine or home server from the prebuilt container image. For development and building from source, see <a href="../development/">Development</a>.</p>
+<p>The current release is the <code>release</code> branch, published as the image tag used below. <code>main</code> may contain changes that are not released yet.</p>
+<h2 id="requirements">Requirements<a class="headerlink" href="#requirements" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Docker with Docker Compose v2 (<code>docker compose</code>), on Linux, macOS or Windows.</li>
+<li>An <code>amd64</code> or <code>arm64</code> machine. The image is published for both.</li>
+<li>Two directories on the host: one for the library database, one for PDFs.</li>
+</ul>
+<p>The image bundles the <code>linxiv</code> CLI and <code>linxiv-mcp</code>, built from linXiv v0.7.1. Do not point linXiv-web at a data directory that the linXiv desktop app or <code>linxiv-headless</code> also uses: linXiv expects one process per library.</p>
+<h2 id="quick-start">Quick start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>mkdir<span class="w"> </span>-p<span class="w"> </span>linxiv-web/data<span class="w"> </span>linxiv-web/pdfs
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nb">cd</span><span class="w"> </span>linxiv-web
+</code></pre></div>
+<p>On Linux, the container runs as uid 1000 and must be able to write both directories:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>sudo<span class="w"> </span>chown<span class="w"> </span><span class="m">1000</span>:1000<span class="w"> </span>data<span class="w"> </span>pdfs
+</code></pre></div>
+<p>Create <code>docker-compose.yml</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">services</span><span class="p">:</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">linxiv-web</span><span class="p">:</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ghcr.io/toledoem/linxiv-web:0.1.4</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">    </span><span class="nt">container_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">linxiv-web</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">    </span><span class="nt">restart</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">unless-stopped</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">    </span><span class="nt">env_file</span><span class="p">:</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.env</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">        </span><span class="nt">required</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">    </span><span class="nt">ports</span><span class="p">:</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="w">      </span><span class="c1"># 127.0.0.1 = this machine only. Use 0.0.0.0 to reach it from the LAN.</span>
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"${LINXIV_WEB_BIND:-127.0.0.1}:${LINXIV_WEB_PUBLISH_PORT:-8086}:8000"</span>
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="w">    </span><span class="nt">volumes</span><span class="p">:</span>
+<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="w">      </span><span class="c1"># Long syntax: a missing host directory is an error, not a silently created empty one.</span>
+<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">bind</span>
+<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="w">        </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${LINXIV_WEB_DATA_HOST:-./data}</span>
+<a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a><span class="w">        </span><span class="nt">target</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/data</span>
+<a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a><span class="w">        </span><span class="nt">bind</span><span class="p">:</span>
+<a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a><span class="w">          </span><span class="nt">create_host_path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+<a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">bind</span>
+<a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a><span class="w">        </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${LINXIV_WEB_PDF_HOST:-./pdfs}</span>
+<a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a><span class="w">        </span><span class="nt">target</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/pdfs</span>
+<a id="__codelineno-2-22" name="__codelineno-2-22" href="#__codelineno-2-22"></a><span class="w">        </span><span class="nt">bind</span><span class="p">:</span>
+<a id="__codelineno-2-23" name="__codelineno-2-23" href="#__codelineno-2-23"></a><span class="w">          </span><span class="nt">create_host_path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+<a id="__codelineno-2-24" name="__codelineno-2-24" href="#__codelineno-2-24"></a><span class="w">    </span><span class="nt">healthcheck</span><span class="p">:</span>
+<a id="__codelineno-2-25" name="__codelineno-2-25" href="#__codelineno-2-25"></a><span class="w">      </span><span class="nt">test</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">"CMD"</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">"python"</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">"-c"</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">"import</span><span class="nv"> </span><span class="s">urllib.request;</span><span class="nv"> </span><span class="s">urllib.request.urlopen('http://127.0.0.1:8000/api/health')"</span><span class="p p-Indicator">]</span>
+<a id="__codelineno-2-26" name="__codelineno-2-26" href="#__codelineno-2-26"></a><span class="w">      </span><span class="nt">interval</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">30s</span>
+<a id="__codelineno-2-27" name="__codelineno-2-27" href="#__codelineno-2-27"></a><span class="w">      </span><span class="nt">timeout</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">5s</span>
+<a id="__codelineno-2-28" name="__codelineno-2-28" href="#__codelineno-2-28"></a><span class="w">      </span><span class="nt">retries</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">3</span>
+</code></pre></div>
+<p>Start it:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>up<span class="w"> </span>-d
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>docker<span class="w"> </span>compose<span class="w"> </span>logs<span class="w"> </span>-f<span class="w"> </span>linxiv-web
+</code></pre></div>
+<p>Open http://127.0.0.1:8086.</p>
+<p>The image is tagged with the linXiv-web version (<code>0.1.4</code>) and <code>latest</code>; pin the version to choose when you update. The image is public: no <code>docker login</code> needed.</p>
+<h2 id="first-run-setup">First-run setup<a class="headerlink" href="#first-run-setup" title="Permanent link">&para;</a></h2>
+<p>With no password configured, the server starts in setup mode and logs:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>linxiv-web: no password set; first-run setup is open on 0.0.0.0:8000. The first visitor creates the admin password.
+</code></pre></div>
+<p>The first person to open the web UI creates the admin password (at least 8 characters) and is logged in. Until then every API call is refused. Do the setup before you publish the port to a network you don't trust.</p>
+<p>After the password, the wizard offers optional steps, each with Skip:</p>
+<ol>
+<li>Contact emails for arXiv, Crossref and OpenAlex, and an NCBI (PubMed) API key.</li>
+<li>Theme and light/dark mode (stored in the browser).</li>
+<li>AI provider, model and key (off by default).</li>
+<li>Home feed URL and PDF folder layout.</li>
+</ol>
+<p>Everything in the wizard can be changed later in Settings.</p>
+<p>The password hash is stored in <code>data/linxiv-web-auth.json</code> (mode 0600). linXiv-web never stores the password itself.</p>
+<h3 id="setting-the-password-in-env-instead">Setting the password in <code>.env</code> instead<a class="headerlink" href="#setting-the-password-in-env-instead" title="Permanent link">&para;</a></h3>
+<p>A password from the environment always wins over the stored one, and setup never opens. Generate an argon2 hash:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>docker<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>-e<span class="w"> </span><span class="nv">PASSWORD</span><span class="o">=</span><span class="s1">'your-password'</span><span class="w"> </span>--entrypoint<span class="w"> </span>python<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span>ghcr.io/toledoem/linxiv-web:0.1.4<span class="w"> </span>-m<span class="w"> </span>app<span class="w"> </span>hash-password
+</code></pre></div>
+<p>Put it in <code>.env</code> next to <code>docker-compose.yml</code>, in single quotes (the hash contains <code>$</code>):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nv">LINXIV_WEB_PASSWORD_HASH</span><span class="o">=</span><span class="s1">'$argon2id$v=19$m=65536,t=3,p=4$...'</span>
+</code></pre></div>
+<h3 id="changing-or-resetting-the-password">Changing or resetting the password<a class="headerlink" href="#changing-or-resetting-the-password" title="Permanent link">&para;</a></h3>
+<p>Logged in: <strong>Settings → Server &amp; data → Login</strong> changes the password and logs out every other browser. "Log out other sessions" there ends all sessions except yours.</p>
+<p>Forgotten password: set a new one from the server, no restart needed (every browser is logged out):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>docker<span class="w"> </span>compose<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>linxiv-web<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>app<span class="w"> </span>reset-password
+</code></pre></div>
+<p>Or remove the stored password so the next visitor runs first-run setup again (the library is untouched):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>down
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>rm<span class="w"> </span>data/linxiv-web-auth.json
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>docker<span class="w"> </span>compose<span class="w"> </span>up<span class="w"> </span>-d
+</code></pre></div>
+<p>A password set with <code>LINXIV_WEB_PASSWORD_HASH</code> / <code>LINXIV_WEB_PASSWORD</code> always wins; change it in <code>.env</code> instead.</p>
+<p>In multi-user mode, <code>reset-password --user &lt;name&gt;</code> resets one account's password and logs only that account out; without <code>--user</code> it resets the owner's server password. See <a href="../server-admin/#passwords">Server Admin</a>.</p>
+<h2 id="logging-in">Logging in<a class="headerlink" href="#logging-in" title="Permanent link">&para;</a></h2>
+<p>Tick <strong>Remember me on this browser</strong> to stay logged in for 90 days (<code>LINXIV_WEB_REMEMBER_DAYS</code> changes this). Without it, the login ends when the browser closes, and after 14 days at most.</p>
+<p>Sessions are kept in <code>data/linxiv-web-state.db</code>, so restarting or updating the container keeps you logged in.</p>
+<h2 id="more-than-one-person">More than one person<a class="headerlink" href="#more-than-one-person" title="Permanent link">&para;</a></h2>
+<p>By default linXiv-web has one password and one library. To give other people their own logins and libraries, plus a shared library that only admins change, turn on multi-user mode in <strong>Settings → Server Admin</strong>. The login page then asks for a username as well. <a href="../server-admin/">Server Admin</a> explains accounts, roles and the shared library.</p>
+<h2 id="where-your-data-lives">Where your data lives<a class="headerlink" href="#where-your-data-lives" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Host directory</th>
+<th>Container</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>data/</code> (<code>LINXIV_WEB_DATA_HOST</code>)</td>
+<td><code>/data</code></td>
+<td><code>papers.db</code> (library), <code>user_settings.json</code> (linXiv settings, including API keys entered in Settings), <code>linxiv-web-auth.json</code> (admin password hash), <code>linxiv-web-state.db</code> (sessions, login throttle, multi-user accounts), <code>libraries/</code> (shared and per-account libraries in multi-user mode)</td>
+</tr>
+<tr>
+<td><code>pdfs/</code> (<code>LINXIV_WEB_PDF_HOST</code>)</td>
+<td><code>/pdfs</code></td>
+<td>PDFs, flat or in year/journal subfolders (Settings → Library → PDF folders)</td>
+</tr>
+</tbody>
+</table>
+<p>Keep <code>data/</code> on a local disk: SQLite over network shares or exFAT is unreliable. <code>pdfs/</code> may live on a NAS or external drive.</p>
+<p>To use other locations, set them in <code>.env</code> (both directories must exist):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nv">LINXIV_WEB_DATA_HOST</span><span class="o">=</span>/srv/linxiv/data
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="nv">LINXIV_WEB_PDF_HOST</span><span class="o">=</span>/mnt/nas/papers
+</code></pre></div>
+<h2 id="reaching-it-from-other-machines">Reaching it from other machines<a class="headerlink" href="#reaching-it-from-other-machines" title="Permanent link">&para;</a></h2>
+<p>Set in <code>.env</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="nv">LINXIV_WEB_BIND</span><span class="o">=</span><span class="m">0</span>.0.0.0
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="nv">LINXIV_WEB_PUBLISH_PORT</span><span class="o">=</span><span class="m">8086</span>
+</code></pre></div>
+<p>then <code>docker compose up -d</code>, and open <code>http://&lt;server-ip&gt;:8086</code>. This is plain HTTP: use it on a trusted LAN, or put HTTPS in front.</p>
+<h3 id="https-with-a-reverse-proxy">HTTPS with a reverse proxy<a class="headerlink" href="#https-with-a-reverse-proxy" title="Permanent link">&para;</a></h3>
+<p>Keep <code>LINXIV_WEB_BIND=127.0.0.1</code> and let the proxy on the same host forward to it. Set in <code>.env</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="nv">LINXIV_WEB_COOKIE_SECURE</span><span class="o">=</span><span class="nb">true</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="nv">LINXIV_WEB_HSTS</span><span class="o">=</span><span class="nb">true</span><span class="w">   </span><span class="c1"># optional: browsers stop using plain HTTP for this host</span>
+</code></pre></div>
+<p>The proxy must pass the original <code>Host</code> header: linXiv-web rejects writes whose <code>Origin</code> doesn't match the host it sees.</p>
+<p>linXiv-web serves only loopback, private LAN and link-local addresses unless <code>LINXIV_WEB_ALLOW_EXTERNAL=true</code>. Behind a proxy it sees the proxy's address, so everyone passes as the proxy. To see real client addresses, list the proxy in <code>LINXIV_WEB_TRUSTED_PROXIES</code> (from inside the container it usually shows up as the Docker gateway, e.g. <code>172.17.0.1</code>, or the whole <code>172.16.0.0/12</code>) and make it send <code>X-Forwarded-For</code>; then internet clients need <code>LINXIV_WEB_ALLOW_EXTERNAL=true</code>.</p>
+<p>Caddy (passes <code>Host</code> by default, gets certificates itself):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>papers.example.org {
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>    reverse_proxy 127.0.0.1:8086
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>}
+</code></pre></div>
+<p>nginx:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="k">server</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">    </span><span class="kn">listen</span><span class="w"> </span><span class="mi">443</span><span class="w"> </span><span class="s">ssl</span><span class="p">;</span>
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">    </span><span class="kn">server_name</span><span class="w"> </span><span class="s">papers.example.org</span><span class="p">;</span>
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="w">    </span><span class="c1"># ssl_certificate / ssl_certificate_key ...</span>
+<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="w">    </span><span class="kn">client_max_body_size</span><span class="w"> </span><span class="mi">200m</span><span class="p">;</span><span class="w">   </span><span class="c1"># match LINXIV_WEB_MAX_UPLOAD_MB</span>
+<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a>
+<a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a><span class="w">    </span><span class="kn">location</span><span class="w"> </span><span class="s">/</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a><span class="w">        </span><span class="kn">proxy_pass</span><span class="w"> </span><span class="s">http://127.0.0.1:8086</span><span class="p">;</span>
+<a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a><span class="w">        </span><span class="kn">proxy_set_header</span><span class="w"> </span><span class="s">Host</span><span class="w"> </span><span class="nv">$host</span><span class="p">;</span>
+<a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a><span class="w">        </span><span class="kn">proxy_set_header</span><span class="w"> </span><span class="s">X-Forwarded-For</span><span class="w"> </span><span class="nv">$proxy_add_x_forwarded_for</span><span class="p">;</span>
+<a id="__codelineno-13-11" name="__codelineno-13-11" href="#__codelineno-13-11"></a><span class="w">        </span><span class="kn">proxy_read_timeout</span><span class="w"> </span><span class="s">480s</span><span class="p">;</span><span class="w">  </span><span class="c1"># long searches, imports, AI calls, two large add-on PDFs queued</span>
+<a id="__codelineno-13-12" name="__codelineno-13-12" href="#__codelineno-13-12"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-13-13" name="__codelineno-13-13" href="#__codelineno-13-13"></a><span class="p">}</span>
+</code></pre></div>
+<h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
+<p>Settings changed in the web UI are stored in <code>data/</code>. Environment variables go in <code>.env</code> and need <code>docker compose up -d</code> to apply. The most useful ones:</p>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Default</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>LINXIV_WEB_BIND</code> / <code>LINXIV_WEB_PUBLISH_PORT</code></td>
+<td><code>127.0.0.1</code> / <code>8086</code></td>
+<td>Where compose publishes the port</td>
+</tr>
+<tr>
+<td><code>LINXIV_WEB_DATA_HOST</code> / <code>LINXIV_WEB_PDF_HOST</code></td>
+<td><code>./data</code> / <code>./pdfs</code></td>
+<td>Host directories</td>
+</tr>
+<tr>
+<td><code>LINXIV_WEB_PASSWORD_HASH</code></td>
+<td>none</td>
+<td>Admin password hash; skips first-run setup</td>
+</tr>
+<tr>
+<td><code>LINXIV_WEB_REMEMBER_DAYS</code></td>
+<td><code>90</code></td>
+<td>Login lifetime with Remember me</td>
+</tr>
+<tr>
+<td><code>LINXIV_WEB_COOKIE_SECURE</code></td>
+<td><code>false</code></td>
+<td><code>true</code> behind HTTPS</td>
+</tr>
+<tr>
+<td><code>LINXIV_WEB_ALLOW_EXTERNAL</code></td>
+<td><code>false</code></td>
+<td>Serve public IP addresses (else 403)</td>
+</tr>
+<tr>
+<td><code>LINXIV_WEB_TRUSTED_PROXIES</code></td>
+<td>none</td>
+<td>Proxy IPs/CIDRs whose <code>X-Forwarded-For</code> is believed</td>
+</tr>
+<tr>
+<td><code>LINXIV_WEB_MAX_UPLOAD_MB</code></td>
+<td><code>200</code></td>
+<td>Upload size cap</td>
+</tr>
+<tr>
+<td><code>LINXIV_WEB_LIBRARIES_PDF_DIR</code></td>
+<td>none</td>
+<td>Multi-user mode: PDF folder for the shared and per-account libraries (container path; mount it)</td>
+</tr>
+<tr>
+<td><code>CROSSREF_MAILTO</code>, <code>NCBI_API_KEY</code>, <code>GEMINI_API_KEY</code>, …</td>
+<td>none</td>
+<td>Override the values entered in Settings</td>
+</tr>
+</tbody>
+</table>
+<p>The full list is in <a href="../reference/configuration/">Admin Server Configuration</a>.</p>
+<h2 id="importing-many-pdfs">Importing many PDFs<a class="headerlink" href="#importing-many-pdfs" title="Permanent link">&para;</a></h2>
+<p>To import a folder of PDFs that is already on the server, without the web UI, use <code>scripts/bulk-import.sh</code>. See <a href="../bulk-import/">bulk-import.md</a>.</p>
+<h2 id="backups">Backups<a class="headerlink" href="#backups" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Database only: Settings → Server &amp; data → Backup downloads a copy of <code>papers.db</code> and can import or restore one. It does not include PDFs. The same card exports and imports the settings (without API keys).</li>
+<li>Database copies on the server: the "Back up databases" maintenance operation keeps the newest copies of every library database inside the data directory, nightly or on demand. See <a href="../server-admin/#maintenance-operations">Maintenance operations</a>. Set <code>TZ</code> on the container so the nightly hour is your local time.</li>
+<li>Everything: stop the container and copy both directories:</li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>down
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>tar<span class="w"> </span>czf<span class="w"> </span>linxiv-backup-<span class="k">$(</span>date<span class="w"> </span>+%F<span class="k">)</span>.tar.gz<span class="w"> </span>data<span class="w"> </span>pdfs
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>docker<span class="w"> </span>compose<span class="w"> </span>up<span class="w"> </span>-d
+</code></pre></div>
+<h2 id="updating">Updating<a class="headerlink" href="#updating" title="Permanent link">&para;</a></h2>
+<p>Change the image tag in <code>docker-compose.yml</code> to the new version, then:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>pull
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>docker<span class="w"> </span>compose<span class="w"> </span>up<span class="w"> </span>-d
+</code></pre></div>
+<p>Reload open browser tabs with Cmd/Ctrl+Shift+R so they pick up the new interface.</p>
+<h2 id="building-the-image-yourself">Building the image yourself<a class="headerlink" href="#building-the-image-yourself" title="Permanent link">&para;</a></h2>
+<p>Instead of pulling from GHCR, compose can build from the git repository. Replace the <code>image:</code> line with:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="w">    </span><span class="nt">build</span><span class="p">:</span>
+<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="w">      </span><span class="nt">context</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https://github.com/ToledoEM/linXiv-web.git#release</span>
+<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="w">      </span><span class="nt">args</span><span class="p">:</span>
+<a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="w">        </span><span class="nt">LINXIV_REF</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">v0.7.1</span>
+<a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a><span class="w">    </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">linxiv-web:local</span>
+</code></pre></div>
+<p>and run <code>docker compose build &amp;&amp; docker compose up -d</code>. The first build compiles linXiv from source and takes several minutes. To build local changes, clone the repository and use <code>context: ./linXiv-web</code> instead of the URL.</p>
+<h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Fix</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Container exits with <code>LINXIV_WEB_PDF_DIR=/pdfs is not writable</code> (or the data dir)</td>
+<td>On Linux: <code>sudo chown 1000:1000 data pdfs</code></td>
+</tr>
+<tr>
+<td><code>... does not exist (mount the PDF directory)</code></td>
+<td>Create the host directories before starting; compose won't create them</td>
+</tr>
+<tr>
+<td>Container exits with <code>linxiv-web-auth.json is unreadable</code></td>
+<td>The stored password file is damaged: delete it and run setup again</td>
+</tr>
+<tr>
+<td><code>invalid password</code> after setting <code>LINXIV_WEB_PASSWORD_HASH</code></td>
+<td>Keep the hash in single quotes in <code>.env</code>; compose expands <code>$</code> otherwise</td>
+</tr>
+<tr>
+<td>Writes fail with <code>cross-origin request rejected</code> behind a proxy</td>
+<td>The proxy must forward the original <code>Host</code> header</td>
+</tr>
+<tr>
+<td><code>403 External requests are disabled</code></td>
+<td>The client has a public IP address: set <code>LINXIV_WEB_ALLOW_EXTERNAL=true</code>, or reach it over LAN/VPN</td>
+</tr>
+<tr>
+<td>Container exits with <code>LINXIV_WEB_TRUSTED_PROXIES: '…' is not an IP or CIDR</code></td>
+<td>Use addresses or CIDRs, not host names</td>
+</tr>
+<tr>
+<td>Old interface after an update</td>
+<td>Hard reload with Cmd/Ctrl+Shift+R</td>
+</tr>
+<tr>
+<td>Logged out after a restart</td>
+<td><code>LINXIV_WEB_SECRET_KEY</code> changed, or <code>data/linxiv-web-state.db</code> was deleted</td>
+</tr>
+<tr>
+<td><code>docker compose pull</code> says <code>denied</code></td>
+<td>Log in to ghcr.io (see Quick start)</td>
+</tr>
+</tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-circle-arrow-up" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m16 12-4-4-4 4M12 16V8"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="./.." class="md-footer__link md-footer__link--prev" aria-label="Previous: Home">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-left" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7M19 12H5"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Home
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../reference/compatibility/" class="md-footer__link md-footer__link--next" aria-label="Next: Compatibility and resources">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Compatibility and resources
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Docs made with <a href="https://zensical.org">Zensical</a> · linXiv developed by <a href="https://github.com/linxiv-dev">linxiv-dev</a> · linXiv-web developed by ToledoEM · Apache License 2.0
+    </div>
+  
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog" role="status" aria-atomic="true">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      
+      
+        
+        
+      <script id="__config" type="application/json">{"annotate":null,"base":"..","features":["content.code.copy","content.code.select","navigation.footer","navigation.indexes","navigation.instant","navigation.path","navigation.top","navigation.tracking","search.highlight"],"redirect":null,"search":"../assets/javascripts/workers/search.c47bb847.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","clipboard.error":"Could not copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.a2388154.min.js"></script>
+      
+    
+  </body>
+</html>

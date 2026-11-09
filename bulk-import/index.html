@@ -1,0 +1,1925 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Browser UI for the linXiv paper library">
+      
+      
+      
+      
+      
+        <link rel="prev" href="../sanitize-pdf-names/">
+      
+      
+        <link rel="next" href="../bulk-ai-tags/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/favicon.ico">
+      <meta name="generator" content="zensical-0.0.71">
+    
+    
+      
+        <title>Bulk PDF import - linXiv-web</title>
+      
+    
+    
+      
+        
+      
+      <link rel="stylesheet" href="../assets/stylesheets/modern/main.e442bf79.min.css">
+      
+        
+          
+        
+        <link rel="stylesheet" href="../assets/stylesheets/modern/palette.b60ce83d.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,500,500i,700,700i%7CJetBrains+Mono:400,400i,700,700i&amp;display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("..",location),__md_scope.pathname.endsWith("/")||(__md_scope=new URL(__md_scope.pathname+"/",location)),__md_hash=e=>[...e].reduce(((e,t)=>(e<<5)-e+t.charCodeAt(0)),0),__md_get=(e,t=localStorage,_=__md_scope)=>JSON.parse(t.getItem(_.pathname+"."+e)),__md_set=(e,t,_=localStorage,a=__md_scope)=>{try{_.setItem(a.pathname+"."+e,JSON.stringify(t))}catch(e){}},document.documentElement.setAttribute("data-platform",navigator.platform)</script>
+    
+      
+
+    
+    
+  
+  <script
+      data-goatcounter="https://etoledo.goatcounter.com/count"
+      async
+      src="//gc.zgo.at/count.js"
+  ></script>
+
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer" aria-hidden="true"></label>
+    <div data-md-component="skip">
+      <a href="#__skip" class="md-skip">
+        Skip to content
+      </a>
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="./.." title="linXiv-web" class="md-header__button md-logo" aria-label="linXiv-web" data-md-component="logo">
+      
+  <img src="../assets/logo.svg" alt="linXiv-web">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer" aria-label="Navigation">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-menu" viewBox="0 0 24 24"><path d="M4 5h16M4 12h16M4 19h16"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            linXiv-web
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Bulk PDF import
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-sun-moon" viewBox="0 0 24 24"><path d="M12 2v2M14.837 16.385a6 6 0 1 1-7.223-7.222c.624-.147.97.66.715 1.248a4 4 0 0 0 5.26 5.259c.589-.255 1.396.09 1.248.715M16 12a4 4 0 0 0-4-4M19 5l-1.256 1.256M20 12h2"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_2" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to system preference"  type="radio" name="__palette" id="__palette_2">
+    
+      <label class="md-header__button md-icon" title="Switch to system preference" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-moon" viewBox="0 0 24 24"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search" aria-label="Search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-search" viewBox="0 0 24 24"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog" aria-label="Search">
+  <button type="button" class="md-search__button">
+    Search
+  </button>
+</div>
+      
+    
+    <div class="md-header__source">
+      
+        <a href="https://github.com/ToledoEM/linXiv-web" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M216.5 362.5c-66-8-112.5-55.5-112.5-117 0-25 9-52 24-70-6.5-16.5-5.5-51.5 2-66 20-2.5 47 8 63 22.5 19-6 39-9 63.5-9s44.5 3 62.5 8.5c15.5-14 43-24.5 63-22 7 13.5 8 48.5 1.5 65.5 16 19 24.5 44.5 24.5 70.5 0 61.5-46.5 108-113.5 116.5 17 11 28.5 35 28.5 62.5v52c0 15 12.5 23.5 27.5 17.5C441 459.5 512 369 512 257 512 115.5 397 0 255.5 0S0 115.5 0 257c0 111 70.5 203 165.5 237.5 13.5 5 26.5-4 26.5-17.5v-40c-7 3-16 5-24 5-33 0-52.5-18-66.5-51.5-5.5-13.5-11.5-21.5-23-23-6-.5-8-3-8-6 0-6 10-10.5 20-10.5 14.5 0 27 9 40 27.5 10 14.5 20.5 21 33 21s20.5-4.5 32-16c8.5-8.5 15-16 21-21"/></svg>
+  </div>
+  <div class="md-source__repository">
+    ToledoEM/linXiv-web
+  </div>
+</a>
+      
+    </div>
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="./.." title="linXiv-web" class="md-nav__button md-logo" aria-label="linXiv-web" data-md-component="logo">
+      
+  <img src="../assets/logo.svg" alt="linXiv-web">
+
+    </a>
+    linXiv-web
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/ToledoEM/linXiv-web" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M216.5 362.5c-66-8-112.5-55.5-112.5-117 0-25 9-52 24-70-6.5-16.5-5.5-51.5 2-66 20-2.5 47 8 63 22.5 19-6 39-9 63.5-9s44.5 3 62.5 8.5c15.5-14 43-24.5 63-22 7 13.5 8 48.5 1.5 65.5 16 19 24.5 44.5 24.5 70.5 0 61.5-46.5 108-113.5 116.5 17 11 28.5 35 28.5 62.5v52c0 15 12.5 23.5 27.5 17.5C441 459.5 512 369 512 257 512 115.5 397 0 255.5 0S0 115.5 0 257c0 111 70.5 203 165.5 237.5 13.5 5 26.5-4 26.5-17.5v-40c-7 3-16 5-24 5-33 0-52.5-18-66.5-51.5-5.5-13.5-11.5-21.5-23-23-6-.5-8-3-8-6 0-6 10-10.5 20-10.5 14.5 0 27 9 40 27.5 10 14.5 20.5 21 33 21s20.5-4.5 32-16c8.5-8.5 15-16 21-21"/></svg>
+  </div>
+  <div class="md-source__repository">
+    ToledoEM/linXiv-web
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="./.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Home
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Install
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_2">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Install
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../self-hosting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Self-hosting with Docker
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/compatibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Compatibility and resources
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Using linXiv-web
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_3">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Using linXiv-web
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/home-feed/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Home feed
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/library/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Library
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/papers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Paper page
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/projects/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Projects and reading lists
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/search-and-add/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Search and add papers
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/authors-graph-tags/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Authors, graph and tags
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/settings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Settings
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/trash-backup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Trash and backups
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../server-admin/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Server Admin
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  AI and agents
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_5">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  AI and agents
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ai/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  AI features
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../mcp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  MCP server
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../browser-add-on/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Browser add-on
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Server scripts
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="true">
+            <label class="md-nav__title" for="__nav_7">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Server scripts
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../scripts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Server scripts
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../sanitize-pdf-names/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Sanitize PDF file names
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Bulk PDF import
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="././" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Bulk PDF import
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Requirements
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#getting-the-script-onto-the-server" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Getting the script onto the server
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#api-mode-container-running" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        api mode: container running
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="api mode: container running">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#running-it-without-a-terminal-cron" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Running it without a terminal (cron)
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#offline-mode-container-stopped" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        offline mode: container stopped
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#where-the-files-end-up" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Where the files end up
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-to-expect" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        What to expect
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Troubleshooting
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../bulk-ai-tags/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Bulk AI tags
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../export-tags/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Export tags
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Reference
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_8">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Reference
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Admin Server Configuration
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  HTTP API
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../functions-not-in-api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Functions not in the CLI
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../development/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Development
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  
+                    
+                    
+                    
+                      
+                    
+                    
+                      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+                      <div class="md-sidebar-button__wrapper">
+                        <label class="md-sidebar-button" for="__toc"></label>
+                      </div>
+                    
+                  
+                  <div class="md-sidebar__inner">
+                    
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Requirements
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#getting-the-script-onto-the-server" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Getting the script onto the server
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#api-mode-container-running" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        api mode: container running
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="api mode: container running">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#running-it-without-a-terminal-cron" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Running it without a terminal (cron)
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#offline-mode-container-stopped" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        offline mode: container stopped
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#where-the-files-end-up" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Where the files end up
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-to-expect" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        What to expect
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Troubleshooting
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+                
+
+
+
+  
+
+
+  <nav class="md-path" aria-label="Navigation" >
+    <ol class="md-path__list">
+      
+        
+  
+  
+    <li class="md-path__item">
+      <a href="./.." class="md-path__link">
+        
+  
+  <span class="md-ellipsis">
+    Home
+  </span>
+
+      </a>
+    </li>
+  
+
+      
+      
+        
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+      <li class="md-path__item">
+        <a href="../scripts/" class="md-path__link">
+          
+  
+  <span class="md-ellipsis">
+    Server scripts
+  </span>
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ol>
+  </nav>
+
+              
+              <article class="md-content__inner md-typeset">
+                <a id="__skip" tabindex="-1"></a>
+                
+                  
+
+  
+  
+
+
+<h1 id="importing-a-folder-of-pdfs-on-the-server">Importing a folder of PDFs on the server<a class="headerlink" href="#importing-a-folder-of-pdfs-on-the-server" title="Permanent link">&para;</a></h1>
+<p>Use this when the PDFs are already on the machine that runs the linXiv-web container and you don't want to upload them one by one in the browser. <code>scripts/bulk-import.sh</code> runs on that machine and imports every PDF under a directory, subfolders included.</p>
+<p>It has two modes:</p>
+<table>
+<thead>
+<tr>
+<th>Mode</th>
+<th>Container</th>
+<th>How it imports</th>
+<th>Use it when</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>api</code> (default)</td>
+<td>running</td>
+<td>uploads each file to <code>POST /api/pdfs/import</code> over <code>127.0.0.1</code></td>
+<td>you want the library to stay online, or run imports from cron</td>
+</tr>
+<tr>
+<td><code>offline</code></td>
+<td>stopped</td>
+<td>runs <code>linxiv pdf import</code> in a one-off container, with the folder mounted read-only</td>
+<td>very large batches, files over the upload cap, or linking every paper to a project</td>
+</tr>
+</tbody>
+</table>
+<p>Each PDF is imported the same way as Upload in the web UI: linXiv reads the metadata from the PDF and keeps its own copy in the PDF folder. <code>--place</code> changes that: <code>move</code> deletes each source file once it is imported, and <code>in-situ</code> leaves the files where they are and links each paper to its file. See <a href="#where-the-files-end-up">Where the files end up</a>. macOS <code>._*</code> files are ignored.</p>
+<p>Don't run <code>docker exec linxiv-web linxiv pdf import ...</code> while the container is up. linXiv allows one writing process per library, and the server can only keep its own calls in order. A second <code>linxiv</code> process writing next to it can fail or leave the library inconsistent. The script avoids this: <code>api</code> mode goes through the server, and <code>offline</code> mode only runs while the server is stopped.</p>
+<h2 id="requirements">Requirements<a class="headerlink" href="#requirements" title="Permanent link">&para;</a></h2>
+<ul>
+<li>On the server: <code>sh</code>, <code>curl</code>, <code>find</code>, <code>awk</code> and <code>sed</code> (any Linux has them), and Docker Compose v2 for <code>offline</code> mode.</li>
+<li><code>api</code> mode: compose publishes the port on the server (the default <code>127.0.0.1:8086</code> works), and the admin password is set (first-run setup done, or <code>LINXIV_WEB_PASSWORD_HASH</code> in <code>.env</code>).</li>
+<li><code>offline</code> mode: the PDFs must be readable by uid 1000, the user the container runs as.</li>
+</ul>
+<h2 id="getting-the-script-onto-the-server">Getting the script onto the server<a class="headerlink" href="#getting-the-script-onto-the-server" title="Permanent link">&para;</a></h2>
+<p>Copy it next to your <code>docker-compose.yml</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>scp<span class="w"> </span>scripts/bulk-import.sh<span class="w"> </span>server:linxiv-web/
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>ssh<span class="w"> </span>server<span class="w"> </span><span class="s1">'chmod +x linxiv-web/bulk-import.sh'</span>
+</code></pre></div>
+<p>Then, on the server:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nb">cd</span><span class="w"> </span>linxiv-web
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>./bulk-import.sh<span class="w"> </span>--help
+</code></pre></div>
+<p>Check what it will pick up first:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>./bulk-import.sh<span class="w"> </span>--dry-run<span class="w"> </span>/srv/inbox
+</code></pre></div>
+<h2 id="api-mode-container-running">api mode: container running<a class="headerlink" href="#api-mode-container-running" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>./bulk-import.sh<span class="w"> </span>/srv/inbox
+</code></pre></div>
+<p>The script asks for the linXiv-web password, logs in, and uploads the files one at a time. You can keep using the web UI while it runs, though other requests wait their turn behind each import. Every file gets one line in the output and in the log file:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>OK    2021/smith-rna.pdf -&gt; doi:10.1038/s41586-021-03819-2
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>FAIL  scans/notes.pdf (400): not a PDF file
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>done: 1 imported, 1 failed, 2 total. Log: ./bulk-import-20261008-221500.log
+</code></pre></div>
+<p>The exit status is 1 when any file fails, and 0 otherwise. <code>DUP</code> and <code>SKIP</code> lines (see <a href="#where-the-files-end-up">Where the files end up</a>) don't count as failures.</p>
+<p>Options for this mode:</p>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--url URL</code></td>
+<td>Server address, if you changed <code>LINXIV_WEB_PUBLISH_PORT</code> (default <code>http://127.0.0.1:8086</code>)</td>
+</tr>
+<tr>
+<td><code>--place copy\|move</code></td>
+<td>Keep the source files (default), or delete each one after it is imported</td>
+</tr>
+<tr>
+<td><code>--move-done DIR</code></td>
+<td>Move each imported file to <code>DIR</code>, keeping its subfolder. A rerun then only retries the failures</td>
+</tr>
+<tr>
+<td><code>--index-text</code></td>
+<td>After the imports, start the job that indexes PDF text for full-text search (the same as <strong>Index PDFs now</strong> in Settings → Library → PDF full text)</td>
+</tr>
+<tr>
+<td><code>--log FILE</code></td>
+<td>Log location (default <code>./bulk-import-&lt;date&gt;-&lt;time&gt;.log</code>)</td>
+</tr>
+</tbody>
+</table>
+<p>Run it on the server itself and point it at <code>127.0.0.1</code>, not at a public HTTPS name. Over loopback, uploads skip the reverse proxy and its body size limit. The script also works when <code>LINXIV_WEB_COOKIE_SECURE=true</code>.</p>
+<h3 id="running-it-without-a-terminal-cron">Running it without a terminal (cron)<a class="headerlink" href="#running-it-without-a-terminal-cron" title="Permanent link">&para;</a></h3>
+<p>The script reads the password from the first line of the file named in <code>LINXIV_WEB_PASSWORD_FILE</code>. Keep that file readable only by you:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>install<span class="w"> </span>-m<span class="w"> </span><span class="m">600</span><span class="w"> </span>/dev/null<span class="w"> </span>~/.linxiv-web-password
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="nb">printf</span><span class="w"> </span><span class="s1">'%s\n'</span><span class="w"> </span><span class="s1">'your-password'</span><span class="w"> </span>&gt;<span class="w"> </span>~/.linxiv-web-password
+</code></pre></div>
+<p>A crontab entry that imports whatever lands in an inbox every night, and moves the imported files out of it:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>15 3 * * * cd $HOME/linxiv-web &amp;&amp; LINXIV_WEB_PASSWORD_FILE=$HOME/.linxiv-web-password ./bulk-import.sh --move-done /srv/inbox-done --index-text /srv/inbox &gt;&gt; bulk-import-cron.log 2&gt;&amp;1
+</code></pre></div>
+<p>Five wrong passwords within five minutes lock out logins from that address for the rest of the five minutes (<code>429 too many login attempts</code>), so check the password file before you schedule it.</p>
+<h2 id="offline-mode-container-stopped">offline mode: container stopped<a class="headerlink" href="#offline-mode-container-stopped" title="Permanent link">&para;</a></h2>
+<p>Stop the server, import, start it again:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>stop<span class="w"> </span>linxiv-web
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>./bulk-import.sh<span class="w"> </span>--mode<span class="w"> </span>offline<span class="w"> </span>/srv/inbox
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>docker<span class="w"> </span>compose<span class="w"> </span>start<span class="w"> </span>linxiv-web
+</code></pre></div>
+<p>The script refuses to run while the container is up. It starts one container for the whole batch, with the same image, volumes and <code>.env</code> as the server, and mounts the folder read-only at <code>/import</code>. There is no login and no upload size cap, and it is faster than <code>api</code> mode because nothing goes over HTTP. Each file's result is written to the log as soon as it is done, so <code>tail -f</code> on the log shows how far a long run has got.</p>
+<p>Options for this mode:</p>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--place copy\|move\|in-situ</code></td>
+<td>See <a href="#where-the-files-end-up">Where the files end up</a> (default <code>copy</code>)</td>
+</tr>
+<tr>
+<td><code>--project-id ID</code></td>
+<td>Link every imported paper to project <code>ID</code> (the number in the project's URL)</td>
+</tr>
+<tr>
+<td><code>--compose-dir DIR</code></td>
+<td>Folder that holds <code>docker-compose.yml</code>, if you run the script from elsewhere (default <code>.</code>)</td>
+</tr>
+<tr>
+<td><code>--service NAME</code></td>
+<td>Compose service name (default <code>linxiv-web</code>)</td>
+</tr>
+<tr>
+<td><code>--move-done DIR</code>, <code>--log FILE</code>, <code>--dry-run</code></td>
+<td>As in <code>api</code> mode</td>
+</tr>
+</tbody>
+</table>
+<p>Full-text indexing needs the server, so after you start the container again, click <strong>Index PDFs now</strong> in Settings → Library → PDF full text.</p>
+<p>On Linux, if every file fails with a permission error, give uid 1000 read access to the folder:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>sudo<span class="w"> </span>chmod<span class="w"> </span>-R<span class="w"> </span>a+rX<span class="w"> </span>/srv/inbox
+</code></pre></div>
+<h2 id="where-the-files-end-up">Where the files end up<a class="headerlink" href="#where-the-files-end-up" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th><code>--place</code></th>
+<th>Modes</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>copy</code> (default)</td>
+<td>both</td>
+<td>linXiv stores its own copy, named after the paper id (<code>doi_10.1016_j.cell.2026.08.035v1.pdf</code>), at the top of the PDF folder. Your files stay where they are</td>
+</tr>
+<tr>
+<td><code>move</code></td>
+<td>both</td>
+<td>As <code>copy</code>, then each source file that imported is deleted. Files that failed stay, so a rerun only retries those</td>
+</tr>
+<tr>
+<td><code>in-situ</code></td>
+<td><code>offline</code></td>
+<td>No copy. Each paper points at its file where it is. For a collection that already lives in the PDF folder</td>
+</tr>
+</tbody>
+</table>
+<p><code>in-situ</code> only works on a folder inside the PDF folder (<code>LINXIV_WEB_PDF_HOST</code>, or a subfolder of it), because linXiv only opens PDFs from there. The script checks this and stops with an <code>ABORT</code> line otherwise. It imports each file, writes the file's own path into the library in place of linXiv's copy, and deletes the copy. This writes straight to <code>papers.db</code>, which is only safe while the server is stopped, so <code>in-situ</code> exists only in <code>offline</code> mode.</p>
+<p>When two of your files turn out to be the same paper (same DOI or arXiv id), the first one keeps the link and the later one is reported as <code>DUP</code> and left on disk, unlinked. A copy linXiv made earlier, from a <code>copy</code> import or the web UI, doesn't count: your file replaces it and the copy is deleted. A file at the top of the PDF folder that is already named like one of linXiv's copies is reported as <code>SKIP</code>: importing it could overwrite the file with itself.</p>
+<p>With <code>in-situ</code>, linXiv treats your files as its own:</p>
+<ul>
+<li>Rename or move a file afterwards and its paper loses the PDF. Clean up file names before you import, for example with <a href="../sanitize-pdf-names/">sanitize-pdf-names.py</a>.</li>
+<li>Settings → Library → PDF folders moves the files into its year and journal folders when you apply a layout.</li>
+<li>Deleting a paper's PDF in linXiv deletes your file.</li>
+<li>The storage total in Settings only counts files at the top of the PDF folder.</li>
+</ul>
+<p>Running <code>in-situ</code> again on the same folder is safe: papers that already point at their files are left as they are. That includes a run that was interrupted. <code>--dry-run</code> shows the file list and the mode and placement it would use.</p>
+<h2 id="what-to-expect">What to expect<a class="headerlink" href="#what-to-expect" title="Permanent link">&para;</a></h2>
+<p>Running the script twice on the same files doesn't create duplicate papers. linXiv derives each paper's id from the arXiv id or DOI it finds in the PDF, or from a hash of the file (<code>local:&lt;hash&gt;</code>) when it finds neither, so a second import lands on the same paper and keeps any titles, authors or tags you edited since. Every file is still uploaded again, which is why <code>--move-done</code> speeds up repeated runs.</p>
+<p>Metadata comes from the PDF alone. Scans and PDFs without embedded metadata get thin records: an empty title, a stray word such as "Abstract", or a DOI copied from a reference or a page footer, which gives the paper another article's metadata. The Library shows such papers with their file name instead of an empty title, and marks titles that look wrong, or unlike the file name, with <code>title?</code> and the file name underneath.</p>
+<p>When your file names are the papers' titles (a Mendeley export, for example), fix them in batches: tick the flagged papers, open batch edit, pick Crossref or PubMed, tick "By PDF file name" and look them up. That search uses the title in each file name and ignores the stored DOI. The last candidate in each list is the file name itself, with the year folder as the date, for papers no source can find. A paper whose DOI was wrong keeps it as its id (for example <code>doi:10.63485/...</code>); the fix replaces its title, authors, date and DOI field.</p>
+<p>In <code>api</code> mode, files over <code>LINXIV_WEB_MAX_UPLOAD_MB</code> (default 200) fail with <code>413 file too large</code>. Raise the variable in <code>.env</code> and run <code>docker compose up -d</code>, or import those files in <code>offline</code> mode. A single import that runs longer than <code>LINXIV_WEB_TIMEOUT_LONG</code> seconds (default 120) fails with a 504.</p>
+<p>Before importing a large batch into an existing library, take a backup in Settings → Server &amp; data → Backup.</p>
+<h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Message</th>
+<th>Fix</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cannot reach http://127.0.0.1:8086</code></td>
+<td>The container is down, or published on another port: pass <code>--url</code></td>
+</tr>
+<tr>
+<td><code>first-run setup is not done</code></td>
+<td>Open the web UI once and create the password</td>
+</tr>
+<tr>
+<td><code>login failed (401): invalid password</code></td>
+<td>Wrong password, or a stale <code>LINXIV_WEB_PASSWORD_FILE</code></td>
+</tr>
+<tr>
+<td><code>login failed (429)</code></td>
+<td>Wait five minutes after repeated wrong passwords</td>
+</tr>
+<tr>
+<td><code>FAIL ... (400): not a PDF file</code></td>
+<td>The file doesn't start with <code>%PDF-</code>: it is damaged, or not a PDF despite the extension</td>
+</tr>
+<tr>
+<td><code>FAIL ...: Could not extract PDF metadata</code> (offline mode)</td>
+<td>Same as above: linXiv could not parse the file</td>
+</tr>
+<tr>
+<td><code>FAIL ... (413): file too large</code></td>
+<td>Raise <code>LINXIV_WEB_MAX_UPLOAD_MB</code>, or use <code>offline</code> mode</td>
+</tr>
+<tr>
+<td><code>linxiv-web is running; stop it first</code></td>
+<td><code>offline</code> mode needs <code>docker compose stop linxiv-web</code></td>
+</tr>
+<tr>
+<td><code>ABORT --place in-situ needs a folder inside the PDF folder</code></td>
+<td>Use a folder under <code>LINXIV_WEB_PDF_HOST</code>, or <code>--place copy</code></td>
+</tr>
+<tr>
+<td><code>--place in-situ needs --mode offline</code></td>
+<td>Stop the container and use <code>--mode offline</code></td>
+</tr>
+<tr>
+<td><code>--move-done only works with --place copy</code></td>
+<td><code>move</code> already removes the files, and <code>in-situ</code> needs them to stay where they are</td>
+</tr>
+<tr>
+<td><code>DUP ... (paper already uses ...)</code></td>
+<td>Another file is the same paper. Keep one and delete the other, or ignore it</td>
+</tr>
+<tr>
+<td><code>--project-id is offline mode only</code></td>
+<td>The upload route has no project option. Use <code>offline</code> mode, or add the papers to the project in the web UI afterwards</td>
+</tr>
+</tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-circle-arrow-up" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m16 12-4-4-4 4M12 16V8"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../sanitize-pdf-names/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Sanitize PDF file names">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-left" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7M19 12H5"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Sanitize PDF file names
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../bulk-ai-tags/" class="md-footer__link md-footer__link--next" aria-label="Next: Bulk AI tags">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Bulk AI tags
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Docs made with <a href="https://zensical.org">Zensical</a> · linXiv developed by <a href="https://github.com/linxiv-dev">linxiv-dev</a> · linXiv-web developed by ToledoEM · Apache License 2.0
+    </div>
+  
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog" role="status" aria-atomic="true">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      
+      
+        
+        
+      <script id="__config" type="application/json">{"annotate":null,"base":"..","features":["content.code.copy","content.code.select","navigation.footer","navigation.indexes","navigation.instant","navigation.path","navigation.top","navigation.tracking","search.highlight"],"redirect":null,"search":"../assets/javascripts/workers/search.c47bb847.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","clipboard.error":"Could not copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.a2388154.min.js"></script>
+      
+    
+  </body>
+</html>
