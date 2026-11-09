@@ -14,9 +14,10 @@ Try it at <https://linxiv-web.onrender.com> with the password `trymelinxiv-web`.
 
 - Library: a sortable table (click any column header) and one search box covering title, abstract, authors, ids, tags, indexed full text and notes. You can filter by PDF and edit metadata for many papers at once.
 - Papers: edit metadata, look it up and compare it side by side with Crossref, arXiv, OpenAlex, PubMed and bioRxiv/medRxiv. Each paper has versions, tags, notes and a PDF reader with find and highlights. arXiv TeX source can be indexed for full-text search.
+- BibTeX: each paper keeps its full BibTeX record (entry type, volume, pages, publisher, ISSN and more) and the source of its metadata. Lookups, adding by DOI or arXiv id, and `.bib` import fill it, and Library BibTeX export writes it back out, so import and export no longer drop fields.
 - Projects and reading lists: projects export to BibTeX, Obsidian, Zotero and `.lxproj`, and `.lxproj` files import back. Reading lists have their own page.
-- Discovery: search tabs for arXiv, OpenAlex, Crossref and the local library, with an advanced arXiv query builder. Add papers by arXiv id, DOI or PDF link. The home page shows RSS/Atom feeds with filter rules, and a monitor reports new arXiv versions.
-- Authors and graph: author pages, edit and merge, ORCID backfill, and a knowledge graph of papers, authors and tags.
+- Discovery: search tabs for arXiv, OpenAlex, Crossref and the local library, with an advanced arXiv query builder. Add papers by arXiv id, DOI or PDF link, or import a BibTeX or Zotero CSL JSON file. The home page shows RSS/Atom feeds with filter rules, and a monitor reports new arXiv versions.
+- Authors and graph: author pages, edit and merge, ORCID backfill, and a knowledge graph of papers, authors and tags that exports to GraphML or CSV.
 - Maintenance: trash, backup, import and restore of the database, settings export and import, PDF folder layouts (by year, journal or both) and a background full-text indexer. Admins also get [maintenance operations](server-admin.md#maintenance-operations), on demand or nightly: duplicate papers, metadata of new papers, PDF file check, server-side database backups, authors and tags without papers, old trash.
 - AI (opt-in): tag suggestions, paper summaries saved as notes, metadata cleanup. See [AI features](ai.md).
 - MCP (opt-in): linXiv's own MCP tools over HTTP at `/mcp`, for any AI tool that speaks MCP. See [MCP server](mcp.md).

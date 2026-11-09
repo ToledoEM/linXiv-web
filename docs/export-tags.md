@@ -1,5 +1,8 @@
 # Exporting tags to a CSV
 
+!!! note "Experimental"
+    This script is experimental. It exists so you can analyse or edit your tags outside linXiv-web.
+
 `scripts/export-tags.sh` writes every paper's tags to a CSV with one row per paper per tag. Run it on the machine that hosts the linXiv-web container; it calls the server at `http://127.0.0.1:8086`, the port `docker-compose.yml` publishes.
 
 Needs `curl` and `jq`.

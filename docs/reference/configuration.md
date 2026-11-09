@@ -17,11 +17,13 @@ linXiv-web reads these environment variables, usually from the `.env` file next 
 | `LINXIV_WEB_ALLOW_EXTERNAL` | `false` | Serve clients with public IP addresses. Off: only loopback, private LAN and link-local clients get through (others get 403) |
 | `LINXIV_WEB_TRUSTED_PROXIES` | none | Comma-separated IPs/CIDRs of reverse proxies whose `X-Forwarded-For` is believed (read right to left). Unlisted proxies count as the client |
 | `LINXIV_WEB_MAX_UPLOAD_MB` | `200` | Upload size cap |
+| `LINXIV_WEB_LOG_LEVEL` | `info` | App log level at startup: `debug`, `info`, `warning` or `error`. A level saved in Settings → Logs overrides it |
 | `TZ` | UTC | Time zone for the nightly maintenance hour and the times shown for maintenance runs and server backups, e.g. `Europe/London`. See [Maintenance operations](../server-admin.md#maintenance-operations) |
 | `LINXIV_WEB_TIMEOUT_LONG` / `_SHORT` | `120` / `30` | CLI timeout in seconds (search, fetch, download and import use the long one) |
 | `LINXIV_BIN` / `LINXIV_MCP_BIN` | `linxiv` / `linxiv-mcp` | CLI and MCP server binaries |
 | `ARXIV_MAILTO`, `CROSSREF_MAILTO`, `OPENALEX_MAILTO` | none | Contact addresses sent to those services; override the values set in Settings |
 | `NCBI_API_KEY` | none | PubMed key; overrides the one set in Settings |
+| `GHCR_TOKEN` | none | GitHub token with `read:packages` for the update check, needed only if the image on ghcr.io is private; overrides the one set in Settings |
 | `GEMINI_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GENAI_API_KEY_TAG_GEN` | none | AI provider keys (the last one is for the OpenAI-compatible endpoint); override the ones set in Settings |
 | `LINXIV_WEB_AI_ALLOWED_HOSTS` | none | Comma-separated host names the OpenAI-compatible base URL may use. Unset: any host except cloud metadata addresses (`169.254.0.0/16`, `fd00:ec2::254`, `100.100.100.200`), which are always refused |
 
