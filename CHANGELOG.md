@@ -4,6 +4,11 @@ All notable changes to linXiv-web are documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The version is `server/pyproject.toml` `version`; images are published to `ghcr.io/toledoem/linxiv-web:<version>`.
 
+## [Unreleased]
+
+### Security
+- Updated `opentelemetry-api` to 1.45.2 for CVE-2026-126360. The server pulls it in through FastAPI.
+
 ## [0.1.4] - 2026-11-07
 
 ### Added
