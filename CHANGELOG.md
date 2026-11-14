@@ -6,8 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+- Dependencies: FastAPI 0.162.4 and ruff 0.17.4 on the server; cytoscape 3.35.0, vite 8.3.8, `@vitejs/plugin-react` 6.3.0, `typescript-eslint` 8.72.2 and jsdom 31 (tests only) in the web app; new digests for the Debian and Python base images.
+
 ### Security
 - Updated `opentelemetry-api` to 1.45.2 for CVE-2026-126360. The server pulls it in through FastAPI.
+- Updated `pypdf` to 7.0.1 (was 6.21.4). It rejects more hostile PDFs, such as oversized images and bad object-stream offsets, and extracts text faster for AI summaries and the full-text index.
 
 ## [0.1.4] - 2026-11-07
 
