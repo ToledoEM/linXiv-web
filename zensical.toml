@@ -38,6 +38,7 @@ nav = [
     { "Bulk PDF import" = "bulk-import.md" },
     { "Bulk AI tags" = "bulk-ai-tags.md" },
     { "Export tags" = "export-tags.md" },
+    { "Import tags" = "import-tags.md" },
   ] },
   { "Reference" = [
     { "Admin Server Configuration" = "reference/configuration.md" },
