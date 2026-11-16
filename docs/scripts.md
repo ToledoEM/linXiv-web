@@ -8,6 +8,7 @@ Command-line helpers for jobs that are too big for the web UI. Copy one to the m
 | `scripts/bulk-import.sh` | Imports a folder of PDFs that is already on the server: through the running server, or offline with the container stopped, copying, moving or linking the files where they are. | [Bulk PDF import](bulk-import.md) |
 | `scripts/bulk-ai-tags.sh` | Asks the AI set up in Settings → AI for tags for every paper that has none (or every paper with `--all`) and adds them. | [Bulk AI tags](bulk-ai-tags.md) |
 | `scripts/export-tags.sh` | Writes every paper's tags to a CSV, one row per paper per tag, that can be used to put the tags back. | [Export tags](export-tags.md) |
+| `scripts/import-tags.sh` | Replaces the tags of the papers listed in a CSV (one row per paper per tag) with the tags it gives them, in one transaction with the container stopped. | [Import tags](import-tags.md) |
 
 For a large collection, the usual order is:
 
@@ -15,5 +16,6 @@ For a large collection, the usual order is:
 2. `bulk-import.sh` on the same folder.
 3. `bulk-ai-tags.sh` for the papers that came in without tags.
 4. `export-tags.sh` to keep a copy of the tags.
+5. `import-tags.sh` to load the tags back after editing them outside linXiv-web.
 
 Every script has a dry run or changes nothing until told to, and each writes a log next to where it runs.

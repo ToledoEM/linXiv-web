@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- `scripts/import-tags.sh` replaces the tags of the papers listed in a CSV with the tags the CSV gives them. It runs with the container stopped, backs up `papers.db` first and makes the change in one transaction. `--dry-run` works while the server runs. New docs page.
+
 ### Changed
 - Dependencies: FastAPI 0.162.4 and ruff 0.17.4 on the server; cytoscape 3.35.0, vite 8.3.8, `@vitejs/plugin-react` 6.3.0, `typescript-eslint` 8.72.2 and jsdom 31 (tests only) in the web app; new digests for the Debian and Python base images.
 
