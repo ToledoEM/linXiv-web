@@ -18,7 +18,7 @@ ssh server 'chmod +x linxiv-web/import-tags.sh'
 
 ## CSV
 
-One row per paper per tag. The header is `source_id,new_tag`, or `source_id,tag` as `export-tags.sh` writes it, so an export can be imported back.
+One row per paper per tag. The header is `source_id,new_tag`, or `source_id,tag` as `export-tags.sh` writes it, so you can import an export back.
 
 ```csv
 source_id,new_tag
@@ -26,10 +26,10 @@ source_id,new_tag
 2401.01234,transcriptomics
 ```
 
-- A paper's rows are its whole new tag set. Tags the paper has now that the CSV does not list are removed.
+- A paper's rows are its whole new tag set. The script removes any tag the paper has now that the CSV does not list.
 - Papers that are not in the CSV keep their tags.
-- A `reading-list` tag already on a paper is kept.
-- Tags are trimmed and empty ones dropped. Two tags on one paper that differ only in case count as one; the first spelling is kept.
+- A `reading-list` tag already on a paper stays.
+- The script trims tags and drops empty ones. Two tags on one paper that differ only in case count as one, and the first spelling wins.
 - The script logs a `source_id` that is not in the library as `SKIP` and moves on.
 
 ## Usage
@@ -59,7 +59,7 @@ linXiv keeps each paper's tags in two places, and the script updates both for ev
 - the tag list on the paper's metadata, which the web UI and the API read;
 - the paper-to-tag links, which tag counts and tag search use.
 
-A tag the library does not have yet is created. All of it runs in one transaction, so a failed check leaves the database as it was. A paper that already has exactly the tags the CSV gives it is left alone, so running the same CSV again changes nothing.
+The script creates any tag the library does not have yet. All of it runs in one transaction, and a failed check leaves the database as it was. Papers that already have exactly the tags the CSV gives them are skipped, so a second run with the same CSV changes nothing.
 
 Each line of the log is one of:
 
@@ -81,5 +81,5 @@ Before it writes, a real run copies the database to `papers-before-import-tags-<
 ## Exit codes
 
 - `0`: done, or dry run finished.
-- `1`: the import stopped (`ABORT` in the log). Nothing was changed.
+- `1`: the import stopped (`ABORT` in the log). The database is unchanged.
 - `2`: bad argument, missing CSV or `docker`, or the service is still running.
