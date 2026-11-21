@@ -5,6 +5,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type KeyboardEvent,
   type MouseEvent,
   type UIEvent,
 } from 'react'
@@ -101,6 +102,41 @@ export default function PdfReader({
   const [draftColor, setDraftColor] = useState<string>(HIGHLIGHT_COLORS[0])
   const [hlBusy, setHlBusy] = useState(false)
   const [hlError, setHlError] = useState('')
+
+  // Highlight popup focus: Tab stays inside while it is open; on close, focus goes
+  // back to where it was (or the scroller), unless the user already moved it elsewhere.
+  const popupRef = useRef<HTMLDivElement | null>(null)
+  const popupReturnRef = useRef<HTMLElement | null>(null)
+  const popupOpen = popup !== null
+  useEffect(() => {
+    if (popupOpen) {
+      // The comment box autofocuses before this runs, so anything inside the popup
+      // (or nothing) means "came from the PDF": return to the scroller.
+      const active = document.activeElement as HTMLElement | null
+      const outside = active && active !== document.body && !popupRef.current?.contains(active)
+      popupReturnRef.current = outside ? active : scrollerRef.current
+      return
+    }
+    const target = popupReturnRef.current
+    popupReturnRef.current = null
+    const active = document.activeElement
+    if (target?.isConnected && (!active || active === document.body)) target.focus({ preventScroll: true })
+  }, [popupOpen])
+  const trapTab = (e: KeyboardEvent<HTMLDivElement>) => {
+    const items = Array.from(
+      popupRef.current?.querySelectorAll<HTMLElement>('button, textarea, input, select, [tabindex="0"]') ?? [],
+    ).filter((el) => !(el as HTMLButtonElement).disabled)
+    if (items.length === 0) return
+    const first = items[0]
+    const last = items[items.length - 1]
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault()
+      last.focus()
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault()
+      first.focus()
+    }
+  }
 
   // This version's highlights per page: layout (and so coords) differ per version.
   const byPage = useMemo(() => {
@@ -606,8 +642,10 @@ export default function PdfReader({
           onMouseDown={(e) => e.stopPropagation()}
           onMouseUp={(e) => e.stopPropagation()}
           onClick={(e) => e.stopPropagation()}
+          ref={popupRef}
           onKeyDown={(e) => {
             if (e.key === 'Escape') setPopup(null)
+            else if (e.key === 'Tab') trapTab(e)
             else submitOnCtrlEnter(() => void savePopup())(e)
           }}
         >

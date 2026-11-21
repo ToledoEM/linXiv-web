@@ -146,6 +146,7 @@ function NoteCard({
           className={`note-body${open ? '' : ' clamped'}`}
           role="button"
           tabIndex={0}
+          aria-expanded={open}
           title={open ? 'Collapse' : 'Expand'}
           onClick={() => !window.getSelection()?.toString() && setOpen((o) => !o)}
           onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), setOpen((o) => !o))}

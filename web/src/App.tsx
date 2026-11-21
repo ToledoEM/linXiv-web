@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
+import { useA11y } from './a11y'
 import { accountFrom, setAccount, useAccount } from './account'
 import { api, setUnauthorizedHandler } from './api'
 import { useLibrary } from './library'
@@ -56,12 +57,25 @@ export default function App() {
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const pages = useSidebarPages()
+  const a11y = useA11y()
   useGlobalShortcuts()
 
   // A page switched off in Settings → Sidebar is unreachable by URL too (desktop AppShell).
   useEffect(() => {
     if (hiddenPageFor(pathname, pages)) void navigate('/', { replace: true })
   }, [pathname, pages, navigate])
+
+  // After a route change started from the sidebar (or with nothing focused), move focus
+  // into <main> so the next Tab continues in the new page. First load keeps the default.
+  const mainRef = useRef<HTMLElement>(null)
+  const lastPath = useRef(pathname)
+  useEffect(() => {
+    if (lastPath.current === pathname) return
+    lastPath.current = pathname
+    const active = document.activeElement
+    if (active && active !== document.body && !active.closest('.sidebar')) return
+    mainRef.current?.focus({ preventScroll: true })
+  }, [pathname])
 
   // Login state + who is logged in; read again after each login (the role decides
   // which Settings groups show).
@@ -113,13 +127,27 @@ export default function App() {
 
   return (
     <div className="layout">
+      {/* Opt-in (Settings → Appearance → Accessibility). Focus by script: a real
+          #main hash would clobber the Settings section hash. */}
+      {a11y.skipLink && (
+        <a
+          className="skip-link"
+          href="#main"
+          onClick={(e) => {
+            e.preventDefault()
+            mainRef.current?.focus()
+          }}
+        >
+          Skip to content
+        </a>
+      )}
       <Sidebar
         items={NAV.filter((i) => !i.pageKey || pages[i.pageKey])}
         onLogout={auth.enabled ? logout : undefined}
         account={account}
       />
       {/* Switching library remounts every page, so each loads from the library in view. */}
-      <main className="content" key={library.view}>
+      <main id="main" className="content" key={library.view} ref={mainRef} tabIndex={-1}>
         {library.shared && (
           <p className="library-banner" role="status">
             {library.canWrite

@@ -7,6 +7,7 @@ import AppLogs from '../AppLogs'
 import MaintenanceSettings from '../MaintenanceSettings'
 import McpSettings from '../McpSettings'
 import MultiUserSettings from '../MultiUserSettings'
+import { saveA11y, useA11y } from '../a11y'
 import { useAccount } from '../account'
 import { setAiEnabled } from '../aiEnabled'
 import { api } from '../api'
@@ -116,6 +117,7 @@ export default function Settings() {
   const [busy, setBusy] = useState<SectionId | null>(null)
   const [historyCount, setHistoryCount] = useState(historySize)
   const pages = useSidebarPages()
+  const a11y = useA11y()
   const admin = useAccount().role === 'admin'
   const groups = GROUPS.filter((g) => admin || !ADMIN_GROUPS.includes(g.id))
   // A hidden group (#admin as a user) falls back to the first one.
@@ -250,6 +252,35 @@ export default function Settings() {
             <ThemePicker />
           </div>
           <DisplayControls />
+        </div>
+
+        <div className="card settings-section">
+          <h3>Accessibility</h3>
+          <p className="muted small">Extra aids, off by default. Stored in this browser.</p>
+          <label className="check">
+            <input
+              type="checkbox"
+              checked={a11y.skipLink}
+              onChange={(e) => saveA11y({ ...a11y, skipLink: e.target.checked })}
+            />
+            Show a "Skip to content" link on the first Tab press
+          </label>
+          <label className="check">
+            <input
+              type="checkbox"
+              checked={a11y.focusRing}
+              onChange={(e) => saveA11y({ ...a11y, focusRing: e.target.checked })}
+            />
+            Stronger focus indicators
+          </label>
+          <label className="check">
+            <input
+              type="checkbox"
+              checked={a11y.contrast}
+              onChange={(e) => saveA11y({ ...a11y, contrast: e.target.checked })}
+            />
+            Higher contrast text
+          </label>
         </div>
 
         <form onSubmit={save('display')} onKeyDown={formSubmitOnCtrlEnter}>
@@ -602,15 +633,16 @@ export default function Settings() {
         <h2>Settings</h2>
       </div>
       <div className="settings-grid">
-        <nav className="settings-nav" role="tablist" aria-orientation="vertical" aria-label="Settings groups">
+        {/* Plain nav, not a tablist: each group's section links sit between the
+            buttons, which a tablist may not contain. Tab moves through all of them. */}
+        <nav className="settings-nav" aria-label="Settings groups">
           {groups.map((g) => [
             <button
               key={g.id}
               type="button"
-              role="tab"
               id={`settings-tab-${g.id}`}
               aria-controls="settings-panel"
-              aria-selected={shown === g.id}
+              aria-current={shown === g.id ? 'true' : undefined}
               className={shown === g.id ? 'active' : ''}
               onClick={() => select(g.id)}
             >
@@ -628,7 +660,7 @@ export default function Settings() {
           key={shown}
           ref={panelRef}
           id="settings-panel"
-          role="tabpanel"
+          role="region"
           aria-labelledby={`settings-tab-${shown}`}
           className="settings-panel"
         >
