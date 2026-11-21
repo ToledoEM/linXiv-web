@@ -11,7 +11,7 @@ ARG LINXIV_REF=v0.7.1
 ARG LINXIV_SRC=git
 
 # --- linXiv source: pinned upstream tag (default) ---
-FROM rust:1-bookworm@sha256:114c7a4425406451c2866b6aafe69fe29b1b298832db1277d411ac73c82d04d6 AS linxiv-src-git
+FROM rust:1-bookworm@sha256:ade39a710ef85f3506cffcfec3e8a24ba090badef1dff2fb798f71d878833fea AS linxiv-src-git
 ARG LINXIV_REF
 RUN git clone --depth 1 --branch "${LINXIV_REF}" \
       --recurse-submodules --shallow-submodules \
@@ -25,7 +25,7 @@ COPY --from=linxiv-local src-tauri/ /src/src-tauri/
 FROM linxiv-src-${LINXIV_SRC} AS linxiv-src
 
 # --- Stage 1: build the linxiv CLI and MCP server (Tauri-free crates, no webkit/gtk) ---
-FROM rust:1-bookworm@sha256:114c7a4425406451c2866b6aafe69fe29b1b298832db1277d411ac73c82d04d6 AS cli-build
+FROM rust:1-bookworm@sha256:ade39a710ef85f3506cffcfec3e8a24ba090badef1dff2fb798f71d878833fea AS cli-build
 WORKDIR /src
 COPY --from=linxiv-src /src/scripts/ scripts/
 # Runtime dlopen'd PDF library (PDF import metadata extraction).
@@ -70,7 +70,7 @@ COPY server/ ./
 RUN uv run ruff check . && uv run ruff format --check . && uv run pytest -rs
 
 # --- Stage 2: build the React SPA ---
-FROM node:25-slim@sha256:81db02c4b671288a03915da9534dbd54f96d0e7c24d80ccc54f5b36b2e684370 AS web-build
+FROM node:26-slim@sha256:e6bedef217677b276c591795e169840edd9096dbf13f29df8ef8d1856b8820bc AS web-build
 WORKDIR /app/web
 COPY web/package.json web/package-lock.json ./
 RUN npm ci
