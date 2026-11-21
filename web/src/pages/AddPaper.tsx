@@ -131,6 +131,7 @@ function AddPaperForm() {
         <input
           key={fileKey}
           type="file"
+          aria-label="BibTeX or CSL JSON files to import"
           accept=".bib,.bibtex,.json,application/json,application/x-bibtex,text/plain"
           multiple
           onChange={(e) => setFiles(Array.from(e.target.files ?? []))}

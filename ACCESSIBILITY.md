@@ -22,6 +22,7 @@ linXiv-web has **not yet had a formal accessibility audit**, and it does not cla
 - Light and dark themes
 - Zoom and density settings
 - Keyboard shortcuts
+- Settings → Appearance → Accessibility, with options that are off by default: a "Skip to content" link, stronger focus indicators, and higher contrast text
 - Knowledge graph data can be exported as GraphML or CSV, as a non-visual alternative to the graph view
 
 ## Known limitations

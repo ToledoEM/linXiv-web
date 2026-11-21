@@ -100,7 +100,7 @@ export default function Sidebar({
           ))}
         </div>
       )}
-      <nav>
+      <nav aria-label="Main">
         {items.map((item) => (
           <NavLink key={item.to} to={item.to} end={item.end} title={item.label} onClick={guard(item.to)}>
             <span className="nav-icon" aria-hidden="true">

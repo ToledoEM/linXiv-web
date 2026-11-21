@@ -104,10 +104,12 @@ export default function PaperDetail() {
     const section = e.currentTarget.parentElement
     if (!section) return
     e.preventDefault()
+    const handle = e.currentTarget
     const move = (ev: PointerEvent) => {
       const box = section.getBoundingClientRect()
-      const left = ((ev.clientX - box.left) / box.width) * 100
-      section.style.setProperty('--paper-split', `${clampSplit(left)}%`)
+      const left = clampSplit(((ev.clientX - box.left) / box.width) * 100)
+      section.style.setProperty('--paper-split', `${left}%`)
+      handle.setAttribute('aria-valuenow', String(left))
     }
     const up = () => {
       window.removeEventListener('pointermove', move)
