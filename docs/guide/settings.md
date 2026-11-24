@@ -38,6 +38,10 @@ Switch AI features on, choose a provider, model and key, and test the connection
 
 API keys are write-only. After saving, the page shows only their last 4 characters.
 
+## Tag vocabulary
+
+How AI tags are matched to the tags you already have: the mode, how many new tags a paper may get, how much frequent tags are preferred, and whether the PDF text is read. The same group holds aliases you add or approve, aliases proposed by AI tagging, and the import and export of a vocabulary CSV. See [AI tags](../ai-tags.md).
+
 ## Integrations
 
 The MCP server for Claude Code, Codex and OpenCode: switch it on, choose the tool profile and create the access token. See [MCP server](../mcp.md).

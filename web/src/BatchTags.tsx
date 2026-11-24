@@ -3,20 +3,22 @@ import { api } from './api'
 import { useBatchGuard } from './batchGuard'
 import { ErrorText } from './components'
 import { toggled } from './projects'
+import TagModePicker, { type TagRunOptions } from './TagModePicker'
 import TagSuggestions from './TagSuggestions'
 import { MathText } from './tex'
-import type { TagSuggestion } from './types'
+import type { TagDropped, TagSuggestion } from './types'
 
 type Status = 'waiting' | 'asking' | 'ready' | 'none' | 'error' | 'saving' | 'saved'
 
 interface Item {
   status: Status
   suggested: TagSuggestion[]
+  dropped: TagDropped[]
   picked: Set<string>
   error?: string
 }
 
-const blank = (): Item => ({ status: 'waiting', suggested: [], picked: new Set() })
+const blank = (): Item => ({ status: 'waiting', suggested: [], dropped: [], picked: new Set() })
 
 const LABEL: Record<Status, string> = {
   waiting: 'not asked',
@@ -47,6 +49,7 @@ export default function BatchTags({
   const [progress, setProgress] = useState(0)
   const [armedAll, setArmedAll] = useState(false)
   const [summary, setSummary] = useState('')
+  const [tagRun, setTagRun] = useState<TagRunOptions>({})
   const stopRef = useRef(false)
   useBatchGuard(running)
 
@@ -67,10 +70,11 @@ export default function BatchTags({
       }
       patch(sid, { ...blank(), status: 'asking' })
       try {
-        const r = await api.suggestTags(sid)
+        const r = await api.suggestTags(sid, tagRun)
         patch(sid, {
           status: r.suggested.length ? 'ready' : 'none',
           suggested: r.suggested,
+          dropped: r.dropped ?? [],
           picked: new Set(r.suggested.map((s) => s.tag)),
         })
       } catch (err) {
@@ -121,9 +125,12 @@ export default function BatchTags({
               Stop
             </button>
           ) : (
-            <button type="button" disabled={!selected.length} onClick={suggestAll}>
-              Suggest tags for {selected.length} selected
-            </button>
+            <>
+              <button type="button" disabled={!selected.length} onClick={suggestAll}>
+                Suggest tags for {selected.length} selected
+              </button>
+              <TagModePicker value={tagRun} onChange={setTagRun} />
+            </>
           )}
         </div>
         {(running || progress > 0) && (
@@ -152,6 +159,7 @@ export default function BatchTags({
                   suggestions={it.suggested}
                   picked={it.picked}
                   disabled={it.status !== 'ready'}
+                  dropped={it.dropped}
                   onToggle={(t) => patch(sid, { picked: toggled(it.picked, t) })}
                 />
               )}

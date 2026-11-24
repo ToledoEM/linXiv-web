@@ -214,7 +214,7 @@ In **Settings → AI**: turn on, pick a API provider (Gemini, OpenAI, Anthropic,
 
 | Action | Where | What the model gets | Result |
 |---|---|---|---|
-| AI Tags | paper page, Library batch panel ("AI tags") | title, categories, abstract, current tags, your existing tag vocabulary | up to 8 tags to tick and add |
+| AI Tags | paper page, Library batch panel ("AI tags") | title, categories, abstract and current tags, and the PDF text if you choose it; then, only for unclear tags, the nearest existing tags ([details](docs/ai-tags.md)) | up to 6 tags to tick and add, matched to your existing tags |
 | AI summary | paper page | "Abstract only", or "Abstract + PDF text" (first 40 pages, 60k characters) | summary + key points, saved as a note on request |
 | AI cleanup | Edit metadata and Library batch metadata, source "AI cleanup" | title, authors, journal | a candidate shown as a field diff; nothing is saved until you approve |
 
@@ -315,7 +315,8 @@ All routes except `/api/health`, `/api/login`, `/api/me` and `/mcp` need a sessi
 | `GET /api/metadata-review`, `POST /api/metadata-review/remove` `{source_ids}` | Papers `complete-metadata` could not complete in this library (fixed or deleted ones drop out); take papers off the list |
 | `GET /api/settings`, `PATCH /api/settings` | `settings get`, `settings update`, limited to an allowlist (storage cap, TeX rendering, contact addresses, home feed, search history, full-text worker, AI and MCP settings); API keys are write-only |
 | `GET /api/ai/models`, `POST /api/ai/test`, `GET /api/ai/schemas` | Provider model list, connection test, the JSON Schema and example each AI action uses (409 while AI is off) |
-| `POST /api/ai/tags/{id}`, `POST /api/ai/summary/{id}?pdf=`, `POST /api/ai/cleanup/{id}` | AI tag suggestions, summary, metadata cleanup; previews only, nothing is written |
+| `POST /api/ai/tags/{id}?mode=&pdf=`, `POST /api/ai/summary/{id}?pdf=`, `POST /api/ai/cleanup/{id}` | AI tag suggestions matched to existing tags, summary, metadata cleanup; previews only, except that tag suggestions can queue an alias for review |
+| `GET /api/tags/vocabulary`, `POST /api/tags/vocabulary/import`, `GET /api/tags/vocabulary/export.csv`, `POST /api/tags/vocabulary/aliases`, `DELETE /api/tags/vocabulary/aliases/{key}`, `GET /api/tags/vocabulary/pending`, `POST /api/tags/vocabulary/pending/{key}/approve` and `/reject` | Vocabulary CSV, aliases and aliases to review for AI tags (web-only, stored in `linxiv-web-tags.db`) |
 | `GET /api/mcp`, `POST /api/mcp/token`, `DELETE /api/mcp/token` | MCP status, create (shown once) or revoke the access token |
 | `POST/GET/DELETE /mcp` | MCP Streamable HTTP endpoint (bearer token; see above) |
 

@@ -24,6 +24,7 @@ linXiv-web is a community project, not an official linXiv component. A FastAPI s
 ## AI and agents
 
 - [AI features](https://raw.githubusercontent.com/ToledoEM/linXiv-web/main/docs/ai.md): tag suggestions, summaries and metadata cleanup with Gemini, OpenAI, Anthropic or OpenAI-compatible servers
+- [AI tags](https://raw.githubusercontent.com/ToledoEM/linXiv-web/main/docs/ai-tags.md): how tag suggestions are matched to the library's tags: prompts, modes, aliases, vocabulary CSV and settings
 - [MCP server](https://raw.githubusercontent.com/ToledoEM/linXiv-web/main/docs/mcp.md): enabling `/mcp`, tokens, tool profiles, connecting Claude Code, Codex and OpenCode
 
 ## Browser add-on

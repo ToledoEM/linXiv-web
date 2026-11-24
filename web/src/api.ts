@@ -46,7 +46,11 @@ import type {
   SettingsResponse,
   SummaryResult,
   TagCounts,
-  TagSuggestion,
+  TagMode,
+  TagPendingAlias,
+  TagSuggestResult,
+  TagVocabImport,
+  TagVocabOverview,
   Source,
   Stats,
   TrashListing,
@@ -115,6 +119,8 @@ export const unlinkedTsvUrl = (library: string) =>
   `/api/maintenance/pdf-check/${encodeURIComponent(library)}/unlinked.tsv`
 export const missingTsvUrl = (library: string) =>
   `/api/maintenance/pdf-check/${encodeURIComponent(library)}/missing.tsv`
+/** Imported tag vocabulary and aliases as `tag,aliases,weight` CSV (GET downloads it). */
+export const tagVocabExportUrl = () => withLibrary('/api/tags/vocabulary/export.csv')
 /** Duplicate groups of the library in view, one row per paper, tab separated. */
 export const duplicatesTsvUrl = () => withLibrary('/api/duplicates/export.tsv')
 
@@ -511,6 +517,20 @@ export const api = {
   clipList: () => request<{ project_id: number | null }>('GET', '/api/clip/list'),
   summarize: (id: string, pdf: boolean) =>
     request<SummaryResult>('POST', `/api/ai/summary/${idPath(id)}${qs({ pdf: pdf || undefined })}`),
-  suggestTags: (id: string) =>
-    request<{ source_id: string; suggested: TagSuggestion[] }>('POST', `/api/ai/tags/${idPath(id)}`),
+  /** `mode` and `pdf` override the saved Tag vocabulary settings for this request. */
+  suggestTags: (id: string, opts: { mode?: TagMode; pdf?: boolean } = {}) =>
+    request<TagSuggestResult>('POST', `/api/ai/tags/${idPath(id)}${qs({ mode: opts.mode, pdf: opts.pdf })}`),
+  tagVocab: () => request<TagVocabOverview>('GET', '/api/tags/vocabulary'),
+  importTagVocab: (file: File, replace: boolean) => {
+    const form = new FormData()
+    form.append('file', file)
+    return request<TagVocabImport>('POST', `/api/tags/vocabulary/import${qs({ replace: replace || undefined })}`, form)
+  },
+  addTagAlias: (alias: string, canonical: string) =>
+    request<{ alias_key: string }>('POST', '/api/tags/vocabulary/aliases', { alias, canonical }),
+  deleteTagAlias: (key: string) =>
+    request('DELETE', `/api/tags/vocabulary/aliases/${encodeURIComponent(key)}`),
+  tagPending: () => request<TagPendingAlias[]>('GET', '/api/tags/vocabulary/pending'),
+  resolveTagPending: (key: string, approve: boolean) =>
+    request('POST', `/api/tags/vocabulary/pending/${encodeURIComponent(key)}/${approve ? 'approve' : 'reject'}`),
 }

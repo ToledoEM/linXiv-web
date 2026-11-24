@@ -154,6 +154,14 @@ export interface UserSettings {
   OPENAI_API_KEY: string
   ANTHROPIC_API_KEY: string
   GENAI_API_KEY_TAG_GEN: string
+  /** AI tag suggestions (Settings → Tag vocabulary): how new tags are matched to the vocabulary. */
+  web_tag_mode: TagMode
+  /** New tags per paper; -1 = the mode's own limit. */
+  web_tag_max_new: number
+  /** Points (0–30) added to the similarity of tags used by more papers. */
+  web_tag_freq_weight: number
+  /** Read the saved PDF's text when suggesting tags. */
+  web_tag_use_pdf: boolean
   /** linXiv MCP over HTTP at /mcp (off by default). */
   mcp_enabled: boolean
   mcp_profile: McpProfile
@@ -186,10 +194,77 @@ export interface TagCounts {
   total: number
 }
 
+export type TagMode = 'free' | 'soft' | 'mild' | 'hard'
+/** How a suggestion was matched: by key, through an alias, by similarity, by the
+ *  model picking an existing tag (as a one-off or as an alias), or a new tag. */
+export type TagHow = 'exact' | 'alias' | 'fuzzy' | 'llm-map' | 'llm-alias' | 'new'
+
 /** One AI tag suggestion; `known` = already used somewhere in the library. */
 export interface TagSuggestion {
   tag: string
   known: boolean
+  /** Listed in the imported tag vocabulary. */
+  in_vocab?: boolean
+  how?: TagHow
+  /** The model's own wording, when it was matched to a different tag. */
+  from?: string
+}
+
+/** A candidate the model suggested that the mode left out. */
+export interface TagDropped {
+  candidate: string
+  reason: string
+}
+
+/** `POST /api/ai/tags/{id}`. */
+export interface TagSuggestResult {
+  source_id: string
+  mode: TagMode
+  used_pdf: boolean
+  suggested: TagSuggestion[]
+  dropped: TagDropped[]
+}
+
+export interface TagVocabRow {
+  tag_key: string
+  tag: string
+  weight: number | null
+  added_at: string
+}
+
+export interface TagAlias {
+  alias_key: string
+  alias: string
+  canonical: string
+  origin: 'csv' | 'user' | 'llm'
+  added_at: string
+}
+
+export interface TagPendingAlias {
+  alias_key: string
+  alias: string
+  canonical: string
+  source_id: string | null
+  model: string | null
+  added_at: string
+}
+
+/** `GET /api/tags/vocabulary`. */
+export interface TagVocabOverview {
+  vocab: TagVocabRow[]
+  aliases: TagAlias[]
+  pending: number
+}
+
+/** `POST /api/tags/vocabulary/import`. */
+export interface TagVocabImport {
+  tags: number
+  aliases: number
+  layout: 'tags' | 'tag_map'
+  replaced: boolean
+  /** Aliases left out because they name another member of the tag's family (STAT5 for stat3). */
+  skipped_siblings: number
+  errors: string[]
 }
 
 /** What one AI function asks the model to return (Settings → AI). */

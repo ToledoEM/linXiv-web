@@ -29,6 +29,7 @@ nav = [
   { "Server Admin" = "server-admin.md" },
   { "AI and agents" = [
     { "AI features" = "ai.md" },
+    { "AI tags" = "ai-tags.md" },
     { "MCP server" = "mcp.md" },
   ] },
   { "Browser add-on" = "browser-add-on.md" },

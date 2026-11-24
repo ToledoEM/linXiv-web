@@ -387,20 +387,33 @@ def _tag_reply(tags):
     )
 
 
+def _replies(*bodies):
+    """OpenAI-shaped replies in order (stage 1, then stage 2)."""
+    queue = list(bodies)
+    return lambda req: httpx.Response(
+        200, json={"choices": [{"message": {"content": json.dumps(queue.pop(0))}}]}
+    )
+
+
+def _library(fake, tags, papers=()):
+    fake.on("tag", "list-all", result=list(tags))
+    fake.on("list", result=[{"source_id": f"p{i}", "tags": t} for i, t in enumerate(papers)])
+
+
 def test_suggest_tags(client, fake, monkeypatch):
     seen: list = []
     reply = [
-        "NLP",
-        " #attention  mechanism ",
-        "nlp",
-        "Transformers",
-        "",
-        "x" * 65,
+        {"tag": "NLP", "also_known_as": []},
+        {"tag": " #attention  mechanism ", "also_known_as": []},
+        {"tag": "nlp", "also_known_as": []},
+        "Transformer",
+        {"tag": "", "also_known_as": []},
+        {"tag": "x" * 65, "also_known_as": []},
         7,
-        "machine translation",
+        {"tag": "machine translation", "also_known_as": ["MT"]},
     ]
     _mock(monkeypatch, _tag_reply(reply), seen)
-    fake.on("settings", "get", result=_stored("openai"))
+    fake.on("settings", "get", result=_stored("openai", web_tag_mode="free"))
     fake.on(
         "paper",
         "get",
@@ -411,33 +424,101 @@ def test_suggest_tags(client, fake, monkeypatch):
             "tags": ["transformers"],
         },
     )
-    fake.on("tag", "list-all", result=["nlp", "transformers", "vision"])
+    _library(fake, ["nlp", "transformers", "vision"], [["nlp"], ["nlp", "vision"]])
     r = client.post("/api/ai/tags/1706.03762")
     assert r.status_code == 200, r.text
     assert r.json() == {
         "source_id": "1706.03762",
+        "mode": "free",
+        "used_pdf": False,
         "suggested": [
-            {"tag": "nlp", "known": True},
-            {"tag": "attention mechanism", "known": False},
-            {"tag": "machine translation", "known": False},
+            {"tag": "nlp", "known": True, "in_vocab": False, "how": "exact"},
+            {"tag": "attention mechanism", "known": False, "in_vocab": False, "how": "new"},
+            {"tag": "machine translation", "known": False, "in_vocab": False, "how": "new"},
         ],
+        "dropped": [],
     }
     assert ["paper", "get", "--", "1706.03762"] in fake.calls
+    assert len(seen) == 1  # free mode: no stage 2
     prompt = json.loads(seen[0].content)["messages"][1]["content"]
     assert "Title: Attention Is All You Need" in prompt
     assert "Categories: cs.CL, cs.LG" in prompt
     assert "Current tags: transformers" in prompt
-    assert "Existing vocabulary: nlp, transformers, vision" in prompt
+    # Stage 1 never sees the vocabulary.
+    assert "vision" not in prompt and "vocabulary" not in prompt.lower()
     # Suggestions only: nothing written.
     assert not any(c[:2] == ["tag", "add"] for c in fake.calls)
 
 
 def test_suggest_tags_caps_count(client, fake, monkeypatch):
-    _mock(monkeypatch, _tag_reply([f"t{i}" for i in range(20)]), [])
-    fake.on("settings", "get", result=_stored("openai"))
+    _mock(monkeypatch, _tag_reply([f"topic {c}" for c in "abcdefghij"]), [])
+    fake.on("settings", "get", result=_stored("openai", web_tag_mode="free"))
     fake.on("paper", "get", result={"title": "T", "tags": []})
-    fake.on("tag", "list-all", result=[])
-    assert len(client.post("/api/ai/tags/p1").json()["suggested"]) == 8
+    _library(fake, [])
+    assert len(client.post("/api/ai/tags/p1").json()["suggested"]) == 6
+
+
+def test_suggest_tags_two_stages(client, fake, monkeypatch, settings):
+    seen: list = []
+    stage1 = {
+        "tags": [
+            {"tag": "neural netwrks", "also_known_as": []},
+            {"tag": "convolution net", "also_known_as": ["CNN"]},
+            {"tag": "perceptron", "also_known_as": []},
+        ]
+    }
+    stage2 = {
+        "decisions": [
+            {"candidate": "convolution net", "action": "alias", "tag": "convolutional network"},
+        ]
+    }
+    _mock(monkeypatch, _replies(stage1, stage2), seen)
+    fake.on("settings", "get", result=_stored("openai", web_tag_freq_weight=0))
+    fake.on("paper", "get", result={"title": "Deep CNNs", "tags": []})
+    _library(
+        fake,
+        ["neural networks", "convolutional network"],
+        [["neural networks"], ["neural networks", "convolutional network"]],
+    )
+    # mode in the query wins over the saved (default soft) mode.
+    r = client.post("/api/ai/tags/p1?mode=hard")
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["mode"] == "hard"
+    assert [(s["tag"], s["how"]) for s in body["suggested"]] == [
+        ("neural networks", "fuzzy"),
+        ("convolutional network", "llm-alias"),
+    ]
+    # Hard: nothing close to "perceptron", and no new tags.
+    assert body["dropped"] == [{"candidate": "perceptron", "reason": "no close tag"}]
+    assert len(seen) == 2
+    asked = json.loads(json.loads(seen[1].content)["messages"][1]["content"])
+    assert asked["paper_title"] == "Deep CNNs"
+    assert [a["candidate"] for a in asked["candidates"]] == ["convolution net"]
+    assert asked["candidates"][0]["neighbours"][0] == {"tag": "convolutional network", "papers": 1}
+    # The alias waits for review.
+    got = client.get("/api/tags/vocabulary/pending").json()
+    assert [(p["alias"], p["canonical"], p["source_id"]) for p in got] == [
+        ("convolution net", "convolutional network", "p1")
+    ]
+
+
+def test_suggest_tags_pdf_text(client, fake, monkeypatch, settings):
+    seen: list = []
+    _mock(monkeypatch, _tag_reply(["a"]), seen)
+    fake.on("settings", "get", result=_stored("openai", web_tag_use_pdf=True))
+    fake.on("paper", "get", result={"title": "T", "tags": []})
+    _library(fake, [])
+    pdf = settings.pdf_dir / "t.pdf"
+    pdf.write_bytes(_pdf_bytes("Hello tagging"))
+    fake.on("pdf", "path", result={"path": str(pdf)})
+    r = client.post("/api/ai/tags/p1")
+    assert r.status_code == 200 and r.json()["used_pdf"] is True
+    assert "Hello tagging" in json.loads(seen[0].content)["messages"][1]["content"]
+    # pdf=false in the query skips it; no PDF falls back to the abstract.
+    assert client.post("/api/ai/tags/p1?pdf=false").json()["used_pdf"] is False
+    fake.on("pdf", "path", result={})
+    assert client.post("/api/ai/tags/p1").json()["used_pdf"] is False
 
 
 def test_suggest_tags_disabled_and_bad_reply(client, fake, monkeypatch):
@@ -452,9 +533,10 @@ def test_suggest_tags_disabled_and_bad_reply(client, fake, monkeypatch):
     )
     fake.on("settings", "get", result=_stored("openai"))
     fake.on("paper", "get", result={"title": "T", "tags": []})
-    fake.on("tag", "list-all", result=[])
+    _library(fake, [])
     r = client.post("/api/ai/tags/p1")
     assert r.status_code == 502 and "no tags" in r.json()["detail"]
+    assert client.post("/api/ai/tags/p1?mode=strict").status_code == 422
 
 
 # ---- schemas + examples ----
@@ -465,30 +547,43 @@ def test_schemas_endpoint_works_while_off(client, fake):
     r = client.get("/api/ai/schemas")
     assert r.status_code == 200
     tasks = {t["id"]: t for t in r.json()}
-    assert set(tasks) == {"test", "tags", "summary", "cleanup"}
+    assert set(tasks) == {"test", "tags", "tags-resolve", "summary", "cleanup"}
     for t in tasks.values():
         assert t["schema"]["$schema"] == "https://json-schema.org/draft/2020-12/schema"
         assert t["label"] and t["example"]
     assert not any(c[:2] == ["settings", "get"] for c in fake.calls)
 
 
+def _valid(value, schema) -> bool:
+    """The subset of JSON Schema the AI schemas use."""
+    kind = schema["type"]
+    if kind == "object":
+        props = schema["properties"]
+        return (
+            isinstance(value, dict)
+            and set(value) == set(schema["required"]) == set(props)
+            and all(_valid(v, props[k]) for k, v in value.items())
+        )
+    if kind == "array":
+        return (
+            isinstance(value, list)
+            and len(value) <= schema["maxItems"]
+            and all(_valid(v, schema["items"]) for v in value)
+        )
+    if kind == "string":
+        return (
+            isinstance(value, str)
+            and schema.get("minLength", 0) <= len(value) <= schema.get("maxLength", 10**6)
+            and value in schema.get("enum", [value])
+        )
+    return isinstance(value, bool)
+
+
 def test_examples_match_their_schemas():
     from app.routes import ai as routes
 
     for t in routes.TASKS:
-        schema, example = t["schema"], t["example"]
-        assert set(example) == set(schema["required"]) == set(schema["properties"])
-        for key, value in example.items():
-            prop = schema["properties"][key]
-            kind = {"boolean": bool, "array": list, "string": str}[prop["type"]]
-            assert isinstance(value, kind)
-            if kind is str:
-                assert prop.get("minLength", 0) <= len(value) <= prop["maxLength"]
-            if kind is list:
-                assert len(value) <= prop["maxItems"]
-                assert all(
-                    isinstance(v, str) and 1 <= len(v) <= prop["items"]["maxLength"] for v in value
-                )
+        assert _valid(t["example"], t["schema"]), t["id"]
 
 
 @pytest.mark.parametrize("provider", ["gemini", "openai", "anthropic", "generic"])
@@ -502,7 +597,7 @@ def test_tag_prompt_carries_schema_and_example(client, fake, monkeypatch, provid
     _mock(monkeypatch, lambda req: httpx.Response(200, json=replies.get(provider, default)), seen)
     fake.on("settings", "get", result=_stored(provider))
     fake.on("paper", "get", result={"title": "T", "tags": []})
-    fake.on("tag", "list-all", result=[])
+    _library(fake, [])
     assert client.post("/api/ai/tags/p1").status_code == 200
     body = json.loads(seen[0].content)
     system = {
@@ -510,7 +605,7 @@ def test_tag_prompt_carries_schema_and_example(client, fake, monkeypatch, provid
         "anthropic": lambda: body["system"],
     }.get(provider, lambda: body["messages"][0]["content"])()
     assert '"maxItems": 8' in system
-    assert 'Example of a valid reply:\n{"tags": ["<tag 1>"' in system
+    assert 'Example of a valid reply:\n{"tags": [{"tag": "<tag 1>"' in system
 
 
 # ---- paper summary ----

@@ -5,7 +5,8 @@ notes, tags; never PDF files) into `maintenance/backups/` of that library; the
 newest `keep_backups` (Settings → Server Admin) stay, older ones are deleted.
 Settings → Server Admin lists them for download, and Settings → Backup restores
 a downloaded one. The library's BibTeX fields file (app/bib_store.py), which
-linXiv does not know, is copied next to each one as `bib-<same time>.db`.
+linXiv does not know, is copied next to each one as `bib-<same time>.db`, and
+the tag vocabulary file (app/tag_store.py) as `tags-<same time>.db`.
 """
 
 from __future__ import annotations
@@ -14,7 +15,7 @@ import re
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from . import bib_store
+from . import bib_store, tag_store
 from .cli import CLIError
 from .maintenance import Op, report_path
 
@@ -26,7 +27,7 @@ if TYPE_CHECKING:
 
 FOLDER = "backups"
 NAME = re.compile(r"^papers-\d{8}-\d{6}\.db$")
-BIB_NAME = re.compile(r"^bib-(\d{8}-\d{6})\.db$")
+BIB_NAME = re.compile(r"^(?:bib|tags)-(\d{8}-\d{6})\.db$")
 
 
 def backup_dir(lib: Library) -> Path:
@@ -53,6 +54,7 @@ async def back_up(app: FastAPI, lib: Library, job: Job) -> dict:
     if not written or not written.is_file():
         raise CLIError(502, "linxiv backup wrote no file")
     await bib_store.backup_to(lib, target.with_name(name.replace("papers-", "bib-", 1)))
+    await tag_store.backup_to(lib, target.with_name(name.replace("papers-", "tags-", 1)))
     removed = 0
     for old in backups(lib)[keep:]:
         old.unlink(missing_ok=True)
