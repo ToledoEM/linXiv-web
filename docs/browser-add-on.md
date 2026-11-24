@@ -1,4 +1,11 @@
+---
+status: experimental
+---
+
 # Browser add-on
+
+!!! note "Experimental"
+    The add-on and the linXiv-web routes it uses are experimental. Check the metadata of clipped papers before relying on it.
 
 The linXiv Firefox clipper is an unofficial Firefox add-on that saves the page you're reading to linXiv-web. Click **Clip to linXiv** in the toolbar, check the metadata, and save. Any site works: a page with good metadata gives a full record, one with none still saves its title and URL.
 

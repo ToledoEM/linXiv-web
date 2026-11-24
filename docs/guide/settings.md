@@ -54,7 +54,7 @@ The **Browser add-on** card creates the access token for the linXiv Firefox add-
 
 ## Server Admin
 
-Admins only. Multi-user mode turns named accounts and the shared library on or off, and Users adds, edits and deletes accounts. Maintenance operations finds duplicate papers, completes metadata of new papers, checks PDF files, backs up the databases, removes authors and tags without papers and empties old trash, on demand or nightly. See [Server Admin](../server-admin.md) and [Maintenance operations](../server-admin.md#maintenance-operations).
+Admins only. Multi-user mode turns named accounts and the shared library on or off, and Users adds, edits and deletes accounts. Maintenance operations finds duplicate papers, completes metadata of new papers, checks PDF files, backs up the databases, removes authors and tags without papers and empties old trash, on demand or nightly. See [Server Admin](../server-admin/index.md) and [Maintenance operations](../server-admin/maintenance.md).
 
 In multi-user mode, accounts that are not admins see fewer settings: no MCP card, Server Admin group, Logs card or Activity card, and About shows the version only. Their AI keys, contacts, feeds and lookup choices belong to their own library.
 

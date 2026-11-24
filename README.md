@@ -28,7 +28,7 @@ Try it at <https://linxiv-web.onrender.com> with the password `trymelinxiv-web`.
 - **AI (opt-in):** tag suggestions, paper summaries saved as notes, metadata cleanup.
 - **MCP (opt-in):** linXiv's own MCP tools over HTTP at `/mcp`, for any AI tool that accept MCP protocol.
 - **Browser add-on:** a Firefox add-on saves the page or PDF you're reading to your library. See [docs/browser-add-on.md](docs/browser-add-on.md).
-- **Several users (opt-in):** named accounts with their own libraries and settings, admin and user roles, and a shared library that admins fill and everyone can copy papers from. See [docs/server-admin.md](docs/server-admin.md).
+- **Several users (opt-in):** named accounts with their own libraries and settings, admin and user roles, and a shared library that admins fill and everyone can copy papers from. See [docs/server-admin/index.md](docs/server-admin/index.md).
 - Themes (light/dark), zoom and density, keyboard shortcuts, sidebar page toggles.
 
 ## How it works

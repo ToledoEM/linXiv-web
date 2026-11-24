@@ -47,15 +47,15 @@ The first request sends:
 - the title and categories;
 - the abstract, up to 6,000 characters;
 - the paper's current tags, so the model doesn't repeat them;
-- with PDF text on, the text of the saved PDF (first 40 pages, at most 60,000 characters). A paper without a readable PDF falls back to the abstract.
+- with PDF text on, the text of the first 5 pages of the saved PDF. A paper without a readable PDF falls back to the abstract.
 
 Your existing tags are not sent. The model suggests what the paper is about, and the matching steps below decide whether that is a tag you already have.
 
 The system prompt is:
 
-```text
+```{ .text .wrap }
 You tag research papers in a personal library. Suggest 3 to 6 short topical tags for the paper, one tag per concept: never two tags that mean the same thing (not both 'microRNA' and 'miRNA').
-Spell each tag in its normalized form: lowercase except acronyms and gene or protein symbols, singular nouns, American spelling ('signaling', 'tumor'), one to three words, hyphens only where the term uses them ('RNA-seq'), no '#'. Keep standard acronyms as written (DNA, RNA-seq, CRISPR, MRI); write rare abbreviations out in full. Put abbreviations and other common names of the same tag in also_known_as. Do not repeat the paper's current tags.
+Spell each tag in its normalized form: lowercase except acronyms and gene or protein symbols, singular nouns except fixed plural terms such as 'systems biology' or 'social sciences', American spelling ('signaling', 'tumor'), one to three words, hyphens only where the term uses them ('RNA-seq'), no '#'. Keep standard acronyms as written (DNA, RNA-seq, CRISPR, MRI); write rare abbreviations out in full. Put abbreviations and other common names of the same tag in also_known_as. Do not repeat the paper's current tags.
 ```
 
 The model replies with a list of tags, each with its other names:
@@ -67,14 +67,14 @@ The model replies with a list of tags, each with its other names:
 ]}
 ```
 
-At most 6 suggestions are kept. A tag longer than 64 characters is dropped. Some local models write every tag as a slug; a new tag with two or more hyphens and no spaces is stored with spaces (`fiber-optic-sensors` becomes `fiber optic sensors`). A tag with one hyphen, such as `RNA-seq`, keeps it.
+At most 6 suggestions are kept. A tag longer than 64 characters is dropped. Some local models write every tag as a slug; a new tag with two or more hyphens and no spaces is stored with spaces (`fiber-optic-sensors` becomes `fiber optic sensors`). A tag with one hyphen, such as `RNA-seq`, keeps it. A few terms the field writes in the plural get that spelling back when they are new tags: `system biology` is stored as `systems biology`, and the same goes for `social sciences`, `life sciences`, `materials science` and the others in the server's list.
 
 ### Step 2: same tag in another spelling
 
 Each candidate gets a spelling key. Two tags with the same key are the same tag. The key ignores:
 
 - case, hyphens, underscores, slashes and punctuation;
-- plural endings on each word (`neural networks` = `neural network`), except words ending in `ss`, `us`, `is` or `ics` (`analysis`, `genomics`);
+- plural endings on each word (`neural networks` = `neural network`), except words ending in `ss`, `us`, `is` or `ics` (`analysis`, `genomics`). The key only decides what matches: `systems biology` and `system biology` are one tag, spelled the way your library has it;
 - British spelling: `signalling`, `tumour`, `haematopoiesis` and `-isation` match `signaling`, `tumor`, `hematopoiesis` and `-ization`;
 - `sequencing` against `seq`, so `RNA sequencing` = `RNA-seq`.
 
@@ -107,7 +107,7 @@ Candidates in the mode's review band go to a second request, all of them in one 
 
 The system prompt is:
 
-```text
+```{ .text .wrap }
 You keep the tag vocabulary of a research library consistent. For each candidate tag you get the existing tags closest to it and how many papers use each. Decide:
 - map: the candidate means the same as one of those tags for this paper; tag = that tag, spelled exactly as listed.
 - alias: the candidate is exactly the same concept as one of those tags under another name (an abbreviation, a spelling variant or a true synonym), so it should always become that tag; tag = that tag, spelled exactly as listed. Never use alias for a broader, narrower or related tag ('causal inference' is not an alias of 'statistical inference'); use map or new for those.
@@ -181,7 +181,7 @@ Default 10, range 0 to 30. Points added to the similarity of a close tag, in ful
 
 ### Read the saved PDF's text too
 
-Default off. Sends the first 40 pages of the saved PDF, up to 60,000 characters, with the abstract. Tags then reflect the methods and results, not only the abstract. It makes each request much longer: with a local 9B model in LM Studio, one paper took 113 s with PDF text against 6 to 33 s with the abstract. Papers without a saved PDF use the abstract.
+Default off. Sends the text of the first 5 pages of the saved PDF with the abstract. Those pages hold the introduction and methods of most papers, so tags can name methods and data the abstract leaves out, while references and supplementary pages stay out of the request. Each request is still longer than with the abstract alone, which matters most with a local model. Papers without a saved PDF use the abstract.
 
 ### Choosing per run
 
@@ -243,7 +243,7 @@ Import rules:
 
 AI tagging works best on a vocabulary that is already consolidated. A routine that keeps it that way:
 
-1. Consolidate the tags you have. Export them with [`export-tags.sh`](export-tags.md), merge variants and synonyms outside linXiv-web, and write the result back with [`import-tags.sh`](import-tags.md). Then run **Clean tags without papers** in Settings → Server Admin → Maintenance operations.
+1. Consolidate the tags you have. Export them with [`export-tags.sh`](export-tags.md), merge variants and synonyms outside linXiv-web, and write the result back with [`import-tags.sh`](import-tags.md). Then run [Clean tags without papers](server-admin/maintenance.md) in Settings → Server Admin → Maintenance operations.
 2. Import the consolidation's tag map as the vocabulary CSV. Every old spelling becomes an alias, so a model that suggests one gets the consolidated tag instead.
 3. Switch the mode to **Mild**, or to **Hard** if new papers should only get tags you already have. Lower **New tags per paper** to 1 or 2 if Mild still adds too many.
 4. Look at **Aliases to review** from time to time. Approve real synonyms; reject broader or narrower terms.
@@ -252,4 +252,4 @@ AI tagging works best on a vocabulary that is already consolidated. A routine th
 
 ## Storage
 
-The vocabulary CSV, aliases and aliases to review are stored per library in `linxiv-web-tags.db`, next to `papers.db`. linXiv itself doesn't read this file. The **Back up databases** maintenance operation copies it as `tags-<date>-<time>.db` next to each database backup. The HTTP routes are listed in the [API reference](reference/api.md).
+The vocabulary CSV, aliases and aliases to review are stored per library in `linxiv-web-tags.db`, next to `papers.db`. linXiv itself doesn't read this file. The [Back up databases](server-admin/maintenance.md) maintenance operation copies it as `tags-<date>-<time>.db` next to each database backup. The HTTP routes are listed in the [API reference](reference/api.md).

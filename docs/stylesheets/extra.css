@@ -2,3 +2,18 @@
 [data-md-color-scheme="slate"] .md-logo img {
   content: url("../assets/logo-dark.svg");
 }
+
+/* Long prose in code blocks (AI prompts): wrap instead of scrolling sideways */
+.md-typeset .wrap pre > code {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* Nav badge for pages with `status: experimental` (flask icon, Lucide) */
+:root {
+  --md-status--experimental: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2v7.31"/><path d="M14 9.3V2"/><path d="M8.5 2h7"/><path d="M14 9.3a6.5 6.5 0 1 1-4 0"/><path d="M5.52 16h12.96"/></svg>');
+}
+.md-status--experimental::after {
+  -webkit-mask-image: var(--md-status--experimental);
+  mask-image: var(--md-status--experimental);
+}
