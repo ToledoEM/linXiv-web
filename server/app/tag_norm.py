@@ -59,6 +59,29 @@ def norm_key(tag: str) -> str:
     return k
 
 
+# Terms the field writes in the plural. norm_key folds them with the singular
+# ("system biology"), so a new tag gets the spelling here instead.
+PLURAL_TERMS = (
+    "systems biology",
+    "systems medicine",
+    "systems pharmacology",
+    "systems neuroscience",
+    "complex systems",
+    "social sciences",
+    "life sciences",
+    "earth sciences",
+    "health sciences",
+    "materials science",
+    "operations research",
+)
+PLURAL_BY_KEY = {norm_key(t): t for t in PLURAL_TERMS}
+
+
+def plural_term(label: str) -> str:
+    """'system biology' -> 'systems biology'; any other tag unchanged."""
+    return PLURAL_BY_KEY.get(norm_key(label), label)
+
+
 def display(tag: str) -> str:
     """Tag as shown and stored: NFKC, no leading '#', single spaces, dashes as '-'."""
     t = unicodedata.normalize("NFKC", tag).strip().lstrip("#")

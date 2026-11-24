@@ -642,7 +642,7 @@ export default function Settings() {
                 checked={draft.web_tag_use_pdf}
                 onChange={(e) => set('web_tag_use_pdf', e.target.checked)}
               />
-              Read the saved PDF's text too (first 40 pages); papers without a PDF use the abstract
+              Read the saved PDF's text too (first 5 pages); papers without a PDF use the abstract
             </label>
             {saveBar('tags')}
           </div>

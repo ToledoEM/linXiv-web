@@ -40,6 +40,9 @@ TEST_EXAMPLE = {"ok": True}
 MAX_CANDIDATES = 8
 MAX_TAG_LEN = tag_pipeline.MAX_TAG_LEN
 MAX_ABSTRACT_CHARS = 6000
+# PDF pages read for tagging: the title page, abstract, introduction and methods
+# name the topics; later pages add length and noise, not tags.
+TAG_PDF_PAGES = 5
 TAGS_SCHEMA = {
     "type": "object",
     "properties": {
@@ -76,7 +79,8 @@ TAGS_SYSTEM = (
     "for the paper, one tag per concept: never two tags that mean the same thing "
     "(not both 'microRNA' and 'miRNA').\n"
     "Spell each tag in its normalized form: lowercase except acronyms and gene or "
-    "protein symbols, singular nouns, American spelling ('signaling', 'tumor'), one to "
+    "protein symbols, singular nouns except fixed plural terms such as 'systems biology' "
+    "or 'social sciences', American spelling ('signaling', 'tumor'), one to "
     "three words, hyphens only where the term uses them ('RNA-seq'), no '#'. Keep "
     "standard acronyms as written (DNA, RNA-seq, CRISPR, MRI); write rare abbreviations "
     "out in full. Put abbreviations and other common names of the same tag in "
@@ -271,11 +275,11 @@ async def test(request: Request):
 
 
 async def _tag_text(request: Request, sid: str) -> tuple[str, bool]:
-    """The saved PDF's text for tagging; ("", False) when there is no readable PDF
-    (tagging then uses the abstract)."""
+    """The first TAG_PDF_PAGES pages of the saved PDF for tagging; ("", False) when
+    there is no readable PDF (tagging then uses the abstract)."""
     try:
         path = await managed_pdf_path(request, sid)
-        body, truncated = await extract_text_async(path)
+        body, truncated = await extract_text_async(path, max_pages=TAG_PDF_PAGES)
     except (HTTPException, PdfTextError):
         return "", False
     return body.strip(), truncated

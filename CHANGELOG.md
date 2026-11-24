@@ -11,6 +11,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Settings group **Tag vocabulary**: mode, new tags per paper, preference for frequent tags and PDF text; aliases, with a review list for aliases the model proposes; import and export of a vocabulary CSV (`tag,aliases,weight`, or a consolidation tag map `old_tag,new_tag,cluster,papers`). Stored per library in `linxiv-web-tags.db` and copied by server database backups.
 - The paper page and the Library batch panel choose the mode and the text source per run. Suggestions show the model's own wording when it was matched to an existing tag, and list what the mode left out and why.
 - `bulk-ai-tags.sh`: `--mode` and `--pdf`.
+- AI tags with PDF text read only the first 5 pages, so requests stay short and references stay out. AI summaries still read up to 40 pages.
+- New AI tags keep the plural of fixed terms such as `systems biology`, `social sciences` and `materials science`; the prompt asks for them too.
 - API: `mode` and `pdf` on `POST /api/ai/tags/{id}`; the reply adds `mode`, `used_pdf`, `dropped`, and `in_vocab`, `how` and `from` per tag. New `/api/tags/vocabulary` routes.
 - `scripts/import-tags.sh` replaces the tags of the papers listed in a CSV with the tags the CSV gives them. It runs with the container stopped, backs up `papers.db` first and makes the change in one transaction. `--dry-run` works while the server runs. New docs page.
 - Settings → Appearance has an Accessibility section for options stored in the browser and off by default. The options are a "Skip to content" link on the first Tab press that moves focus past the sidebar, stronger focus indicators (a 3px outline on every focused control), and higher contrast text (muted text reaches at least 4.5:1 in every theme).
@@ -22,6 +24,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Screen readers: the BibTeX/CSL import file picker on Add Paper has a label; the Settings group list is announced as navigation with the current group marked, instead of an incomplete tab list; collapsible notes report whether they are expanded; the PDF/details divider reports its position while dragged with the mouse.
 
 ### Changed
+- Docs: Server Admin is now a section with four pages: multi-user and accounts, where the data lives, maintenance operations, and background jobs and MCP. The Browser add-on page is marked experimental, and AI prompts in the docs wrap instead of scrolling sideways.
 - AI tags: at most 6 suggestions per paper (was 8); `bulk-ai-tags.sh --max-tags` takes 1 to 6.
 - New server dependency: rapidfuzz 3.14.6.
 - Dependencies: FastAPI 0.162.4 and ruff 0.17.4 on the server; cytoscape 3.35.0, vite 8.3.8, `@vitejs/plugin-react` 6.3.0, `typescript-eslint` 8.72.2 and jsdom 31 (tests only) in the web app; new digests for the Debian and Python base images.

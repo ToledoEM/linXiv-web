@@ -32,7 +32,7 @@ from dataclasses import dataclass, field
 
 from rapidfuzz import fuzz, process
 
-from .tag_norm import display, norm_key, sibling, symbol_like
+from .tag_norm import display, norm_key, plural_term, sibling, symbol_like
 
 MAX_SUGGESTED = 6
 MAX_TAG_LEN = 64
@@ -255,7 +255,7 @@ def unslug(label: str) -> str:
 
 
 def _new(label: str) -> dict:
-    return {"tag": unslug(label), "known": False, "in_vocab": False, "how": "new"}
+    return {"tag": plural_term(unslug(label)), "known": False, "in_vocab": False, "how": "new"}
 
 
 async def run(

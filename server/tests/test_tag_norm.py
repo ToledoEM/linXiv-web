@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from app.tag_norm import display, norm_key, sibling, symbol_like
+from app.tag_norm import display, norm_key, plural_term, sibling, symbol_like
 
 
 @pytest.mark.parametrize(
@@ -65,3 +65,10 @@ def test_symbol_like():
     assert symbol_like("er", "er")
     assert not symbol_like("autophagy", norm_key("autophagy"))
     assert not symbol_like("deep learning", norm_key("deep learning"))
+
+
+def test_plural_terms():
+    assert plural_term("system biology") == "systems biology"
+    assert plural_term("Systems Biology") == "systems biology"
+    assert plural_term("social science") == "social sciences"
+    assert plural_term("cell biology") == "cell biology"

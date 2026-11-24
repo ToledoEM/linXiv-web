@@ -512,9 +512,22 @@ def test_suggest_tags_pdf_text(client, fake, monkeypatch, settings):
     pdf = settings.pdf_dir / "t.pdf"
     pdf.write_bytes(_pdf_bytes("Hello tagging"))
     fake.on("pdf", "path", result={"path": str(pdf)})
+    from app.routes import ai as routes
+
+    pages: list = []
+    real = routes.extract_text_async
+
+    async def spy(path, max_pages=40, max_chars=60_000):
+        pages.append(max_pages)
+        return await real(path, max_pages=max_pages, max_chars=max_chars)
+
+    monkeypatch.setattr(routes, "extract_text_async", spy)
     r = client.post("/api/ai/tags/p1")
     assert r.status_code == 200 and r.json()["used_pdf"] is True
     assert "Hello tagging" in json.loads(seen[0].content)["messages"][1]["content"]
+    assert pages == [5]
+    system = json.loads(seen[0].content)["messages"][0]["content"]
+    assert "'systems biology'" in system
     # pdf=false in the query skips it; no PDF falls back to the abstract.
     assert client.post("/api/ai/tags/p1?pdf=false").json()["used_pdf"] is False
     fake.on("pdf", "path", result={})

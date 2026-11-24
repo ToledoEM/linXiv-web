@@ -300,3 +300,11 @@ def test_new_slug_tags_get_spaces():
     assert tp.unslug("single-cell RNA-seq") == "single-cell RNA-seq"
     r = _run([C("diffusion-models"), C("fiber-optic-sensors")], _vocab({}), mode="free")
     assert tags(r) == [("diffusion-models", "new"), ("fiber optic sensors", "new")]
+
+
+def test_new_plural_terms_keep_their_plural():
+    r = _run([C("system biology"), C("material science")], _vocab({}), mode="free")
+    assert tags(r) == [("systems biology", "new"), ("materials science", "new")]
+    # An existing tag keeps the library's spelling.
+    r = _run([C("systems biology")], _vocab({"system biology": 3}), mode="free")
+    assert tags(r) == [("system biology", "exact")]
