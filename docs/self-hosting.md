@@ -125,7 +125,7 @@ docker compose up -d
 
 A password set with `LINXIV_WEB_PASSWORD_HASH` / `LINXIV_WEB_PASSWORD` always wins; change it in `.env` instead.
 
-In multi-user mode, `reset-password --user <name>` resets one account's password and logs only that account out; without `--user` it resets the owner's server password. See [Server Admin](server-admin.md#passwords).
+In multi-user mode, `reset-password --user <name>` resets one account's password and logs only that account out; without `--user` it resets the owner's server password. See [Server Admin](server-admin/index.md#passwords).
 
 ## Logging in
 
@@ -135,7 +135,7 @@ Sessions are kept in `data/linxiv-web-state.db`, so restarting or updating the c
 
 ## More than one person
 
-By default linXiv-web has one password and one library. To give other people their own logins and libraries, plus a shared library that only admins change, turn on multi-user mode in **Settings → Server Admin**. The login page then asks for a username as well. [Server Admin](server-admin.md) explains accounts, roles and the shared library.
+By default linXiv-web has one password and one library. To give other people their own logins and libraries, plus a shared library that only admins change, turn on multi-user mode in **Settings → Server Admin**. The login page then asks for a username as well. [Server Admin](server-admin/index.md) explains accounts, roles and the shared library.
 
 ## Where your data lives
 
@@ -229,7 +229,7 @@ To import a folder of PDFs that is already on the server, without the web UI, us
 ## Backups
 
 - Database only: Settings → Server & data → Backup downloads a copy of `papers.db` and can import or restore one. It does not include PDFs. The same card exports and imports the settings (without API keys).
-- Database copies on the server: the "Back up databases" maintenance operation keeps the newest copies of every library database inside the data directory, nightly or on demand. See [Maintenance operations](server-admin.md#maintenance-operations). Set `TZ` on the container so the nightly hour is your local time.
+- Database copies on the server: the "Back up databases" maintenance operation keeps the newest copies of every library database inside the data directory, nightly or on demand. See [Maintenance operations](server-admin/maintenance.md). Set `TZ` on the container so the nightly hour is your local time.
 - Everything: stop the container and copy both directories:
 
   ```sh

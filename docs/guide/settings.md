@@ -38,6 +38,10 @@ Switch AI features on, choose a provider, model and key, and test the connection
 
 API keys are write-only. After saving, the page shows only their last 4 characters.
 
+## Tag vocabulary
+
+How AI tags are matched to the tags you already have: the mode, how many new tags a paper may get, how much frequent tags are preferred, and whether the PDF text is read. The same group holds aliases you add or approve, aliases proposed by AI tagging, and the import and export of a vocabulary CSV. See [AI tags](../ai-tags.md).
+
 ## Integrations
 
 The MCP server for Claude Code, Codex and OpenCode: switch it on, choose the tool profile and create the access token. See [MCP server](../mcp.md).
@@ -50,7 +54,7 @@ The **Browser add-on** card creates the access token for the linXiv Firefox add-
 
 ## Server Admin
 
-Admins only. Multi-user mode turns named accounts and the shared library on or off, and Users adds, edits and deletes accounts. Maintenance operations finds duplicate papers, completes metadata of new papers, checks PDF files, backs up the databases, removes authors and tags without papers and empties old trash, on demand or nightly. See [Server Admin](../server-admin.md) and [Maintenance operations](../server-admin.md#maintenance-operations).
+Admins only. Multi-user mode turns named accounts and the shared library on or off, and Users adds, edits and deletes accounts. Maintenance operations finds duplicate papers, completes metadata of new papers, checks PDF files, backs up the databases, removes authors and tags without papers and empties old trash, on demand or nightly. See [Server Admin](../server-admin/index.md) and [Maintenance operations](../server-admin/maintenance.md).
 
 In multi-user mode, accounts that are not admins see fewer settings: no MCP card, Server Admin group, Logs card or Activity card, and About shows the version only. Their AI keys, contacts, feeds and lookup choices belong to their own library.
 

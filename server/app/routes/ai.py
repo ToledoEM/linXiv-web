@@ -1,5 +1,6 @@
 """AI routes: provider checks for Settings → AI (list models, test the
-connection), tag suggestions, paper summaries and metadata cleanup.
+connection), tag suggestions (app/tag_pipeline.py), paper summaries and
+metadata cleanup.
 
 All use the saved provider settings (never values from the request) and refuse
 while `ai_enabled` is off. Suggestions are only returned; the UI adds the tags
@@ -11,14 +12,16 @@ from __future__ import annotations
 import json
 import re
 import time
+from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Request
 
-from .. import ai
+from .. import ai, tag_pipeline, tag_store
 from ..pdf_text import PdfTextError, extract_text_async
-from .common import ident, run
+from .common import ident, library, run
 from .metadata import require_source
 from .pdfs import managed_pdf_path
+from .tag_vocab import load_vocabulary
 
 router = APIRouter(prefix="/api/ai", tags=["ai"])
 
@@ -31,31 +34,100 @@ TEST_SCHEMA = {
 TEST_EXAMPLE = {"ok": True}
 
 
-# Tag suggestions: at most this many per paper, and this much of the library's
-# tag vocabulary in the prompt.
-MAX_SUGGESTED = 8
-MAX_VOCABULARY = 400
-MAX_TAG_LEN = 64
+# Tag suggestions (app/tag_pipeline.py). Stage 1 asks for free candidate tags
+# without the vocabulary, so they follow the paper rather than the library;
+# stage 2 only sees candidates close to existing tags, with those tags.
+MAX_CANDIDATES = 8
+MAX_TAG_LEN = tag_pipeline.MAX_TAG_LEN
 MAX_ABSTRACT_CHARS = 6000
+# PDF pages read for tagging: the title page, abstract, introduction and methods
+# name the topics; later pages add length and noise, not tags.
+TAG_PDF_PAGES = 5
 TAGS_SCHEMA = {
     "type": "object",
     "properties": {
         "tags": {
             "type": "array",
-            "items": {"type": "string", "minLength": 1, "maxLength": MAX_TAG_LEN},
-            "maxItems": MAX_SUGGESTED,
+            "items": {
+                "type": "object",
+                "properties": {
+                    "tag": {"type": "string", "minLength": 1, "maxLength": MAX_TAG_LEN},
+                    "also_known_as": {
+                        "type": "array",
+                        "items": {"type": "string", "minLength": 1, "maxLength": MAX_TAG_LEN},
+                        "maxItems": 4,
+                    },
+                },
+                "required": ["tag", "also_known_as"],
+                "additionalProperties": False,
+            },
+            "maxItems": MAX_CANDIDATES,
         }
     },
     "required": ["tags"],
     "additionalProperties": False,
 }
 # Examples show the reply's shape only: placeholders, so models don't copy content.
-TAGS_EXAMPLE = {"tags": ["<tag 1>", "<tag 2>", "<tag 3>"]}
+TAGS_EXAMPLE = {
+    "tags": [
+        {"tag": "<tag 1>", "also_known_as": []},
+        {"tag": "<tag 2>", "also_known_as": ["<abbreviation of tag 2>"]},
+    ]
+}
 TAGS_SYSTEM = (
     "You tag research papers in a personal library. Suggest 3 to 6 short topical tags "
-    "for the paper: lowercase, one to three words, no '#'. Reuse tags from the existing "
-    "vocabulary when they fit; add a new tag only for an important topic it lacks. "
-    "Do not repeat the paper's current tags."
+    "for the paper, one tag per concept: never two tags that mean the same thing "
+    "(not both 'microRNA' and 'miRNA').\n"
+    "Spell each tag in its normalized form: lowercase except acronyms and gene or "
+    "protein symbols, singular nouns except fixed plural terms such as 'systems biology' "
+    "or 'social sciences', American spelling ('signaling', 'tumor'), one to "
+    "three words, hyphens only where the term uses them ('RNA-seq'), no '#'. Keep "
+    "standard acronyms as written (DNA, RNA-seq, CRISPR, MRI); write rare abbreviations "
+    "out in full. Put abbreviations and other common names of the same tag in "
+    "also_known_as. Do not repeat the paper's current tags."
+)
+
+RESOLVE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "decisions": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "candidate": {"type": "string", "minLength": 1, "maxLength": MAX_TAG_LEN},
+                    "action": {"type": "string", "enum": ["map", "alias", "new"]},
+                    "tag": {"type": "string", "minLength": 1, "maxLength": MAX_TAG_LEN},
+                },
+                "required": ["candidate", "action", "tag"],
+                "additionalProperties": False,
+            },
+            "maxItems": MAX_CANDIDATES,
+        }
+    },
+    "required": ["decisions"],
+    "additionalProperties": False,
+}
+RESOLVE_EXAMPLE = {
+    "decisions": [
+        {"candidate": "<candidate 1>", "action": "map", "tag": "<existing tag>"},
+        {"candidate": "<candidate 2>", "action": "new", "tag": "<candidate 2, spelling fixed>"},
+    ]
+}
+RESOLVE_SYSTEM = (
+    "You keep the tag vocabulary of a research library consistent. For each candidate "
+    "tag you get the existing tags closest to it and how many papers use each. Decide:\n"
+    "- map: the candidate means the same as one of those tags for this paper; tag = that "
+    "tag, spelled exactly as listed.\n"
+    "- alias: the candidate is exactly the same concept as one of those tags under another "
+    "name (an abbreviation, a spelling variant or a true synonym), so it should always "
+    "become that tag; tag = that tag, spelled exactly as listed. Never use alias for a "
+    "broader, narrower or related tag ('causal inference' is not an alias of 'statistical "
+    "inference'); use map or new for those.\n"
+    "- new: none of them means the same (broader, narrower, related or a different member "
+    "of a family such as STAT1 vs STAT5 is not the same); tag = the candidate with its "
+    "spelling normalized.\n"
+    "Prefer an existing tag used by more papers when two fit equally. Answer every candidate."
 )
 
 
@@ -128,9 +200,15 @@ TASKS = [
     },
     {
         "id": "tags",
-        "label": "Tag suggestions",
+        "label": "Tag suggestions: candidates",
         "schema": TAGS_SCHEMA,
         "example": TAGS_EXAMPLE,
+    },
+    {
+        "id": "tags-resolve",
+        "label": "Tag suggestions: match to existing tags",
+        "schema": RESOLVE_SCHEMA,
+        "example": RESOLVE_EXAMPLE,
     },
     {
         "id": "summary",
@@ -196,64 +274,90 @@ async def test(request: Request):
     }
 
 
-def _clean_tags(raw: object, current: list[str], vocabulary: list[str]) -> list[dict]:
-    """Model output -> [{tag, known}]: trimmed, deduped, minus the paper's tags,
-    spelled like the vocabulary when it matches one."""
-    if not isinstance(raw, dict) or not isinstance(raw.get("tags"), list):
-        raise HTTPException(status_code=502, detail="The model returned no tags")
-    known = {t.casefold(): t for t in vocabulary}
-    taken = {t.casefold() for t in current}
-    out: list[dict] = []
-    for item in raw["tags"]:
-        if not isinstance(item, str):
-            continue
-        tag = re.sub(r"\s+", " ", item.strip().lstrip("#")).strip()
-        if not tag or len(tag) > MAX_TAG_LEN or any(ord(c) < 32 or ord(c) == 127 for c in tag):
-            continue
-        key = tag.casefold()
-        if key in taken:
-            continue
-        taken.add(key)
-        out.append({"tag": known.get(key, tag), "known": key in known})
-        if len(out) == MAX_SUGGESTED:
-            break
-    return out
+async def _tag_text(request: Request, sid: str) -> tuple[str, bool]:
+    """The first TAG_PDF_PAGES pages of the saved PDF for tagging; ("", False) when
+    there is no readable PDF (tagging then uses the abstract)."""
+    try:
+        path = await managed_pdf_path(request, sid)
+        body, truncated = await extract_text_async(path, max_pages=TAG_PDF_PAGES)
+    except (HTTPException, PdfTextError):
+        return "", False
+    return body.strip(), truncated
 
 
 @router.post("/tags/{source_id:path}")
-async def suggest_tags(request: Request, source_id: str):
-    """Suggested tags for one paper from its title, abstract and categories,
-    steered toward the library's existing tags."""
-    cfg = await _config(request)
+async def suggest_tags(
+    request: Request,
+    source_id: str,
+    mode: Literal["free", "soft", "mild", "hard"] | None = None,
+    pdf: bool | None = None,
+):
+    """Suggested tags for one paper, matched against the library's vocabulary
+    (Settings → Tag vocabulary). `mode` and `pdf` override the saved settings
+    for this request. Suggestions only; aliases the model proposes wait for
+    review."""
+    stored = await run(request, ["settings", "get"])
+    stored = stored if isinstance(stored, dict) else {}
+    cfg = await _config(request, stored)
+    opts = tag_pipeline.options(stored, mode)
+    use_pdf = stored.get("web_tag_use_pdf") is True if pdf is None else pdf
     sid = ident(source_id)
     paper = await run(request, ["paper", "get", "--", sid])
-    vocabulary = await run(request, ["tag", "list-all"])
-    vocabulary = (
-        [t for t in vocabulary if isinstance(t, str)] if isinstance(vocabulary, list) else []
-    )
     current = [t for t in (paper.get("tags") or []) if isinstance(t, str)]
     categories = paper.get("categories") or ([paper["category"]] if paper.get("category") else [])
-    prompt = "\n".join(
-        [
-            f"Title: {paper.get('title') or ''}",
-            f"Categories: {', '.join(str(c) for c in categories) or 'none'}",
-            f"Abstract: {(paper.get('summary') or 'none')[:MAX_ABSTRACT_CHARS]}",
-            f"Current tags: {', '.join(current) or 'none'}",
-            f"Existing vocabulary: {', '.join(vocabulary[:MAX_VOCABULARY]) or 'none yet'}",
-        ]
-    )
+    body, truncated = await _tag_text(request, sid) if use_pdf else ("", False)
+    lines = [
+        f"Title: {paper.get('title') or ''}",
+        f"Categories: {', '.join(str(c) for c in categories) or 'none'}",
+        f"Abstract: {(paper.get('summary') or 'none')[:MAX_ABSTRACT_CHARS]}",
+        f"Current tags: {', '.join(current) or 'none'}",
+    ]
+    if body:
+        lines.append(f"Full text{' (truncated)' if truncated else ''}:\n{body}")
     try:
         raw = await ai.complete(
             cfg,
-            prompt,
+            "\n".join(lines),
             system=TAGS_SYSTEM,
             schema=TAGS_SCHEMA,
             example=TAGS_EXAMPLE,
-            max_tokens=512,
+            max_tokens=1024,
         )
     except ai.AIError as e:
         raise HTTPException(status_code=e.status, detail=e.message) from e
-    return {"source_id": sid, "suggested": _clean_tags(raw, current, vocabulary)}
+    found = tag_pipeline.candidates(raw)
+    if found is None:
+        raise HTTPException(status_code=502, detail="The model returned no tags")
+
+    async def resolve(asked: list[dict]) -> list[dict]:
+        prompt = json.dumps(
+            {"paper_title": paper.get("title") or "", "candidates": asked}, ensure_ascii=False
+        )
+        try:
+            reply = await ai.complete(
+                cfg,
+                prompt,
+                system=RESOLVE_SYSTEM,
+                schema=RESOLVE_SCHEMA,
+                example=RESOLVE_EXAMPLE,
+                max_tokens=1024,
+            )
+        except ai.AIError as e:
+            raise HTTPException(status_code=e.status, detail=e.message) from e
+        decisions = reply.get("decisions") if isinstance(reply, dict) else None
+        return decisions if isinstance(decisions, list) else []
+
+    vocab = await load_vocabulary(request)
+    result = await tag_pipeline.run(found, vocab, opts, current, resolve)
+    if result.proposals:
+        await tag_store.propose(library(request), result.proposals, sid, cfg.model)
+    return {
+        "source_id": sid,
+        "mode": opts.mode,
+        "used_pdf": bool(body),
+        "suggested": result.suggested,
+        "dropped": result.dropped,
+    }
 
 
 def _text_list(value: object, limit: int, max_len: int) -> list[str]:

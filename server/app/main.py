@@ -50,6 +50,7 @@ from .routes import (
     shared,
     sources,
     system,
+    tag_vocab,
     trash,
     user_settings,
     users,
@@ -270,6 +271,7 @@ def create_app(
     app.include_router(log_routes.router, dependencies=admin_only)
     app.include_router(activity_routes.router, dependencies=admin_only)
     # Before library: its GET /papers/{id:path} would swallow .../lookup.
+    app.include_router(tag_vocab.router, dependencies=guarded)
     app.include_router(metadata.router, dependencies=guarded)
     app.include_router(library.router, dependencies=guarded)
 

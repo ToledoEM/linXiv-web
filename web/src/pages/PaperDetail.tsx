@@ -13,7 +13,7 @@ import {
 } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { api, pdfUrl } from '../api'
-import type { Annotation, Paper, PaperVersions, TagSuggestion } from '../types'
+import type { Annotation, Paper, PaperVersions, TagDropped, TagSuggestion } from '../types'
 import { Authors, ErrorText } from '../components'
 import { paperJournal, paperLabel, validDoi } from '../format'
 import { useAiEnabled } from '../aiEnabled'
@@ -22,6 +22,7 @@ import Highlights from '../Highlights'
 import MetadataEditor from '../MetadataEditor'
 import { BIB_FIELDS } from '../metadataFields'
 import Notes from '../Notes'
+import TagModePicker, { type TagRunOptions } from '../TagModePicker'
 import TagSuggestions from '../TagSuggestions'
 import { toggled } from '../projects'
 import CopyToMine from '../CopyToMine'
@@ -76,6 +77,8 @@ export default function PaperDetail() {
   // Shared library for a non-admin: read and copy only.
   const ro = !library.canWrite
   const [suggested, setSuggested] = useState<TagSuggestion[] | null>(null)
+  const [dropped, setDropped] = useState<TagDropped[]>([])
+  const [tagRun, setTagRun] = useState<TagRunOptions>({})
   const [pickedTags, setPickedTags] = useState<Set<string>>(new Set())
   const [customUrl, setCustomUrl] = useState('')
   const [showPdf, setShowPdf] = useState(true)
@@ -225,8 +228,9 @@ export default function PaperDetail() {
   const suggestTags = () =>
     act('suggest', async () => {
       setSuggested(null)
-      const r = await api.suggestTags(id)
+      const r = await api.suggestTags(id, tagRun)
       setSuggested(r.suggested)
+      setDropped(r.dropped ?? [])
       setPickedTags(new Set(r.suggested.map((s) => s.tag)))
     })
 
@@ -450,9 +454,12 @@ export default function PaperDetail() {
                 />
                 <button disabled={!!busy || !newTag.trim()}>Add</button>
                 {aiOn && (
-                  <button type="button" disabled={!!busy} onClick={suggestTags}>
-                    {busy === 'suggest' ? 'Suggesting…' : 'AI Tags'}
-                  </button>
+                  <>
+                    <button type="button" disabled={!!busy} onClick={suggestTags}>
+                      {busy === 'suggest' ? 'Suggesting…' : 'AI Tags'}
+                    </button>
+                    <TagModePicker value={tagRun} onChange={setTagRun} disabled={!!busy} />
+                  </>
                 )}
               </form>
             )}
@@ -463,6 +470,7 @@ export default function PaperDetail() {
                   suggestions={suggested}
                   picked={pickedTags}
                   disabled={!!busy}
+                  dropped={dropped}
                   onToggle={(t) => setPickedTags((s) => toggled(s, t))}
                 />
                 <div className="actions">

@@ -26,9 +26,15 @@ nav = [
     { "Settings" = "guide/settings.md" },
     { "Trash and backups" = "guide/trash-backup.md" },
   ] },
-  { "Server Admin" = "server-admin.md" },
+  { "Server Admin" = [
+    "server-admin/index.md",
+    { "Where the data lives" = "server-admin/data.md" },
+    { "Maintenance operations" = "server-admin/maintenance.md" },
+    { "Background jobs and MCP" = "server-admin/jobs-mcp.md" },
+  ] },
   { "AI and agents" = [
     { "AI features" = "ai.md" },
+    { "AI tags" = "ai-tags.md" },
     { "MCP server" = "mcp.md" },
   ] },
   { "Browser add-on" = "browser-add-on.md" },
@@ -50,6 +56,9 @@ nav = [
 
 [project.extra]
 generator = false
+
+[project.extra.status]
+experimental = "Experimental"
 
 [project.theme]
 language = "en"

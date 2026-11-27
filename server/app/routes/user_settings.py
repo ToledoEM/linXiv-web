@@ -56,6 +56,13 @@ DEFAULTS: dict[str, object] = {
     "genai_provider": "gemini",
     "genai_model": "",
     "genai_base_url": "",
+    # AI tag suggestions (web-only keys, app/tag_pipeline.py): how strictly new
+    # tags are matched to the vocabulary, the new-tag cap (-1 = the mode's own),
+    # the frequency boost in similarity points, and whether PDF text is read.
+    "web_tag_mode": "soft",
+    "web_tag_max_new": -1,
+    "web_tag_freq_weight": 10,
+    "web_tag_use_pdf": False,
     # linXiv MCP over HTTP (web-only keys): off until the user opts in.
     "mcp_enabled": False,
     "mcp_profile": "read",
@@ -93,6 +100,7 @@ QUOTED_KEYS = (
     "web_log_level",
     "web_update_check",
     "web_feeds",
+    "web_tag_mode",
 )
 # Server-wide keys: kept in the root library only, changed by admins only (in
 # multi-user mode each library holds its own copy of everything else).
@@ -135,6 +143,10 @@ class SettingsPatch(BaseModel):
     web_log_level: Literal["debug", "info", "warning", "error"] | None = None
     web_update_check: Literal["off", "daily", "weekly", "monthly"] | None = None
     GHCR_TOKEN: str | None = Field(None, pattern=AI_KEY_RE)
+    web_tag_mode: Literal["free", "soft", "mild", "hard"] | None = None
+    web_tag_max_new: int | None = Field(None, ge=-1, le=6)
+    web_tag_freq_weight: int | None = Field(None, ge=0, le=30)
+    web_tag_use_pdf: bool | None = None
 
 
 async def _root_settings(request: Request) -> dict:
@@ -157,6 +169,8 @@ async def _current(request: Request) -> dict:
         values["web_log_level"] = logs.level_name()
     if values["web_update_check"] not in ("off", "daily", "weekly", "monthly"):
         values["web_update_check"] = "off"
+    if values["web_tag_mode"] not in ("free", "soft", "mild", "hard"):
+        values["web_tag_mode"] = "soft"
     if values["web_lookup_source"] not in LOOKUP_SOURCES:
         values["web_lookup_source"] = "auto"
     values["web_lookup_disabled"] = ",".join(

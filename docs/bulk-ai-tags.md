@@ -2,7 +2,7 @@
 
 Use this after a large import, when hundreds of papers have no tags and picking them one by one in the Library batch panel would take too long. `scripts/bulk-ai-tags.sh` runs on the machine that hosts the linXiv-web container. It asks the AI you set up in Settings → AI for tags for every paper that has none, and adds them.
 
-Each paper gets the same suggestions as **AI Tags** on the paper page: the model reads the title, categories and abstract, and is steered toward tags your library already uses. The script adds all suggested tags, as the batch panel does when you approve without unticking any, or the first few with `--max-tags`.
+Each paper gets the same suggestions as **AI Tags** on the paper page: the model reads the title, categories and abstract, and the server matches its tags to the ones your library already has, in the mode saved in Settings → Tag vocabulary (see [AI tags](ai-tags.md)). The script adds all suggested tags, as the batch panel does when you approve without unticking any, or the first few with `--max-tags`.
 
 The container keeps running and the web UI stays usable. The script talks to the server over `127.0.0.1`, so tags go through the server like any other edit.
 
@@ -52,7 +52,7 @@ FAIL  arXiv:2101.00001  -  (502): Gemini error 500: internal error
 done: 812 tagged, 3 none, 41 skipped, 2 failed, 858 total. Log: ./bulk-ai-tags-20261013-221500.log
 ```
 
-Each line shows the paper id, its PDF file inside the PDF folder (`-` when it has none) and the tags it got. `(new)` marks a tag that wasn't in your library before.
+Each line shows the paper id, its PDF file inside the PDF folder (`-` when it has none) and the tags it got. `(new)` marks a tag that wasn't in your library before. When the model's wording was matched to one of your tags, the wording follows the tag after `<-`. `(alias queued)` means the model proposed that wording as an alias of the tag; it waits in Settings → Tag vocabulary → Aliases to review.
 
 | Status | Meaning |
 |---|---|
@@ -68,7 +68,9 @@ Options:
 | Option | Effect |
 |---|---|
 | `--all` | Also ask about papers that already have tags, not only the untagged ones. The model is told each paper's current tags and the server drops any it repeats, so only new tags are added. See [Tagging papers that already have tags](#tagging-papers-that-already-have-tags) |
-| `--max-tags N` | Add only the first `N` suggestions per paper, 1 to 8. The default adds all of them (the model is asked for 3 to 6, the server keeps at most 8) |
+| `--max-tags N` | Add only the first `N` suggestions per paper, 1 to 6. The default adds all of them (the model is asked for 3 to 6, the server keeps at most 6) |
+| `--mode MODE` | Mode for this run: `free`, `soft`, `mild` or `hard` ([Modes](ai-tags.md#modes)). Without it, the mode saved in Settings → Tag vocabulary |
+| `--pdf` | Send each paper's saved PDF text too, which makes every request much slower. Papers without a PDF use the abstract. Without it, the PDF setting saved in Settings → Tag vocabulary applies |
 | `--jobs N` | Ask the AI about `N` papers at a time, 1 to 4 (default 1). See [Running papers in parallel](#running-papers-in-parallel) |
 | `--log FILE` | Log location (default `./bulk-ai-tags-<date>-<time>.log`) |
 | `--dry-run` | List the untagged papers and how many would be skipped, then stop |

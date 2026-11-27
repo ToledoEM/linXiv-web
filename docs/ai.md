@@ -6,7 +6,7 @@ AI features are off by default. To turn them on, open **Settings → AI**, tick 
 
 | Action | Where | What the model gets | Result |
 |---|---|---|---|
-| AI Tags | paper page, Library batch panel ("AI tags") | title, categories, abstract, current tags, your existing tag vocabulary | up to 8 tags to tick and add |
+| AI Tags | paper page, Library batch panel ("AI tags") | title, categories, abstract and current tags, and the PDF text if you choose it; then, only for unclear tags, the nearest existing tags ([details](ai-tags.md)) | up to 6 tags to tick and add, matched to your existing tags |
 | AI summary | paper page | "Abstract only", or "Abstract + PDF text" (first 40 pages, 60k characters) | summary + key points, saved as a note on request |
 | AI cleanup | Edit metadata and Library batch metadata, source "AI cleanup" | title, authors, journal | a candidate shown as a field diff; nothing is saved until you approve |
 
@@ -19,6 +19,10 @@ Every request carries a JSON Schema and a valid example reply; Settings → AI s
 Requests time out after 90 s, or 300 s for OpenAI-compatible servers, since local models read long prompts slowly.
 
 `LINXIV_WEB_AI_ALLOWED_HOSTS` limits which hosts the OpenAI-compatible base URL may use. Cloud metadata addresses are always refused. See [Admin Server Configuration](reference/configuration.md).
+
+## AI tags
+
+AI tags are matched to the tags your library already has, so one concept keeps one tag. [AI tags](ai-tags.md) explains the prompts, the matching, the four modes, aliases, the vocabulary CSV and the settings.
 
 ## Tagging the whole library
 

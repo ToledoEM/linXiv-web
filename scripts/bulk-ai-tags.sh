@@ -5,7 +5,8 @@
 #   The list of papers with no tags (every paper with --all) is read once at
 #   the start. Each paper is
 #   sent to POST /api/ai/tags/{id} (the same suggestions as "AI Tags" on the
-#   paper page), and the suggested tags are added with POST /api/papers/{id}/tags.
+#   paper page, checked against the tag vocabulary in the saved or --mode tag
+#   mode), and the suggested tags are added with POST /api/papers/{id}/tags.
 #   Papers with neither a title nor an abstract are skipped: the model would
 #   have nothing to read. --jobs N keeps N papers in flight at once.
 #
@@ -20,8 +21,12 @@ Options:
   --all                Also ask about papers that already have tags; the AI is told
                        their current tags and only new ones are added
                        (default: only papers with no tags)
-  --max-tags N         Add at most N of the suggested tags per paper, 1 to 8
+  --max-tags N         Add at most N of the suggested tags per paper, 1 to 6
                        (default: all of them, as the web UI does)
+  --mode MODE          Tag mode for this run: free, soft, mild or hard
+                       (default: the one saved in Settings → Tag vocabulary)
+  --pdf                Also send each paper's saved PDF text (default: as saved
+                       in Settings → Tag vocabulary); papers without one use the abstract
   --jobs N             Ask the AI about N papers at a time, 1 to 4 (default 1).
                        A local model needs as many parallel slots (LM Studio:
                        Max Concurrent Predictions); see docs/bulk-ai-tags.md
@@ -41,6 +46,8 @@ die() { echo "bulk-ai-tags: $*" >&2; exit 2; }
 # The port docker-compose.yml publishes on the server.
 URL=http://127.0.0.1:8086
 MAX_TAGS=
+MODE=
+PDF=
 JOBS=1
 LOG=
 DRY_RUN=0
@@ -52,6 +59,8 @@ PAGE=1000      # the most GET /api/papers returns per call
 while [ $# -gt 0 ]; do
   case "$1" in
     --max-tags) MAX_TAGS=${2:?--max-tags needs a value}; shift 2 ;;
+    --mode) MODE=${2:?--mode needs a value}; shift 2 ;;
+    --pdf) PDF=true; shift ;;
     --jobs) JOBS=${2:?--jobs needs a value}; shift 2 ;;
     --log) LOG=${2:?--log needs a value}; shift 2 ;;
     --dry-run) DRY_RUN=1; shift ;;
@@ -62,9 +71,18 @@ while [ $# -gt 0 ]; do
 done
 case "$MAX_TAGS" in
   '') ;;
-  *[!0-9]*) die "--max-tags must be a number from 1 to 8" ;;
-  *) [ "$MAX_TAGS" -ge 1 ] && [ "$MAX_TAGS" -le 8 ] || die "--max-tags must be a number from 1 to 8" ;;
+  *[!0-9]*) die "--max-tags must be a number from 1 to 6" ;;
+  *) [ "$MAX_TAGS" -ge 1 ] && [ "$MAX_TAGS" -le 6 ] || die "--max-tags must be a number from 1 to 6" ;;
 esac
+case "$MODE" in
+  ''|free|soft|mild|hard) ;;
+  *) die "--mode must be free, soft, mild or hard" ;;
+esac
+# Query for POST /api/ai/tags/{id}: only what was given overrides the saved settings.
+QUERY=
+[ -z "$MODE" ] || QUERY="mode=$MODE"
+[ -z "$PDF" ] || QUERY="${QUERY:+$QUERY&}pdf=true"
+QUERY=${QUERY:+?$QUERY}
 case "$JOBS" in
   ''|*[!0-9]*) die "--jobs must be a number from 1 to 4" ;;
   *) [ "$JOBS" -ge 1 ] && [ "$JOBS" -le 4 ] || die "--jobs must be a number from 1 to 4" ;;
@@ -224,8 +242,8 @@ jq -e '.ok == true' "$WORK/body" >/dev/null || die "AI check failed: the model d
 model=$(jq -r '"\(.provider) / \(.model)"' "$WORK/body")
 
 log "started $(date '+%Y-%m-%d %H:%M:%S'): $TOTAL $WHAT(s) on $URL"
-log "AI $model, max tags per paper: ${MAX_TAGS:-all}, jobs: $JOBS"
-max=${MAX_TAGS:-8}
+log "AI $model, tag mode: ${MODE:-saved}, PDF text: ${PDF:-saved}, max tags per paper: ${MAX_TAGS:-all}, jobs: $JOBS"
+max=${MAX_TAGS:-6}
 
 # Tags the papers listed in DIR/list, keeping its temp files in DIR. Results go
 # to the log only; the totals are counted from it at the end.
@@ -237,11 +255,11 @@ tag_papers() {
       continue
     fi
     path=$(id_path "$sid")
-    call POST "/api/ai/tags/$path"
+    call POST "/api/ai/tags/$path$QUERY"
     # The provider's rate limit or overload comes back as 502 "<Provider> error 429 ...".
     if [ "$CODE" = 502 ] && detail "$T/body" | grep -Eq 'error (429|503|529)'; then
       sleep 30
-      call POST "/api/ai/tags/$path"
+      call POST "/api/ai/tags/$path$QUERY"
     fi
     if [ "$CODE" != 200 ]; then
       line FAIL "$sid" "$file" "$(reason)"
@@ -253,7 +271,10 @@ tag_papers() {
       continue
     fi
     tags=$(jq -r --argjson m "$max" \
-      '[.suggested[:$m][] | .tag + (if .known then "" else " (new)" end)] | join(", ")' "$T/body")
+      '[.suggested[:$m][] | .tag
+        + (if .from then " <- " + .from else "" end)
+        + (if .how == "llm-alias" then " (alias queued)" else "" end)
+        + (if .known then "" else " (new)" end)] | join(", ")' "$T/body")
     jq --argjson m "$max" '{tags: [.suggested[:$m][].tag]}' "$T/body" > "$T/tags.json"
     call POST "/api/papers/$path/tags" "$T/tags.json"
     if [ "$CODE" = 200 ]; then

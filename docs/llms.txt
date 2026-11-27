@@ -19,11 +19,15 @@ linXiv-web is a community project, not an official linXiv component. A FastAPI s
 - [Authors, graph and tags](https://raw.githubusercontent.com/ToledoEM/linXiv-web/main/docs/guide/authors-graph-tags.md): author pages, merging, ORCID backfill, knowledge graph, tags
 - [Settings](https://raw.githubusercontent.com/ToledoEM/linXiv-web/main/docs/guide/settings.md): settings groups, browser-stored versus server-stored options
 - [Trash and backups](https://raw.githubusercontent.com/ToledoEM/linXiv-web/main/docs/guide/trash-backup.md): trash, restore, database backup and import, settings export and import
-- [Server Admin](https://raw.githubusercontent.com/ToledoEM/linXiv-web/main/docs/server-admin.md): multi-user mode, accounts, shared library, maintenance operations (duplicates, metadata of new papers, PDF check, server backups, authors and tags without papers, empty trash)
+- [Multi-user and accounts](https://raw.githubusercontent.com/ToledoEM/linXiv-web/main/docs/server-admin/index.md): multi-user mode, accounts, roles, shared library, passwords
+- [Where the data lives](https://raw.githubusercontent.com/ToledoEM/linXiv-web/main/docs/server-admin/data.md): library folders inside data/ and how to back them up
+- [Maintenance operations](https://raw.githubusercontent.com/ToledoEM/linXiv-web/main/docs/server-admin/maintenance.md): duplicates, metadata of new papers, metadata refresh, PDF check, server backups, authors and tags without papers, empty trash
+- [Background jobs and MCP](https://raw.githubusercontent.com/ToledoEM/linXiv-web/main/docs/server-admin/jobs-mcp.md): jobs and the MCP server with several libraries
 
 ## AI and agents
 
 - [AI features](https://raw.githubusercontent.com/ToledoEM/linXiv-web/main/docs/ai.md): tag suggestions, summaries and metadata cleanup with Gemini, OpenAI, Anthropic or OpenAI-compatible servers
+- [AI tags](https://raw.githubusercontent.com/ToledoEM/linXiv-web/main/docs/ai-tags.md): how tag suggestions are matched to the library's tags: prompts, modes, aliases, vocabulary CSV and settings
 - [MCP server](https://raw.githubusercontent.com/ToledoEM/linXiv-web/main/docs/mcp.md): enabling `/mcp`, tokens, tool profiles, connecting Claude Code, Codex and OpenCode
 
 ## Browser add-on

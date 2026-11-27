@@ -207,7 +207,7 @@ Descriptions come from `linxiv-mcp` (linXiv v0.7.1). Hints: read-only, edit (und
 - A request carrying another site's `Origin` header is refused with 403, which blocks DNS-rebinding attacks from a browser.
 - Behind a reverse proxy, pass the `Host` header through (see [self-hosting.md](self-hosting.md#https-with-a-reverse-proxy)) so the `Origin` check compares against the public name.
 - Pick the smallest profile that does the job. Full lets an agent delete papers and projects permanently.
-- In multi-user mode only admins can change the MCP settings or create the token, and `/mcp` always works on the owner's library. The shared and per-account libraries are out of its reach. See [Server Admin](server-admin.md).
+- In multi-user mode only admins can change the MCP settings or create the token, and `/mcp` always works on the owner's library. The shared and per-account libraries are out of its reach. See [Server Admin](server-admin/jobs-mcp.md).
 
 ## Troubleshooting
 

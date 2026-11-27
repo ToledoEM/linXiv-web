@@ -26,6 +26,8 @@ import PdfLayout from '../PdfLayout'
 import PdfTextIndex from '../PdfTextIndex'
 import { splitSettingsHash } from '../settingsHash'
 import SettingsSubnav from '../SettingsSubnav'
+import TagVocabSettings from '../TagVocabSettings'
+import { TAG_MODES } from '../tagModes'
 import ThemePicker from '../ThemePicker'
 import VersionMonitor from '../VersionMonitor'
 import { CONTACTS } from '../contacts'
@@ -40,6 +42,7 @@ import type {
   LookupSource,
   NcbiKeyStatus,
   SettingsResponse,
+  TagMode,
   UserSettings,
 } from '../types'
 import { setTexEnabled } from '../texStore'
@@ -57,6 +60,7 @@ type SectionId =
   | 'lookup'
   | 'logs'
   | 'update'
+  | 'tags'
 const SECTIONS: Record<SectionId, (keyof UserSettings)[]> = {
   contacts: ['ARXIV_MAILTO', 'CROSSREF_MAILTO', 'OPENALEX_MAILTO', 'NCBI_API_KEY'],
   update: ['web_update_check'],
@@ -77,15 +81,26 @@ const SECTIONS: Record<SectionId, (keyof UserSettings)[]> = {
   search: ['search_history_enabled', 'search_history_max'],
   lookup: ['web_lookup_source', 'web_lookup_disabled'],
   logs: ['web_log_level'],
+  tags: ['web_tag_mode', 'web_tag_max_new', 'web_tag_freq_weight', 'web_tag_use_pdf'],
 }
 
 // Groups mirror the desktop SettingsPage: left nav, one panel at a time, #id deep links.
-type GroupId = 'appearance' | 'library' | 'server' | 'ai' | 'integrations' | 'admin' | 'shortcuts' | 'about'
+type GroupId =
+  | 'appearance'
+  | 'library'
+  | 'server'
+  | 'ai'
+  | 'tags'
+  | 'integrations'
+  | 'admin'
+  | 'shortcuts'
+  | 'about'
 const GROUPS: { id: GroupId; label: string; icon: string }[] = [
   { id: 'appearance', label: 'Appearance', icon: '◐' },
   { id: 'library', label: 'Library', icon: '▤' },
   { id: 'server', label: 'Server & data', icon: '▥' },
   { id: 'ai', label: 'AI', icon: '✦' },
+  { id: 'tags', label: 'Tag vocabulary', icon: '#' },
   { id: 'integrations', label: 'Integrations', icon: '⚇' },
   { id: 'admin', label: 'Server Admin', icon: '⚿' },
   { id: 'shortcuts', label: 'Shortcuts', icon: '⌨' },
@@ -569,6 +584,70 @@ export default function Settings() {
         </form>
 
         <OrcidBackfill />
+      </>
+    ),
+    tags: (
+      <>
+        <form onSubmit={save('tags')} onKeyDown={formSubmitOnCtrlEnter}>
+          <div className="card settings-section">
+            <h3>AI tag suggestions</h3>
+            <p className="muted small">
+              The model first suggests tags without seeing your library's tags. Each suggestion is then matched to the
+              vocabulary (your library's tags and the CSV below): spelling variants and aliases always merge, close
+              tags merge by similarity, and unclear ones go to a second, short request. The paper page and the Library
+              batch panel can pick another mode for one run.
+            </p>
+            <label className="field">
+              <span>Mode</span>
+              <select value={draft.web_tag_mode} onChange={(e) => set('web_tag_mode', e.target.value as TagMode)}>
+                {TAG_MODES.map((m) => (
+                  <option key={m.value} value={m.value}>
+                    {m.label}: {m.hint}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="field">
+              <span>New tags per paper</span>
+              <input
+                type="number"
+                min={-1}
+                max={6}
+                step={1}
+                required
+                value={draft.web_tag_max_new}
+                onChange={(e) => set('web_tag_max_new', Math.trunc(Number(e.target.value)))}
+              />
+              <span className="muted small">-1 uses the mode's own limit. Hard mode never adds new tags.</span>
+            </label>
+            <label className="field">
+              <span>Preference for frequent tags</span>
+              <input
+                type="number"
+                min={0}
+                max={30}
+                step={1}
+                required
+                value={draft.web_tag_freq_weight}
+                onChange={(e) => set('web_tag_freq_weight', Math.trunc(Number(e.target.value)))}
+              />
+              <span className="muted small">
+                Similarity points (0 to 30) added for the tag on the most papers, less for rarer tags. Breaks ties
+                toward tags you use often. 0 turns it off.
+              </span>
+            </label>
+            <label className="check">
+              <input
+                type="checkbox"
+                checked={draft.web_tag_use_pdf}
+                onChange={(e) => set('web_tag_use_pdf', e.target.checked)}
+              />
+              Read the saved PDF's text too (first 5 pages); papers without a PDF use the abstract
+            </label>
+            {saveBar('tags')}
+          </div>
+        </form>
+        <TagVocabSettings />
       </>
     ),
     integrations: (
