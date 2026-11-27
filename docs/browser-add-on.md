@@ -1,7 +1,3 @@
----
-status: experimental
----
-
 # Browser add-on
 
 !!! note "Experimental"

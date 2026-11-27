@@ -41,7 +41,7 @@ Open http://127.0.0.1:8086 and log in. After an update, rebuild and recreate the
 
 To keep the library elsewhere, set `LINXIV_WEB_DATA_HOST` and `LINXIV_WEB_PDF_HOST` in `.env`. Both directories must already exist. Keep the database directory on local disk, because SQLite over network or exFAT storage is unreliable.
 
-For the prebuilt image, use [Self-hosting](self-hosting.md) instead.
+For the prebuilt image, use [Self-hosting](../self-hosting.md) instead.
 
 ## This documentation site
 

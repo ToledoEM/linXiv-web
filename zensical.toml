@@ -51,14 +51,14 @@ nav = [
     { "HTTP API" = "reference/api.md" },
     { "Functions not in the CLI" = "functions-not-in-api.md" },
   ] },
-  { "Development" = "development.md" },
+  { "Development" = [
+    "development/index.md",
+    { "Roadmap" = "development/roadmap.md" },
+  ] },
 ]
 
 [project.extra]
 generator = false
-
-[project.extra.status]
-experimental = "Experimental"
 
 [project.theme]
 language = "en"

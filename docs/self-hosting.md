@@ -1,6 +1,6 @@
 # Self-hosting linXiv-web with Docker
 
-This guide runs linXiv-web on your own machine or home server from the prebuilt container image. For development and building from source, see [Development](development.md).
+This guide runs linXiv-web on your own machine or home server from the prebuilt container image. For development and building from source, see [Development](development/index.md).
 
 The current release is the `release` branch, published as the image tag used below. `main` may contain changes that are not released yet.
 
