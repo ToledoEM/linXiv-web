@@ -253,3 +253,5 @@ AI tagging works best on a vocabulary that is already consolidated. A routine th
 ## Storage
 
 The vocabulary CSV, aliases and aliases to review are stored per library in `linxiv-web-tags.db`, next to `papers.db`. linXiv itself doesn't read this file. The [Back up databases](server-admin/maintenance.md) maintenance operation copies it as `tags-<date>-<time>.db` next to each database backup. The HTTP routes are listed in the [API reference](reference/api.md).
+
+<!-- cspell:words Aseq vocab signaling tumor CRISPR fiber isation hematopoiesis ization FOXC Ralpha Rgamma NONO -->
