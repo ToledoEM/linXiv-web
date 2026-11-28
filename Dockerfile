@@ -11,7 +11,7 @@ ARG LINXIV_REF=v0.7.1
 ARG LINXIV_SRC=git
 
 # --- linXiv source: pinned upstream tag (default) ---
-FROM rust:1-bookworm@sha256:ade39a710ef85f3506cffcfec3e8a24ba090badef1dff2fb798f71d878833fea AS linxiv-src-git
+FROM rust:1-bookworm@sha256:75d26c23c24cc6ea1cdabf0714a6bff8fd7bf3248716043fd7ae86dac7f41b94 AS linxiv-src-git
 ARG LINXIV_REF
 RUN git clone --depth 1 --branch "${LINXIV_REF}" \
       --recurse-submodules --shallow-submodules \
@@ -25,7 +25,7 @@ COPY --from=linxiv-local src-tauri/ /src/src-tauri/
 FROM linxiv-src-${LINXIV_SRC} AS linxiv-src
 
 # --- Stage 1: build the linxiv CLI and MCP server (Tauri-free crates, no webkit/gtk) ---
-FROM rust:1-bookworm@sha256:ade39a710ef85f3506cffcfec3e8a24ba090badef1dff2fb798f71d878833fea AS cli-build
+FROM rust:1-bookworm@sha256:75d26c23c24cc6ea1cdabf0714a6bff8fd7bf3248716043fd7ae86dac7f41b94 AS cli-build
 WORKDIR /src
 COPY --from=linxiv-src /src/scripts/ scripts/
 # Runtime dlopen'd PDF library (PDF import metadata extraction).
@@ -42,7 +42,7 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
     && install -D src-tauri/vendor/pdfium/lib/libpdfium.so /out/libpdfium.so
 
 # Standalone CLI image, used for discovery and the real-CLI integration test.
-FROM debian:bookworm-slim@sha256:734a72b3d6142a71993b4bc580ca01d8ca687f77a2c422d96a961d3376b179bc AS cli
+FROM debian:bookworm-slim@sha256:e67eeead736ff7bbe258ef088bff683635c561b1fcfefad0806c1df4ab49ce0e AS cli
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates \
     && rm -rf /var/lib/apt/lists/*
@@ -55,7 +55,7 @@ ENTRYPOINT ["linxiv"]
 
 # --- Server tests + lint, with the real CLI for the integration test ---
 #   docker build --target server-test .
-FROM python:3.15-slim-bookworm@sha256:96599df822d0e1c6bb700014a05c7f3c8cabc6e0f7ff3c4f9f69cee033b4b5d9 AS server-test
+FROM python:3.15-slim-bookworm@sha256:498829c717b1e59fc42f0e7865eafe4e04ca0f70a3769d4ae70ba218df54507c AS server-test
 COPY --from=ghcr.io/astral-sh/uv:0.8@sha256:1d31be550ff927957472b2a491dc3de1ea9b5c2d319a9cea5b6a48021e2990a6 /uv /usr/local/bin/uv
 COPY --from=cli-build /out/linxiv /usr/local/bin/linxiv
 COPY --from=cli-build /out/linxiv-mcp /usr/local/bin/linxiv-mcp
@@ -70,7 +70,7 @@ COPY server/ ./
 RUN uv run ruff check . && uv run ruff format --check . && uv run pytest -rs
 
 # --- Stage 2: build the React SPA ---
-FROM node:26-slim@sha256:e6bedef217677b276c591795e169840edd9096dbf13f29df8ef8d1856b8820bc AS web-build
+FROM node:26-slim@sha256:abe7e5a82b61a8ef67b315b85497c9e65173387ccf2f4a029248184b8e020be5 AS web-build
 WORKDIR /app/web
 COPY web/package.json web/package-lock.json ./
 RUN npm ci
@@ -78,7 +78,7 @@ COPY web/ ./
 RUN npm run build
 
 # --- Stage 3: Python runtime ---
-FROM python:3.15-slim-bookworm@sha256:96599df822d0e1c6bb700014a05c7f3c8cabc6e0f7ff3c4f9f69cee033b4b5d9 AS runtime
+FROM python:3.15-slim-bookworm@sha256:498829c717b1e59fc42f0e7865eafe4e04ca0f70a3769d4ae70ba218df54507c AS runtime
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates \
     && rm -rf /var/lib/apt/lists/*
