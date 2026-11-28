@@ -1,0 +1,2378 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Browser UI for the linXiv paper library">
+      
+      
+      
+      
+      
+        <link rel="prev" href="../ai/">
+      
+      
+        <link rel="next" href="../mcp/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/favicon.ico">
+      <meta name="generator" content="zensical-0.0.71">
+    
+    
+      
+        <title>AI tags - linXiv-web</title>
+      
+    
+    
+      
+        
+      
+      <link rel="stylesheet" href="../assets/stylesheets/modern/main.e442bf79.min.css">
+      
+        
+          
+        
+        <link rel="stylesheet" href="../assets/stylesheets/modern/palette.b60ce83d.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,500,500i,700,700i%7CJetBrains+Mono:400,400i,700,700i&amp;display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("..",location),__md_scope.pathname.endsWith("/")||(__md_scope=new URL(__md_scope.pathname+"/",location)),__md_hash=e=>[...e].reduce(((e,t)=>(e<<5)-e+t.charCodeAt(0)),0),__md_get=(e,t=localStorage,_=__md_scope)=>JSON.parse(t.getItem(_.pathname+"."+e)),__md_set=(e,t,_=localStorage,a=__md_scope)=>{try{_.setItem(a.pathname+"."+e,JSON.stringify(t))}catch(e){}},document.documentElement.setAttribute("data-platform",navigator.platform)</script>
+    
+      
+
+    
+    
+  
+  <script
+      data-goatcounter="https://etoledo.goatcounter.com/count"
+      async
+      src="//gc.zgo.at/count.js"
+  ></script>
+
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer" aria-hidden="true"></label>
+    <div data-md-component="skip">
+      <a href="#__skip" class="md-skip">
+        Skip to content
+      </a>
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="./.." title="linXiv-web" class="md-header__button md-logo" aria-label="linXiv-web" data-md-component="logo">
+      
+  <img src="../assets/logo.svg" alt="linXiv-web">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer" aria-label="Navigation">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-menu" viewBox="0 0 24 24"><path d="M4 5h16M4 12h16M4 19h16"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            linXiv-web
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              AI tags
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-sun-moon" viewBox="0 0 24 24"><path d="M12 2v2M14.837 16.385a6 6 0 1 1-7.223-7.222c.624-.147.97.66.715 1.248a4 4 0 0 0 5.26 5.259c.589-.255 1.396.09 1.248.715M16 12a4 4 0 0 0-4-4M19 5l-1.256 1.256M20 12h2"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_2" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to system preference"  type="radio" name="__palette" id="__palette_2">
+    
+      <label class="md-header__button md-icon" title="Switch to system preference" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-moon" viewBox="0 0 24 24"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search" aria-label="Search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-search" viewBox="0 0 24 24"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog" aria-label="Search">
+  <button type="button" class="md-search__button">
+    Search
+  </button>
+</div>
+      
+    
+    <div class="md-header__source">
+      
+        <a href="https://github.com/ToledoEM/linXiv-web" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M216.5 362.5c-66-8-112.5-55.5-112.5-117 0-25 9-52 24-70-6.5-16.5-5.5-51.5 2-66 20-2.5 47 8 63 22.5 19-6 39-9 63.5-9s44.5 3 62.5 8.5c15.5-14 43-24.5 63-22 7 13.5 8 48.5 1.5 65.5 16 19 24.5 44.5 24.5 70.5 0 61.5-46.5 108-113.5 116.5 17 11 28.5 35 28.5 62.5v52c0 15 12.5 23.5 27.5 17.5C441 459.5 512 369 512 257 512 115.5 397 0 255.5 0S0 115.5 0 257c0 111 70.5 203 165.5 237.5 13.5 5 26.5-4 26.5-17.5v-40c-7 3-16 5-24 5-33 0-52.5-18-66.5-51.5-5.5-13.5-11.5-21.5-23-23-6-.5-8-3-8-6 0-6 10-10.5 20-10.5 14.5 0 27 9 40 27.5 10 14.5 20.5 21 33 21s20.5-4.5 32-16c8.5-8.5 15-16 21-21"/></svg>
+  </div>
+  <div class="md-source__repository">
+    ToledoEM/linXiv-web
+  </div>
+</a>
+      
+    </div>
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="./.." title="linXiv-web" class="md-nav__button md-logo" aria-label="linXiv-web" data-md-component="logo">
+      
+  <img src="../assets/logo.svg" alt="linXiv-web">
+
+    </a>
+    linXiv-web
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/ToledoEM/linXiv-web" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M216.5 362.5c-66-8-112.5-55.5-112.5-117 0-25 9-52 24-70-6.5-16.5-5.5-51.5 2-66 20-2.5 47 8 63 22.5 19-6 39-9 63.5-9s44.5 3 62.5 8.5c15.5-14 43-24.5 63-22 7 13.5 8 48.5 1.5 65.5 16 19 24.5 44.5 24.5 70.5 0 61.5-46.5 108-113.5 116.5 17 11 28.5 35 28.5 62.5v52c0 15 12.5 23.5 27.5 17.5C441 459.5 512 369 512 257 512 115.5 397 0 255.5 0S0 115.5 0 257c0 111 70.5 203 165.5 237.5 13.5 5 26.5-4 26.5-17.5v-40c-7 3-16 5-24 5-33 0-52.5-18-66.5-51.5-5.5-13.5-11.5-21.5-23-23-6-.5-8-3-8-6 0-6 10-10.5 20-10.5 14.5 0 27 9 40 27.5 10 14.5 20.5 21 33 21s20.5-4.5 32-16c8.5-8.5 15-16 21-21"/></svg>
+  </div>
+  <div class="md-source__repository">
+    ToledoEM/linXiv-web
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="./.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Home
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Install
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_2">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Install
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../self-hosting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Self-hosting with Docker
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/compatibility/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Compatibility and resources
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Using linXiv-web
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_3">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Using linXiv-web
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/home-feed/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Home feed
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/library/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Library
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/papers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Paper page
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/projects/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Projects and reading lists
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/search-and-add/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Search and add papers
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/authors-graph-tags/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Authors, graph and tags
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/settings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Settings
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guide/trash-backup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Trash and backups
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../server-admin/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Server Admin
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_4" id="__nav_4_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_4">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Server Admin
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../server-admin/data/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Where the data lives
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../server-admin/maintenance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Maintenance operations
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../server-admin/jobs-mcp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Background jobs and MCP
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  AI and agents
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
+            <label class="md-nav__title" for="__nav_5">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  AI and agents
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ai/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  AI features
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  AI tags
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="././" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  AI tags
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#how-a-suggestion-is-made" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        How a suggestion is made
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="How a suggestion is made">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#step-1-candidate-tags" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Step 1: candidate tags
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-2-same-tag-in-another-spelling" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Step 2: same tag in another spelling
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-3-close-tags" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Step 3: close tags
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-4-second-request" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Step 4: second request
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-you-see" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        What you see
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#modes" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Modes
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#options" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Options
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Options">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Mode
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#new-tags-per-paper" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        New tags per paper
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#preference-for-frequent-tags" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Preference for frequent tags
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#read-the-saved-pdfs-text-too" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Read the saved PDF's text too
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#choosing-per-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Choosing per run
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#aliases" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Aliases
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#vocabulary-csv" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Vocabulary CSV
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#once-your-tag-library-is-stable" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Once your tag library is stable
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#storage" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Storage
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../mcp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  MCP server
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../browser-add-on/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Browser add-on
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Server scripts
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_7">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Server scripts
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../scripts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Server scripts
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../sanitize-pdf-names/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Sanitize PDF file names
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../bulk-import/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Bulk PDF import
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../bulk-ai-tags/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Bulk AI tags
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../export-tags/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Export tags
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../import-tags/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Import tags
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Reference
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_8">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Reference
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Admin Server Configuration
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  HTTP API
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../functions-not-in-api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Functions not in the CLI
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../development/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Development
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_9" id="__nav_9_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_9">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Development
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../development/roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Roadmap
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  
+                    
+                    
+                    
+                      
+                    
+                    
+                      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+                      <div class="md-sidebar-button__wrapper">
+                        <label class="md-sidebar-button" for="__toc"></label>
+                      </div>
+                    
+                  
+                  <div class="md-sidebar__inner">
+                    
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#how-a-suggestion-is-made" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        How a suggestion is made
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="How a suggestion is made">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#step-1-candidate-tags" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Step 1: candidate tags
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-2-same-tag-in-another-spelling" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Step 2: same tag in another spelling
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-3-close-tags" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Step 3: close tags
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-4-second-request" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Step 4: second request
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-you-see" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        What you see
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#modes" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Modes
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#options" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Options
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Options">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Mode
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#new-tags-per-paper" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        New tags per paper
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#preference-for-frequent-tags" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Preference for frequent tags
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#read-the-saved-pdfs-text-too" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Read the saved PDF's text too
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#choosing-per-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Choosing per run
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#aliases" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Aliases
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#vocabulary-csv" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Vocabulary CSV
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#once-your-tag-library-is-stable" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Once your tag library is stable
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#storage" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Storage
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+                
+
+
+
+  
+
+
+  <nav class="md-path" aria-label="Navigation" >
+    <ol class="md-path__list">
+      
+        
+  
+  
+    <li class="md-path__item">
+      <a href="./.." class="md-path__link">
+        
+  
+  <span class="md-ellipsis">
+    Home
+  </span>
+
+      </a>
+    </li>
+  
+
+      
+      
+        
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+      <li class="md-path__item">
+        <a href="../ai/" class="md-path__link">
+          
+  
+  <span class="md-ellipsis">
+    AI and agents
+  </span>
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ol>
+  </nav>
+
+              
+              <article class="md-content__inner md-typeset">
+                <a id="__skip" tabindex="-1"></a>
+                
+                  
+
+  
+  
+
+
+<h1 id="ai-tags">AI tags<a class="headerlink" href="#ai-tags" title="Permanent link">&para;</a></h1>
+<p>AI tags suggests tags for a paper and checks each one against the tags your library already has. The aim is one tag per concept: <code>RNA-seq</code>, <code>RNAseq</code> and <code>RNA sequencing</code> should all end up as the same tag.</p>
+<p>You can ask for tags in three places:</p>
+<ul>
+<li><strong>AI Tags</strong> on the paper page;</li>
+<li><strong>AI tags</strong> in the Library batch panel, for the papers you tick;</li>
+<li>the <a href="../bulk-ai-tags/">bulk AI tags script</a> on the server, for the whole library.</li>
+</ul>
+<p>AI features must be on (<a href="../ai/">AI features</a>). Suggestions are only a preview. Nothing is added until you tick the tags and click <strong>Add</strong>, or the bulk script adds them.</p>
+<h2 id="how-a-suggestion-is-made">How a suggestion is made<a class="headerlink" href="#how-a-suggestion-is-made" title="Permanent link">&para;</a></h2>
+<p>The model is asked twice at most. The first request reads the paper and suggests tags. The server matches those against your vocabulary without the model. Only the suggestions it can't place go back to the model in a second, short request.</p>
+<pre class="mermaid"><code>flowchart TD
+  paper["Paper: title, categories, abstract,&lt;br&gt;PDF text if chosen"] --&gt; llm1["LLM request 1: candidate tags&lt;br&gt;(your tags are not sent)"]
+  llm1 --&gt; key{"Same spelling key,&lt;br&gt;alias or other name&lt;br&gt;as a known tag?"}
+  vocab[("Vocabulary:&lt;br&gt;library tags + CSV tags,&lt;br&gt;aliases")] -.-&gt; key
+  key -- yes --&gt; known["Existing tag"]
+  key -- no --&gt; free{"Free mode?"}
+  free -- yes --&gt; new["New tag"]
+  free -- no --&gt; sim["Similarity to vocabulary:&lt;br&gt;5 nearest tags, no family siblings,&lt;br&gt;points for frequent tags&lt;br&gt;(gene symbols: none)"]
+  vocab -.-&gt; sim
+  sim -- "score at or above auto-merge" --&gt; known
+  sim -- "in the review band&lt;br&gt;(Mild: any tag at 50+)" --&gt; llm2["LLM request 2: map, alias or new,&lt;br&gt;with the 5 nearest tags"]
+  sim -- "below the band" --&gt; low{"Mode"}
+  low -- Soft or Mild --&gt; new
+  low -- Hard --&gt; out["Left out"]
+  llm2 -- map --&gt; known
+  llm2 -- alias --&gt; queue["Existing tag,&lt;br&gt;alias goes to Aliases to review"]
+  llm2 -- new --&gt; new
+  new --&gt; cap{"Under the mode's&lt;br&gt;new-tag limit?"}
+  cap -- yes --&gt; chips["Suggestions you tick and add"]
+  cap -- no --&gt; out
+  known --&gt; chips
+  queue --&gt; chips
+  queue -. approved .-&gt; vocab</code></pre>
+<h3 id="step-1-candidate-tags">Step 1: candidate tags<a class="headerlink" href="#step-1-candidate-tags" title="Permanent link">&para;</a></h3>
+<p>The first request sends:</p>
+<ul>
+<li>the title and categories;</li>
+<li>the abstract, up to 6,000 characters;</li>
+<li>the paper's current tags, so the model doesn't repeat them;</li>
+<li>with PDF text on, the text of the first 5 pages of the saved PDF. A paper without a readable PDF falls back to the abstract.</li>
+</ul>
+<p>Your existing tags are not sent. The model suggests what the paper is about, and the matching steps below decide whether that is a tag you already have.</p>
+<p>The system prompt is:</p>
+<div class="wrap highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>You tag research papers in a personal library. Suggest 3 to 6 short topical tags for the paper, one tag per concept: never two tags that mean the same thing (not both 'microRNA' and 'miRNA').
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>Spell each tag in its normalized form: lowercase except acronyms and gene or protein symbols, singular nouns except fixed plural terms such as 'systems biology' or 'social sciences', American spelling ('signaling', 'tumor'), one to three words, hyphens only where the term uses them ('RNA-seq'), no '#'. Keep standard acronyms as written (DNA, RNA-seq, CRISPR, MRI); write rare abbreviations out in full. Put abbreviations and other common names of the same tag in also_known_as. Do not repeat the paper's current tags.
+</code></pre></div>
+<p>The model replies with a list of tags, each with its other names:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="p">{</span><span class="nt">"tags"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="p">{</span><span class="nt">"tag"</span><span class="p">:</span><span class="w"> </span><span class="s2">"single-cell RNA-seq"</span><span class="p">,</span><span class="w"> </span><span class="nt">"also_known_as"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"scRNA-seq"</span><span class="p">]},</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span><span class="p">{</span><span class="nt">"tag"</span><span class="p">:</span><span class="w"> </span><span class="s2">"drug response"</span><span class="p">,</span><span class="w"> </span><span class="nt">"also_known_as"</span><span class="p">:</span><span class="w"> </span><span class="p">[]}</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="p">]}</span>
+</code></pre></div>
+<p>At most 6 suggestions are kept. A tag longer than 64 characters is dropped. Some local models write every tag as a slug; a new tag with two or more hyphens and no spaces is stored with spaces (<code>fiber-optic-sensors</code> becomes <code>fiber optic sensors</code>). A tag with one hyphen, such as <code>RNA-seq</code>, keeps it. A few terms the field writes in the plural get that spelling back when they are new tags: <code>system biology</code> is stored as <code>systems biology</code>, and the same goes for <code>social sciences</code>, <code>life sciences</code>, <code>materials science</code> and the others in the server's list.</p>
+<h3 id="step-2-same-tag-in-another-spelling">Step 2: same tag in another spelling<a class="headerlink" href="#step-2-same-tag-in-another-spelling" title="Permanent link">&para;</a></h3>
+<p>Each candidate gets a spelling key. Two tags with the same key are the same tag. The key ignores:</p>
+<ul>
+<li>case, hyphens, underscores, slashes and punctuation;</li>
+<li>plural endings on each word (<code>neural networks</code> = <code>neural network</code>), except words ending in <code>ss</code>, <code>us</code>, <code>is</code> or <code>ics</code> (<code>analysis</code>, <code>genomics</code>). The key only decides what matches: <code>systems biology</code> and <code>system biology</code> are one tag, spelled the way your library has it;</li>
+<li>British spelling: <code>signalling</code>, <code>tumour</code>, <code>haematopoiesis</code> and <code>-isation</code> match <code>signaling</code>, <code>tumor</code>, <code>hematopoiesis</code> and <code>-ization</code>;</li>
+<li><code>sequencing</code> against <code>seq</code>, so <code>RNA sequencing</code> = <code>RNA-seq</code>.</li>
+</ul>
+<p>The candidate is looked up by its key among your tags, then in the alias table, then by the keys of its <code>also_known_as</code> names. A hit becomes your existing tag, spelled the way your library spells it. When the library has two spellings with the same key, the one on more papers is used.</p>
+<h3 id="step-3-close-tags">Step 3: close tags<a class="headerlink" href="#step-3-close-tags" title="Permanent link">&para;</a></h3>
+<p>A candidate with no match is compared with every tag in the vocabulary by string similarity, scored 0 to 100. The 5 nearest tags scoring at least 50 are kept.</p>
+<p>Tags that differ only in a trailing number, letter or Greek letter are different members of one family, such as <code>STAT1</code> and <code>STAT5</code>, <code>IL6</code> and <code>IL10</code>, <code>FOXA1</code> and <code>FOXC1</code>, or <code>PPARalpha</code> and <code>PPARgamma</code>. They are never treated as close, however similar they look. <code>GSK3</code> and <code>GSK3B</code> count as forms of the same gene and can match.</p>
+<p>Short gene symbols skip this step and only match by key or alias, because short strings look similar to many unrelated tags. That covers one-word tags of up to 6 characters with a digit or a capital letter, and any tag of 3 characters or fewer (<code>En1</code>, <code>NONO</code>).</p>
+<p>Tags on more papers get extra points, set by <strong>Preference for frequent tags</strong> (default 10). The tag on the most papers gets the full amount, and rarer tags get less, on a log scale. The points are only added when the similarity has already reached the mode's review band, so they decide between plausible matches and can't pull in an unrelated tag.</p>
+<p>For example, with the default 10 points and Soft mode (auto-merge at 95): a candidate is 90% similar to two tags, one on 100 papers (the most in the library) and one on 1 paper. The first scores 100 and the second about 91.5. The candidate merges into the tag on 100 papers.</p>
+<h3 id="step-4-second-request">Step 4: second request<a class="headerlink" href="#step-4-second-request" title="Permanent link">&para;</a></h3>
+<p>Candidates in the mode's review band go to a second request, all of them in one request per paper. It sends the paper title and, for each candidate, its 5 nearest tags with their paper counts:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="p">{</span><span class="nt">"paper_title"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Deep CNNs"</span><span class="p">,</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w"> </span><span class="nt">"candidates"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">   </span><span class="p">{</span><span class="nt">"candidate"</span><span class="p">:</span><span class="w"> </span><span class="s2">"convolution net"</span><span class="p">,</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">    </span><span class="nt">"neighbours"</span><span class="p">:</span><span class="w"> </span><span class="p">[{</span><span class="nt">"tag"</span><span class="p">:</span><span class="w"> </span><span class="s2">"convolutional network"</span><span class="p">,</span><span class="w"> </span><span class="nt">"papers"</span><span class="p">:</span><span class="w"> </span><span class="mi">12</span><span class="p">},</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">                   </span><span class="p">{</span><span class="nt">"tag"</span><span class="p">:</span><span class="w"> </span><span class="s2">"neural networks"</span><span class="p">,</span><span class="w"> </span><span class="nt">"papers"</span><span class="p">:</span><span class="w"> </span><span class="mi">40</span><span class="p">}]}</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w"> </span><span class="p">]}</span>
+</code></pre></div>
+<p>The system prompt is:</p>
+<div class="wrap highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>You keep the tag vocabulary of a research library consistent. For each candidate tag you get the existing tags closest to it and how many papers use each. Decide:
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>- map: the candidate means the same as one of those tags for this paper; tag = that tag, spelled exactly as listed.
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>- alias: the candidate is exactly the same concept as one of those tags under another name (an abbreviation, a spelling variant or a true synonym), so it should always become that tag; tag = that tag, spelled exactly as listed. Never use alias for a broader, narrower or related tag ('causal inference' is not an alias of 'statistical inference'); use map or new for those.
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>- new: none of them means the same (broader, narrower, related or a different member of a family such as STAT1 vs STAT5 is not the same); tag = the candidate with its spelling normalized.
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>Prefer an existing tag used by more papers when two fit equally. Answer every candidate.
+</code></pre></div>
+<p>The model answers each candidate with one of:</p>
+<ul>
+<li><code>map</code>: use that existing tag for this paper only;</li>
+<li><code>alias</code>: use that existing tag, and propose the candidate as its alias in <strong>Aliases to review</strong>;</li>
+<li><code>new</code>: keep the candidate as a new tag, with the spelling the model corrected.</li>
+</ul>
+<p>The server checks the answer. A map or alias to a tag that wasn't in the candidate's list of 5, or to a family member of the candidate, is treated as new. If the model skips a candidate, Soft keeps it as a new tag, while Mild and Hard leave it out.</p>
+<p>If the corrected spelling of a new tag matches a tag you have, that tag is used.</p>
+<p>Both requests also carry a JSON Schema and an example reply. Settings → AI shows them as <strong>Tag suggestions: candidates</strong> and <strong>Tag suggestions: match to existing tags</strong>.</p>
+<h3 id="what-you-see">What you see<a class="headerlink" href="#what-you-see" title="Permanent link">&para;</a></h3>
+<p>Each suggestion is a chip you can tick or untick:</p>
+<ul>
+<li><code>RNA-seq ← RNA sequencing</code>: the model wrote <code>RNA sequencing</code>, and it was matched to your tag <code>RNA-seq</code>;</li>
+<li><code>new</code>: the tag is in neither your library nor the vocabulary CSV;</li>
+<li><code>alias?</code>: the model called its wording an alias of this tag, and the alias waits for review.</li>
+</ul>
+<p>Hovering a chip says where the tag comes from and how it was matched. Candidates the mode left out are listed under the chips with the reason:</p>
+<table>
+<thead>
+<tr>
+<th>Reason</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>no close tag</code></td>
+<td>Hard mode: no tag in the vocabulary is close enough</td>
+</tr>
+<tr>
+<td><code>no decision</code></td>
+<td>Mild or Hard: the second request gave no answer for it</td>
+</tr>
+<tr>
+<td><code>new-tag limit</code></td>
+<td>The paper already has as many new tags as <strong>New tags per paper</strong> allows</td>
+</tr>
+<tr>
+<td><code>new tags not allowed</code></td>
+<td>Hard mode, or <strong>New tags per paper</strong> is 0</td>
+</tr>
+</tbody>
+</table>
+<h2 id="modes">Modes<a class="headerlink" href="#modes" title="Permanent link">&para;</a></h2>
+<p>The mode decides how readily a candidate merges into an existing tag and how many new tags a paper can get.</p>
+<table>
+<thead>
+<tr>
+<th>Mode</th>
+<th>Merges by similarity at</th>
+<th>Second request for</th>
+<th>New tags per paper</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Free</td>
+<td>never (spelling key and aliases only)</td>
+<td>nobody</td>
+<td>up to 6</td>
+</tr>
+<tr>
+<td>Soft (default)</td>
+<td>95</td>
+<td>similarity 85 to 95</td>
+<td>up to 4</td>
+</tr>
+<tr>
+<td>Mild</td>
+<td>90</td>
+<td>every unmerged candidate with a tag at 50 or more</td>
+<td>up to 2</td>
+</tr>
+<tr>
+<td>Hard</td>
+<td>85</td>
+<td>similarity 60 to 85</td>
+<td>none</td>
+</tr>
+</tbody>
+</table>
+<p>Free takes the model's tags as they are, apart from spelling variants and aliases. Use it on a new library, or to see what the model would suggest on its own.</p>
+<p>Soft merges near-identical tags, asks the model about close ones and keeps the rest as new tags. It suits a library that is still growing.</p>
+<p>Mild sends almost every unmatched candidate to the second request, and a candidate only becomes a new tag when the model says so. A candidate with no tag at 50 or more similarity becomes new without asking. Use it once the vocabulary covers most of what you read.</p>
+<p>Hard never adds a new tag. Every suggestion is an existing tag or is left out. Use it with a closed vocabulary, for example one imported from a CSV.</p>
+<h2 id="options">Options<a class="headerlink" href="#options" title="Permanent link">&para;</a></h2>
+<p>All options are in <strong>Settings → Tag vocabulary</strong>, under <strong>AI tag suggestions</strong>, and are saved per library.</p>
+<h3 id="mode">Mode<a class="headerlink" href="#mode" title="Permanent link">&para;</a></h3>
+<p>Default Soft. Sets the mode above for every AI tag request: the paper page, the Library batch panel and the bulk script. Each of those can use another mode for one run (see <a href="#choosing-per-run">Choosing per run</a>).</p>
+<h3 id="new-tags-per-paper">New tags per paper<a class="headerlink" href="#new-tags-per-paper" title="Permanent link">&para;</a></h3>
+<p>Default -1, which uses the mode's own limit (Free 6, Soft 4, Mild 2, Hard 0). A number from 0 to 6 replaces that limit in every mode except Hard, which always allows 0. Set 1 to let each paper add one new tag at most; set 0 to allow only existing tags while keeping the matching of your mode.</p>
+<h3 id="preference-for-frequent-tags">Preference for frequent tags<a class="headerlink" href="#preference-for-frequent-tags" title="Permanent link">&para;</a></h3>
+<p>Default 10, range 0 to 30. Points added to the similarity of a close tag, in full for the tag on the most papers and less for rarer tags. Raise it to steer suggestions toward the tags you use most; set 0 to compare by spelling similarity alone. A CSV <code>weight</code> replaces the paper count of its tag (see <a href="#vocabulary-csv">Vocabulary CSV</a>).</p>
+<h3 id="read-the-saved-pdfs-text-too">Read the saved PDF's text too<a class="headerlink" href="#read-the-saved-pdfs-text-too" title="Permanent link">&para;</a></h3>
+<p>Default off. Sends the text of the first 5 pages of the saved PDF with the abstract. Those pages hold the introduction and methods of most papers, so tags can name methods and data the abstract leaves out, while references and supplementary pages stay out of the request. Each request is still longer than with the abstract alone, which matters most with a local model. Papers without a saved PDF use the abstract.</p>
+<h3 id="choosing-per-run">Choosing per run<a class="headerlink" href="#choosing-per-run" title="Permanent link">&para;</a></h3>
+<p>The paper page (next to <strong>AI Tags</strong>) and the Library batch panel (next to <strong>Suggest tags</strong>) have two selects:</p>
+<ul>
+<li><strong>Saved mode</strong>, <strong>Free</strong>, <strong>Soft</strong>, <strong>Mild</strong> or <strong>Hard</strong>;</li>
+<li><strong>Saved text source</strong>, <strong>Abstract only</strong> or <strong>Abstract + PDF text</strong>.</li>
+</ul>
+<p>"Saved" uses the setting above. The bulk script has <code>--mode</code> and <code>--pdf</code> for the same purpose (<a href="../bulk-ai-tags/">Bulk AI tags</a>).</p>
+<h2 id="aliases">Aliases<a class="headerlink" href="#aliases" title="Permanent link">&para;</a></h2>
+<p>An alias points one name at a tag: <code>NN</code> at <code>neural network</code>, <code>RNAseq</code> at <code>RNA-seq</code>. Aliases are checked right after the spelling key, before any similarity, so a merge decided once applies to every later paper without asking the model.</p>
+<p>Aliases come from three places:</p>
+<ul>
+<li>The second request proposes one when it answers <code>alias</code>. The suggestion already uses the existing tag, and the alias waits in <strong>Aliases to review</strong>. <strong>Approve</strong> stores it, and it applies from the next suggestion on. <strong>Reject</strong> drops it, and the same alias is never proposed again.</li>
+<li>You add one by hand in <strong>Aliases</strong> (the alias, then the tag it stands for), where you can also delete them. With more than 10 aliases a filter box appears; the list shows the first 200 matches.</li>
+<li>A vocabulary CSV brings them in its <code>aliases</code> column, or as the old spellings of a tag map.</li>
+</ul>
+<p>An alias and its tag can't have the same spelling key, since the key already matches them, and neither can be <code>reading-list</code>.</p>
+<h2 id="vocabulary-csv">Vocabulary CSV<a class="headerlink" href="#vocabulary-csv" title="Permanent link">&para;</a></h2>
+<p>The vocabulary is what AI tagging matches against: every tag in your library plus the tags of an imported CSV. A CSV tag that no paper has yet can still be suggested; it is added to linXiv when you add it to a paper. Import it in <strong>Settings → Tag vocabulary → Vocabulary CSV</strong>.</p>
+<p>Two layouts are read, chosen by the header.</p>
+<p>A tag list, with <code>tag</code> and optional <code>aliases</code> (separated by <code>|</code>) and <code>weight</code> columns:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>tag,aliases,weight
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>RNA-seq,RNA sequencing|bulk RNA-seq,40
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>organoid,,
+</code></pre></div>
+<p><code>weight</code> (0 or more) is used instead of the paper count when frequent tags get extra points. Use it to favour tags you plan to use even if few papers carry them yet.</p>
+<p>A tag map from a tag consolidation, with <code>old_tag,new_tag,cluster,papers</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>old_tag,new_tag,cluster,papers
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>wnt pathway,wnt signaling,4,3
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>wnt signalling,wnt signaling,4,2
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>wnt signaling,wnt signaling,4,10
+</code></pre></div>
+<p>Each <code>new_tag</code> becomes a vocabulary tag, weighted by the sum of its <code>papers</code>. Each <code>old_tag</code> with a different spelling key becomes an alias of it; <code>wnt signalling</code> already shares its key, so it needs none. <code>cluster</code> is not used. An <code>old_tag</code> that is a family member of its <code>new_tag</code>, such as <code>STAT5</code> in a <code>stat3</code> cluster, is not imported as an alias, because clustering by name similarity puts family members together. The import result says how many it skipped.</p>
+<p>Import rules:</p>
+<ul>
+<li>up to 50,000 rows; tags longer than 64 characters, empty tags, <code>reading-list</code> and bad weights are skipped and listed in the result (first 50);</li>
+<li><strong>Replace the CSV vocabulary and CSV aliases</strong> removes the earlier CSV tags and CSV aliases first; aliases you added or approved stay. Without it the file is merged into what is there;</li>
+<li>an alias already stored is not overwritten.</li>
+</ul>
+<p><strong>Download CSV</strong> exports the CSV tags and every alias in the <code>tag,aliases,weight</code> layout, so the file can be edited and imported again.</p>
+<h2 id="once-your-tag-library-is-stable">Once your tag library is stable<a class="headerlink" href="#once-your-tag-library-is-stable" title="Permanent link">&para;</a></h2>
+<p>AI tagging works best on a vocabulary that is already consolidated. A routine that keeps it that way:</p>
+<ol>
+<li>Consolidate the tags you have. Export them with <a href="../export-tags/"><code>export-tags.sh</code></a>, merge variants and synonyms outside linXiv-web, and write the result back with <a href="../import-tags/"><code>import-tags.sh</code></a>. Then run <a href="../server-admin/maintenance/">Clean tags without papers</a> in Settings → Server Admin → Maintenance operations.</li>
+<li>Import the consolidation's tag map as the vocabulary CSV. Every old spelling becomes an alias, so a model that suggests one gets the consolidated tag instead.</li>
+<li>Switch the mode to <strong>Mild</strong>, or to <strong>Hard</strong> if new papers should only get tags you already have. Lower <strong>New tags per paper</strong> to 1 or 2 if Mild still adds too many.</li>
+<li>Look at <strong>Aliases to review</strong> from time to time. Approve real synonyms; reject broader or narrower terms.</li>
+<li>When you start reading in a new field, use <strong>Soft</strong> or <strong>Free</strong> for those papers, from the paper page or the batch panel, so the new topics get tags.</li>
+<li>Export the tags again now and then, to see how fast the vocabulary grows and whether it needs another consolidation.</li>
+</ol>
+<h2 id="storage">Storage<a class="headerlink" href="#storage" title="Permanent link">&para;</a></h2>
+<p>The vocabulary CSV, aliases and aliases to review are stored per library in <code>linxiv-web-tags.db</code>, next to <code>papers.db</code>. linXiv itself doesn't read this file. The <a href="../server-admin/maintenance/">Back up databases</a> maintenance operation copies it as <code>tags-&lt;date&gt;-&lt;time&gt;.db</code> next to each database backup. The HTTP routes are listed in the <a href="../reference/api/">API reference</a>.</p>
+<!-- cspell:words Aseq vocab signaling tumor CRISPR fiber isation hematopoiesis ization FOXC Ralpha Rgamma NONO -->
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-circle-arrow-up" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m16 12-4-4-4 4M12 16V8"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../ai/" class="md-footer__link md-footer__link--prev" aria-label="Previous: AI features">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-left" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7M19 12H5"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                AI features
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../mcp/" class="md-footer__link md-footer__link--next" aria-label="Next: MCP server">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                MCP server
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Docs made with <a href="https://zensical.org">Zensical</a> · linXiv developed by <a href="https://github.com/linxiv-dev">linxiv-dev</a> · linXiv-web developed by ToledoEM · Apache License 2.0
+    </div>
+  
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog" role="status" aria-atomic="true">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      
+      
+        
+        
+      <script id="__config" type="application/json">{"annotate":null,"base":"..","features":["content.code.copy","content.code.select","navigation.footer","navigation.indexes","navigation.instant","navigation.path","navigation.top","navigation.tracking","search.highlight"],"redirect":null,"search":"../assets/javascripts/workers/search.c47bb847.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","clipboard.error":"Could not copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.a2388154.min.js"></script>
+      
+    
+  </body>
+</html>
